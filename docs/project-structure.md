@@ -1,0 +1,117 @@
+# openTrattOS — Project Structure
+
+## Monorepo Layout (Turborepo)
+
+```
+openTrattOS/
+│
+├── apps/
+│   ├── web/                        # Next.js frontend (TypeScript + TailwindCSS)
+│   │   ├── app/                    # Next.js App Router pages
+│   │   │   ├── (dashboard)/        # Protected dashboard routes
+│   │   │   │   ├── ingredients/    # Ingredient CRUD UI
+│   │   │   │   ├── recipes/        # Escandallos / Costing UI
+│   │   │   │   ├── haccp/          # Compliance checklists UI
+│   │   │   │   └── operations/     # Inventory & orders UI
+│   │   │   ├── (auth)/             # Login / Register pages
+│   │   │   └── layout.tsx
+│   │   ├── components/
+│   │   │   ├── ui/                 # Primitive components (Button, Card, Input...)
+│   │   │   └── modules/            # Feature-specific composed components
+│   │   └── lib/                    # API client, utils, hooks
+│   │
+│   └── api/                        # NestJS backend (TypeScript)
+│       └── src/
+│           ├── main.ts             # Entry point (port 3001)
+│           ├── app.module.ts       # Root module
+│           │
+│           ├── ingredients/        # Bounded Context: Ingredients
+│           │   ├── domain/
+│           │   │   ├── ingredient.entity.ts
+│           │   │   ├── category.entity.ts
+│           │   │   ├── supplier.entity.ts
+│           │   │   └── uom.value-object.ts   # UoM conversion engine lives here
+│           │   ├── application/
+│           │   │   ├── use-cases/
+│           │   │   │   ├── create-ingredient.use-case.ts
+│           │   │   │   ├── convert-uom.use-case.ts
+│           │   │   │   └── seed-categories.use-case.ts
+│           │   │   └── ports/      # Repository interfaces (no DB coupling)
+│           │   ├── infrastructure/
+│           │   │   ├── persistence/
+│           │   │   │   ├── ingredient.repository.ts  # Implements port
+│           │   │   │   └── category.repository.ts
+│           │   │   └── seeds/
+│           │   │       └── default-categories.seed.ts
+│           │   └── interface/
+│           │       ├── ingredients.controller.ts
+│           │       ├── suppliers.controller.ts
+│           │       └── dto/
+│           │           ├── create-ingredient.dto.ts
+│           │           └── ingredient-response.dto.ts
+│           │
+│           ├── costing/            # Bounded Context: Recipes & Escandallos (M2)
+│           ├── haccp/              # Bounded Context: HACCP / APPCC (M3)
+│           ├── operations/         # Bounded Context: Inventory & Orders (M4)
+│           │
+│           └── shared/             # Cross-cutting concerns
+│               ├── auth/           # JWT Authentication guards
+│               ├── tenant/         # Multi-tenant middleware (organizationId injection)
+│               ├── database/       # TypeORM / Prisma config, migrations
+│               └── openapi/        # Swagger setup (MCP-ready docs)
+│
+├── packages/
+│   ├── types/                      # Shared TypeScript types (DTOs used by web+api)
+│   └── uom-engine/                 # The UoM conversion library (publishable to npm)
+│
+├── docs/
+│   ├── prd-module-1-ingredients.md
+│   ├── architecture-decisions.md
+│   └── project-structure.md        # This file
+│
+├── _bmad/                          # BMAD-METHOD governance
+│   └── _config/
+│       └── agents/
+│           └── ui_ux_architect.md  # Custom UX persona
+│
+├── turbo.json                      # Turborepo pipeline config
+├── package.json                    # Root workspace package.json
+├── .gitignore
+├── LICENSE                         # AGPL-3.0
+└── README.md
+```
+
+## Key Design Decisions Visualised
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   openTrattOS                        │
+│                                                      │
+│  ┌──────────────────────────────────────────────┐   │
+│  │  Next.js (web)    PWA / Tablet Mode          │   │
+│  └──────────────────┬───────────────────────────┘   │
+│                     │ REST + OpenAPI (MCP-ready)     │
+│  ┌──────────────────▼───────────────────────────┐   │
+│  │             NestJS (api)                      │   │
+│  │  ┌──────────┐ ┌────────┐ ┌──────┐ ┌───────┐ │   │
+│  │  │Ingredients│ │Costing│ │HACCP │ │ Ops   │ │   │
+│  │  │  (M1) ✅  │ │ (M2)  │ │ (M3) │ │ (M4)  │ │   │
+│  │  └──────────┘ └────────┘ └──────┘ └───────┘ │   │
+│  │              shared: auth / tenant / db       │   │
+│  └──────────────────┬───────────────────────────┘   │
+│                     │                               │
+│  ┌──────────────────▼───────────────────────────┐   │
+│  │  PostgreSQL   Redis (cache)  MinIO (files)   │   │
+│  └──────────────────────────────────────────────┘   │
+│                                                      │
+│  ┌──────────────────────────────────────────────┐   │
+│  │  FastAPI / Python AI (optional microservice) │   │
+│  │  Only called if AI_SERVICE_URL is set        │   │
+│  └──────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────┘
+
+ENTERPRISE ONLY (TrattOS / Rancher):
+  Hermes/OpenClaw Agent ── LangGraph ── Hindsight Memory
+         │
+  WhatsApp / Telegram (kitchen staff interface)
+```
