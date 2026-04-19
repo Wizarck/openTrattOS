@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2022",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@opentrattos/types": ["../../packages/types/src"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
