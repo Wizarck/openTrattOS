@@ -111,3 +111,8 @@ dist
 
 # BMAD
 .bmad-core/tmp
+
+# RFC-0001 skills distribution: per-LLM mirrors are gitignored copies of skills/
+.claude/skills/
+.gemini/skills/
+.skills-sources/
