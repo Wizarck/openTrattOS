@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "atlassian-geeplo": {
+    "atlassian": {
       "auth": "cf-access",
       "env_optional": [
         "ATLASSIAN_USERNAME",
@@ -23,27 +23,15 @@
       ],
       "transport": "http"
     },
-    "google-workspace-arturo": {
+    "google-workspace": {
       "auth": "oauth",
       "env_optional": [
-        "GOOGLE_ARTURO_CLIENT_SECRET",
-        "GOOGLE_ARTURO_REFRESH_TOKEN"
+        "GOOGLE_CLIENT_SECRET",
+        "GOOGLE_REFRESH_TOKEN"
       ],
       "env_required": [
-        "GOOGLE_ARTURO_OAUTH_TOKEN",
-        "GOOGLE_ARTURO_CLIENT_ID"
-      ],
-      "transport": "http"
-    },
-    "google-workspace-palafito": {
-      "auth": "oauth",
-      "env_optional": [
-        "GOOGLE_PALAFITO_CLIENT_SECRET",
-        "GOOGLE_PALAFITO_REFRESH_TOKEN"
-      ],
-      "env_required": [
-        "GOOGLE_PALAFITO_OAUTH_TOKEN",
-        "GOOGLE_PALAFITO_CLIENT_ID"
+        "GOOGLE_OAUTH_TOKEN",
+        "GOOGLE_CLIENT_ID"
       ],
       "transport": "http"
     },
@@ -106,21 +94,10 @@
       ],
       "transport": "http"
     },
-    "trello-arturo": {
+    "trello": {
       "auth": "bearer",
       "env_optional": [
         "TRELLO_DEFAULT_BOARD_ID"
-      ],
-      "env_required": [
-        "TRELLO_API_KEY",
-        "TRELLO_TOKEN"
-      ],
-      "transport": "http"
-    },
-    "trello-palafito": {
-      "auth": "bearer",
-      "env_optional": [
-        "TRELLO_PALAFITO_BOARD_ID"
       ],
       "env_required": [
         "TRELLO_API_KEY",

@@ -18,7 +18,7 @@ capabilities_map: true
 Before responding to ANY task:
 
 1. Read `.ai-playbook/specs/dispatcher-chain.md` — universal norms and override semantics.
-2. Call MCP `hindsight.recall(query="openTrattOS <topic>")` to surface prior decisions.
+2. Consult `.claude/injected-context.md` — populated by the SessionStart hook from `hindsight.recall(query="openTrattOS <topic>")` against bank `opentrattos`. If absent or showing `DEGRADED_CONTEXT`, announce + proceed without prior recall.
 3. Check `openspec/changes/*/` for active work on the topic. If a change is live and open, extend it — don't start parallel work.
 4. Only then respond.
 

@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "atlassian-geeplo": {
+    "atlassian": {
       "env": {
         "ATLASSIAN_API_TOKEN": "${ATLASSIAN_API_TOKEN}",
         "ATLASSIAN_URL": "${ATLASSIAN_URL}"
@@ -12,16 +12,10 @@
         "TWENTY_API_URL": "${TWENTY_API_URL}"
       }
     },
-    "google-workspace-arturo": {
+    "google-workspace": {
       "env": {
-        "GOOGLE_ARTURO_CLIENT_ID": "${GOOGLE_ARTURO_CLIENT_ID}",
-        "GOOGLE_ARTURO_OAUTH_TOKEN": "${GOOGLE_ARTURO_OAUTH_TOKEN}"
-      }
-    },
-    "google-workspace-palafito": {
-      "env": {
-        "GOOGLE_PALAFITO_CLIENT_ID": "${GOOGLE_PALAFITO_CLIENT_ID}",
-        "GOOGLE_PALAFITO_OAUTH_TOKEN": "${GOOGLE_PALAFITO_OAUTH_TOKEN}"
+        "GOOGLE_CLIENT_ID": "${GOOGLE_CLIENT_ID}",
+        "GOOGLE_OAUTH_TOKEN": "${GOOGLE_OAUTH_TOKEN}"
       }
     },
     "guardrails-mcp": {
@@ -56,13 +50,7 @@
         "SKILLS_REGISTRY_URL": "${SKILLS_REGISTRY_URL}"
       }
     },
-    "trello-arturo": {
-      "env": {
-        "TRELLO_API_KEY": "${TRELLO_API_KEY}",
-        "TRELLO_TOKEN": "${TRELLO_TOKEN}"
-      }
-    },
-    "trello-palafito": {
+    "trello": {
       "env": {
         "TRELLO_API_KEY": "${TRELLO_API_KEY}",
         "TRELLO_TOKEN": "${TRELLO_TOKEN}"
