@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>openTrattOS — Trattoria palette options (4)</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px; line-height: 1.55; color: #18181b;
+  padding: 32px 24px; max-width: 1100px; margin: 0 auto;
+  background: #fafafa;
+}
+h1 { font-size: 26px; letter-spacing: -0.02em; margin-bottom: 6px; }
+.lede { color: #6b7280; font-size: 14px; max-width: 720px; }
+h2 { font-size: 16px; letter-spacing: -0.01em; margin-bottom: 4px; font-weight: 600; }
+h2 .id { font-family: ui-monospace, monospace; font-size: 12px; color: #71717a; font-weight: 500; margin-right: 6px; padding: 2px 6px; background: #f4f4f5; border-radius: 4px; }
+h2.recommended .id { background: #ecfdf5; color: #047857; }
+h2.recommended::after { content: "★ recommended"; font-size: 11px; font-weight: 600; color: #047857; margin-left: 8px; padding: 2px 6px; background: #ecfdf5; border-radius: 999px; vertical-align: 2px; }
+.soul { color: #6b7280; font-size: 13px; font-style: italic; margin-bottom: 14px; }
+
+.palette-section { background: #fff; border: 1px solid #e4e4e7; border-radius: 14px; padding: 24px; margin-bottom: 24px; }
+
+.swatches { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 18px; }
+.swatch { padding: 12px 10px; border-radius: 8px; font-family: ui-monospace, monospace; font-size: 11px; line-height: 1.4; min-height: 76px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid rgba(0,0,0,0.06); }
+.swatch .label { font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.65; }
+.swatch .hex { font-weight: 500; }
+
+.preview-grid { display: grid; grid-template-columns: 1fr 320px; gap: 18px; }
+@media (max-width: 760px) { .preview-grid { grid-template-columns: 1fr; } }
+.preview-frame { border-radius: 12px; padding: 18px 18px 16px; border: 1px solid; min-height: 280px; font-size: 13px; }
+.frame-row { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid; gap: 10px; }
+.frame-row:last-of-type { border-bottom: none; }
+.frame-row .name { flex: 1; font-weight: 500; }
+.frame-row .source { font-size: 12px; flex: 1; opacity: 0.6; }
+.frame-row .num { font-family: ui-monospace, monospace; font-feature-settings: "tnum"; }
+.frame-cite { font-family: ui-monospace, monospace; font-size: 10px; padding: 1px 5px; border-radius: 3px; margin-left: 4px; }
+.frame-actions { display: flex; gap: 6px; margin-top: 14px; }
+.frame-btn { font-family: inherit; font-size: 13px; padding: 6px 12px; border-radius: 7px; cursor: pointer; border: 1px solid; font-weight: 500; }
+.frame-btn-primary { font-weight: 600; }
+.frame-summary { display: flex; justify-content: space-between; align-items: baseline; padding-top: 12px; margin-top: 8px; border-top: 1px solid; font-size: 12px; }
+.frame-summary .live { font-family: ui-monospace, monospace; font-size: 16px; font-weight: 600; }
+.frame-summary .live.accent { font-size: 18px; }
+
+.aside-frame { padding: 16px; border-radius: 12px; border: 1px solid; }
+.aside-frame h3 { font-size: 13px; margin-bottom: 10px; font-weight: 600; }
+.aside-frame .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; border: 1px solid; }
+.aside-frame .margin-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+.aside-frame .margin-row.primary { font-size: 16px; font-weight: 700; padding: 10px 0 4px; }
+.aside-frame .margin-row.primary .num { font-family: ui-monospace, monospace; }
+
+.notes { font-size: 12px; color: #6b7280; margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e4e4e7; }
+.notes strong { color: #18181b; }
+
+footer { margin-top: 36px; padding-top: 20px; border-top: 1px solid #e4e4e7; color: #71717a; font-size: 13px; }
+footer code { background: #f4f4f5; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+
+/* ─── P1 Terracotta & Cream ─── */
+.p1 { --bg: #F4EDE2; --surface: #E8DFD0; --ink: #1F1B17; --mute: #6B5D4E; --border: #D4C8B6; --accent: #B8362B; --accent-fg: #FAF7F1; --success: #6B7A3F; --destructive: #7A2A1E; --warn-bg: #F5E5C9; }
+/* ─── P2 Hearth & Brass ─── */
+.p2 { --bg: #F5EFE3; --surface: #ECE4D2; --ink: #2A1F15; --mute: #6E5F4C; --border: #DCD0B7; --accent: #B5853F; --accent-fg: #FFFCF0; --success: #6E7C45; --destructive: #7A2A1E; --warn-bg: #F1DEC3; }
+/* ─── P3 Pulcinella ─── */
+.p3 { --bg: #F4EFE6; --surface: #ECE4D6; --ink: #1B1916; --mute: #6B6557; --border: #D9CFBF; --accent: #2E8B85; --accent-fg: #FAFCFB; --success: #5F7A4A; --destructive: #A8392F; --warn-bg: #F2E3C8; }
+/* ─── P4 Sun-faded Check ─── */
+.p4 { --bg: #FAF5EC; --surface: #F0DBC9; --ink: #181311; --mute: #6E5F50; --border: #DEC9B6; --accent: #B33D33; --accent-fg: #FAF7F2; --success: #647C52; --destructive: #7A2A1E; --warn-bg: #F4DEC8; }
+
+/* shared frame styling using palette CSS vars */
+.preview-frame { background: var(--bg); border-color: var(--border); color: var(--ink); }
+.frame-row { border-color: var(--border); }
+.frame-row .source, .frame-row .num.mute { color: var(--mute); }
+.frame-cite { background: var(--surface); color: var(--mute); }
+.frame-btn { background: var(--bg); border-color: var(--border); color: var(--ink); }
+.frame-btn-primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.frame-summary { border-color: var(--border); color: var(--mute); }
+.frame-summary .live.accent { color: var(--accent); }
+
+.aside-frame { background: var(--surface); border-color: var(--border); color: var(--ink); }
+.aside-frame .badge { background: var(--warn-bg); color: var(--destructive); border-color: var(--destructive); }
+.aside-frame .margin-row.primary .num { color: var(--success); }
+
+/* swatch text colors against backgrounds */
+.sw-bg { color: #1f1b17; } .sw-surface { color: #1f1b17; } .sw-ink { color: #f8f8f8; } .sw-mute { color: #fff; } .sw-accent { color: #fff; } .sw-success { color: #fff; } .sw-destructive { color: #fff; }
+.p1 .sw-bg { background: #F4EDE2; } .p1 .sw-surface { background: #E8DFD0; } .p1 .sw-ink { background: #1F1B17; } .p1 .sw-mute { background: #6B5D4E; } .p1 .sw-accent { background: #B8362B; } .p1 .sw-success { background: #6B7A3F; } .p1 .sw-destructive { background: #7A2A1E; }
+.p2 .sw-bg { background: #F5EFE3; } .p2 .sw-surface { background: #ECE4D2; } .p2 .sw-ink { background: #2A1F15; } .p2 .sw-mute { background: #6E5F4C; } .p2 .sw-accent { background: #B5853F; } .p2 .sw-success { background: #6E7C45; } .p2 .sw-destructive { background: #7A2A1E; }
+.p3 .sw-bg { background: #F4EFE6; } .p3 .sw-surface { background: #ECE4D6; } .p3 .sw-ink { background: #1B1916; } .p3 .sw-mute { background: #6B6557; } .p3 .sw-accent { background: #2E8B85; } .p3 .sw-success { background: #5F7A4A; } .p3 .sw-destructive { background: #A8392F; }
+.p4 .sw-bg { background: #FAF5EC; } .p4 .sw-surface { background: #F0DBC9; } .p4 .sw-ink { background: #181311; } .p4 .sw-mute { background: #6E5F50; } .p4 .sw-accent { background: #B33D33; } .p4 .sw-success { background: #647C52; } .p4 .sw-destructive { background: #7A2A1E; }
+</style>
+</head>
+<body>
+
+<h1>Trattoria palette options — for Mock G' iteration</h1>
+<p class="lede">Mock G's bones stay (system-font stack, OKLCH-friendly tinted neutrals, restrained accent ≤10%, allergen icon+text, prefers-reduced-motion). Only the colour layer changes. Pick one — or a hybrid (e.g. <em>"P3 accent on P1 base"</em>).</p>
+
+<!-- ────────────────── P1 ────────────────── -->
+<section class="palette-section p1">
+  <h2><span class="id">P1</span>Terracota & Crema <em style="font-weight:400;color:#71717a;font-size:14px;">— el icónico</em></h2>
+  <p class="soul">Trattoria de pueblo a mediodía. Pared de ladrillo + mantel cremoso. La carta clásica.</p>
+
+  <div class="swatches">
+    <div class="swatch sw-bg"><div class="label">bg</div><div class="hex">#F4EDE2</div></div>
+    <div class="swatch sw-surface"><div class="label">surface</div><div class="hex">#E8DFD0</div></div>
+    <div class="swatch sw-ink"><div class="label">ink</div><div class="hex">#1F1B17</div></div>
+    <div class="swatch sw-mute"><div class="label">mute</div><div class="hex">#6B5D4E</div></div>
+    <div class="swatch sw-accent"><div class="label">accent</div><div class="hex">#B8362B</div></div>
+    <div class="swatch sw-success"><div class="label">success</div><div class="hex">#6B7A3F</div></div>
+    <div class="swatch sw-destructive"><div class="label">danger</div><div class="hex">#7A2A1E</div></div>
+  </div>
+
+  <div class="preview-grid">
+    <div class="preview-frame">
+      <div class="frame-row"><span class="name">Crushed tomato <span style="color:var(--mute);font-size:11px;">· Heinz</span></span><span class="source">Distribuidora García</span><span class="num">200 g</span><span class="num mute">100% <span class="frame-cite">USDA</span></span><span class="num">€0.45</span></div>
+      <div class="frame-row"><span class="name">Onion</span><span class="source">Verduras del Sol</span><span class="num">100 g</span><span class="num mute">85% <span class="frame-cite">CIA</span></span><span class="num">€0.18</span></div>
+      <div class="frame-row"><span class="name">Ground beef</span><span class="source">Carnicería X</span><span class="num">300 g</span><span class="num mute">95% <span class="frame-cite">CIA</span></span><span class="num">€1.62</span></div>
+      <div class="frame-summary"><div>Recipe waste 18% <span class="frame-cite">stew avg · ICN</span></div><div>Live cost <span class="live accent">€3.45 / kg</span></div></div>
+      <div class="frame-actions"><button class="frame-btn">Discard</button><button class="frame-btn">Generate label</button><button class="frame-btn frame-btn-primary">Save recipe</button></div>
+    </div>
+    <div class="aside-frame">
+      <h3>Allergens & diet</h3>
+      <span class="badge"><span aria-hidden="true">⚠</span> Gluten</span>
+      <h3 style="margin-top:18px;">Menu · Dine-in</h3>
+      <div class="margin-row"><span>Cost</span><span>€3.45</span></div>
+      <div class="margin-row"><span>Sale price</span><span>€18.00</span></div>
+      <div class="margin-row primary"><span>Margin</span><span class="num">80.8% ✓</span></div>
+    </div>
+  </div>
+  <div class="notes"><strong>Strength:</strong> reads "Italian neighbourhood restaurant" instantly. <strong>Risk:</strong> very common — easy to be confused with stock rustic-Italian SaaS branding. Tomato red has saturation; needs the warm cream around it to breathe.</div>
+</section>
+
+<!-- ────────────────── P2 ────────────────── -->
+<section class="palette-section p2">
+  <h2><span class="id">P2</span>Hearth & Brass <em style="font-weight:400;color:#71717a;font-size:14px;">— osteria al anochecer</em></h2>
+  <p class="soul">La osteria a las 22:00. Lámpara encendida, pizarra del día, copas en la mesa. Tinta marrón en lugar de negro.</p>
+
+  <div class="swatches">
+    <div class="swatch sw-bg"><div class="label">bg</div><div class="hex">#F5EFE3</div></div>
+    <div class="swatch sw-surface"><div class="label">surface</div><div class="hex">#ECE4D2</div></div>
+    <div class="swatch sw-ink"><div class="label">ink</div><div class="hex">#2A1F15</div></div>
+    <div class="swatch sw-mute"><div class="label">mute</div><div class="hex">#6E5F4C</div></div>
+    <div class="swatch sw-accent"><div class="label">accent</div><div class="hex">#B5853F</div></div>
+    <div class="swatch sw-success"><div class="label">success</div><div class="hex">#6E7C45</div></div>
+    <div class="swatch sw-destructive"><div class="label">danger</div><div class="hex">#7A2A1E</div></div>
+  </div>
+
+  <div class="preview-grid">
+    <div class="preview-frame">
+      <div class="frame-row"><span class="name">Crushed tomato <span style="color:var(--mute);font-size:11px;">· Heinz</span></span><span class="source">Distribuidora García</span><span class="num">200 g</span><span class="num mute">100% <span class="frame-cite">USDA</span></span><span class="num">€0.45</span></div>
+      <div class="frame-row"><span class="name">Onion</span><span class="source">Verduras del Sol</span><span class="num">100 g</span><span class="num mute">85% <span class="frame-cite">CIA</span></span><span class="num">€0.18</span></div>
+      <div class="frame-row"><span class="name">Ground beef</span><span class="source">Carnicería X</span><span class="num">300 g</span><span class="num mute">95% <span class="frame-cite">CIA</span></span><span class="num">€1.62</span></div>
+      <div class="frame-summary"><div>Recipe waste 18% <span class="frame-cite">stew avg · ICN</span></div><div>Live cost <span class="live accent">€3.45 / kg</span></div></div>
+      <div class="frame-actions"><button class="frame-btn">Discard</button><button class="frame-btn">Generate label</button><button class="frame-btn frame-btn-primary">Save recipe</button></div>
+    </div>
+    <div class="aside-frame">
+      <h3>Allergens & diet</h3>
+      <span class="badge"><span aria-hidden="true">⚠</span> Gluten</span>
+      <h3 style="margin-top:18px;">Menu · Dine-in</h3>
+      <div class="margin-row"><span>Cost</span><span>€3.45</span></div>
+      <div class="margin-row"><span>Sale price</span><span>€18.00</span></div>
+      <div class="margin-row primary"><span>Margin</span><span class="num">80.8% ✓</span></div>
+    </div>
+  </div>
+  <div class="notes"><strong>Strength:</strong> única paleta sin negro — tinta umber `#2A1F15` da calidez sin perder rigor. El brass `#B5853F` evoca la lámpara antigua sin gritar. <strong>Risk:</strong> el accent dorado/brass tiene baja saturación contra fondos cremas — si no se cuida puede leer "papel viejo" en lugar de "lámpara que ilumina la mesa".</div>
+</section>
+
+<!-- ────────────────── P3 ────────────────── -->
+<section class="palette-section p3">
+  <h2 class="recommended"><span class="id">P3</span>Pulcinella <em style="font-weight:400;color:#71717a;font-size:14px;">— inesperada</em></h2>
+  <p class="soul">Cocina de pueblo + un punto de Mediterráneo. Puerta griega, cobre patinado, azulejo viejo. El detalle inesperado de los Pulcinella.</p>
+
+  <div class="swatches">
+    <div class="swatch sw-bg"><div class="label">bg</div><div class="hex">#F4EFE6</div></div>
+    <div class="swatch sw-surface"><div class="label">surface</div><div class="hex">#ECE4D6</div></div>
+    <div class="swatch sw-ink"><div class="label">ink</div><div class="hex">#1B1916</div></div>
+    <div class="swatch sw-mute"><div class="label">mute</div><div class="hex">#6B6557</div></div>
+    <div class="swatch sw-accent"><div class="label">accent</div><div class="hex">#2E8B85</div></div>
+    <div class="swatch sw-success"><div class="label">success</div><div class="hex">#5F7A4A</div></div>
+    <div class="swatch sw-destructive"><div class="label">danger</div><div class="hex">#A8392F</div></div>
+  </div>
+
+  <div class="preview-grid">
+    <div class="preview-frame">
+      <div class="frame-row"><span class="name">Crushed tomato <span style="color:var(--mute);font-size:11px;">· Heinz</span></span><span class="source">Distribuidora García</span><span class="num">200 g</span><span class="num mute">100% <span class="frame-cite">USDA</span></span><span class="num">€0.45</span></div>
+      <div class="frame-row"><span class="name">Onion</span><span class="source">Verduras del Sol</span><span class="num">100 g</span><span class="num mute">85% <span class="frame-cite">CIA</span></span><span class="num">€0.18</span></div>
+      <div class="frame-row"><span class="name">Ground beef</span><span class="source">Carnicería X</span><span class="num">300 g</span><span class="num mute">95% <span class="frame-cite">CIA</span></span><span class="num">€1.62</span></div>
+      <div class="frame-summary"><div>Recipe waste 18% <span class="frame-cite">stew avg · ICN</span></div><div>Live cost <span class="live accent">€3.45 / kg</span></div></div>
+      <div class="frame-actions"><button class="frame-btn">Discard</button><button class="frame-btn">Generate label</button><button class="frame-btn frame-btn-primary">Save recipe</button></div>
+    </div>
+    <div class="aside-frame">
+      <h3>Allergens & diet</h3>
+      <span class="badge"><span aria-hidden="true">⚠</span> Gluten</span>
+      <h3 style="margin-top:18px;">Menu · Dine-in</h3>
+      <div class="margin-row"><span>Cost</span><span>€3.45</span></div>
+      <div class="margin-row"><span>Sale price</span><span>€18.00</span></div>
+      <div class="margin-row primary"><span>Margin</span><span class="num">80.8% ✓</span></div>
+    </div>
+  </div>
+  <div class="notes"><strong>Strength:</strong> el turquesa `#2E8B85` es lo único de tu inspiración que ningún competidor hace — diferenciador inmediato. Los neutrals siguen siendo cálidos italianos, así que no se va al "Mediterranean travel poster". Allergen y destructive en paprika `#A8392F`, no en tomato — más serio. <strong>Risk:</strong> si subimos saturación del turquesa pierde la pátina y se va a "spa". Mantenerlo en este oklch ~0.55L / 0.06C.</div>
+</section>
+
+<!-- ────────────────── P4 ────────────────── -->
+<section class="palette-section p4">
+  <h2><span class="id">P4</span>Sun-faded Check <em style="font-weight:400;color:#71717a;font-size:14px;">— rojo sutil</em></h2>
+  <p class="soul">Mantel de cuadros tras 30 lavados. Calor sin gritar. Un guiño al icono sin dibujarlo literal.</p>
+
+  <div class="swatches">
+    <div class="swatch sw-bg"><div class="label">bg</div><div class="hex">#FAF5EC</div></div>
+    <div class="swatch sw-surface"><div class="label">surface</div><div class="hex">#F0DBC9</div></div>
+    <div class="swatch sw-ink"><div class="label">ink</div><div class="hex">#181311</div></div>
+    <div class="swatch sw-mute"><div class="label">mute</div><div class="hex">#6E5F50</div></div>
+    <div class="swatch sw-accent"><div class="label">accent</div><div class="hex">#B33D33</div></div>
+    <div class="swatch sw-success"><div class="label">success</div><div class="hex">#647C52</div></div>
+    <div class="swatch sw-destructive"><div class="label">danger</div><div class="hex">#7A2A1E</div></div>
+  </div>
+
+  <div class="preview-grid">
+    <div class="preview-frame">
+      <div class="frame-row"><span class="name">Crushed tomato <span style="color:var(--mute);font-size:11px;">· Heinz</span></span><span class="source">Distribuidora García</span><span class="num">200 g</span><span class="num mute">100% <span class="frame-cite">USDA</span></span><span class="num">€0.45</span></div>
+      <div class="frame-row"><span class="name">Onion</span><span class="source">Verduras del Sol</span><span class="num">100 g</span><span class="num mute">85% <span class="frame-cite">CIA</span></span><span class="num">€0.18</span></div>
+      <div class="frame-row"><span class="name">Ground beef</span><span class="source">Carnicería X</span><span class="num">300 g</span><span class="num mute">95% <span class="frame-cite">CIA</span></span><span class="num">€1.62</span></div>
+      <div class="frame-summary"><div>Recipe waste 18% <span class="frame-cite">stew avg · ICN</span></div><div>Live cost <span class="live accent">€3.45 / kg</span></div></div>
+      <div class="frame-actions"><button class="frame-btn">Discard</button><button class="frame-btn">Generate label</button><button class="frame-btn frame-btn-primary">Save recipe</button></div>
+    </div>
+    <div class="aside-frame">
+      <h3>Allergens & diet</h3>
+      <span class="badge"><span aria-hidden="true">⚠</span> Gluten</span>
+      <h3 style="margin-top:18px;">Menu · Dine-in</h3>
+      <div class="margin-row"><span>Cost</span><span>€3.45</span></div>
+      <div class="margin-row"><span>Sale price</span><span>€18.00</span></div>
+      <div class="margin-row primary"><span>Margin</span><span class="num">80.8% ✓</span></div>
+    </div>
+  </div>
+  <div class="notes"><strong>Strength:</strong> P1 con la saturación bajada un escalón. Más calmada al cabo de horas en la pantalla. Surface `#F0DBC9` es notablemente rosé — se siente físico, como tela. <strong>Risk:</strong> es básicamente G con accent rojo. Si el objetivo era diferenciarse de "trattoria-app de stock", esta opción no lo logra.</div>
+</section>
+
+<footer>
+Cuando elijas — <code>P1</code>, <code>P2</code>, <code>P3</code>, <code>P4</code>, o un híbrido (p.ej. <em>"P3 accent + P2 ink"</em>) — Sally itera Mock G' (`mock-G2-trattoria.html`) aplicando G's bones + tu paleta + las texturas de tus referencias (terracota implícita en bordes, calidez, tipografía system pero un detalle serif para el título de receta como guiño al menú escrito a mano). El Mock G original se mantiene en sitio.
+</footer>
+
+</body>
+</html>

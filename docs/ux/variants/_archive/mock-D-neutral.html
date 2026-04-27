@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mock D — Neutral baseline (shadcn defaults)</title>
+<link href="https://cdn.jsdelivr.net/npm/inter-ui@4.0.2/inter.min.css" rel="stylesheet">
+<style>
+:root {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(222.2 84% 4.9%);
+  --card: hsl(0 0% 100%);
+  --primary: hsl(222.2 47.4% 11.2%);
+  --primary-fg: hsl(210 40% 98%);
+  --secondary: hsl(210 40% 96.1%);
+  --secondary-fg: hsl(222.2 47.4% 11.2%);
+  --muted: hsl(210 40% 96.1%);
+  --muted-fg: hsl(215.4 16.3% 46.9%);
+  --accent: hsl(210 40% 96.1%);
+  --destructive: hsl(0 84.2% 60.2%);
+  --border: hsl(214.3 31.8% 91.4%);
+  --ring: hsl(222.2 84% 4.9%);
+  --success: hsl(142.1 76.2% 36.3%);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', system-ui, sans-serif; font-size: 14px; line-height: 1.5; color: var(--foreground); background: var(--background); padding: 24px; }
+.banner { background: var(--secondary); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; margin-bottom: 24px; font-size: 13px; color: var(--muted-fg); }
+.banner b { color: var(--foreground); }
+header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+h1 { font-size: 24px; font-weight: 600; line-height: 1.2; letter-spacing: -0.025em; }
+h1 .sub { font-weight: 400; color: var(--muted-fg); font-size: 16px; }
+.actions { display: flex; gap: 8px; }
+.btn { font-family: inherit; font-size: 14px; font-weight: 500; padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: opacity 150ms; border: 1px solid var(--border); background: var(--background); color: var(--foreground); }
+.btn:hover { background: var(--accent); }
+.btn-primary { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
+.btn-primary:hover { opacity: 0.9; }
+.layout { display: grid; grid-template-columns: 1fr 360px; gap: 24px; }
+@media (max-width: 1023px) { .layout { grid-template-columns: 1fr; } }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 24px; }
+.card h2 { font-size: 18px; font-weight: 600; margin-bottom: 16px; letter-spacing: -0.025em; }
+.muted { color: var(--muted-fg); font-size: 13px; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 12px; font-weight: 500; color: var(--muted-fg); padding: 10px 0; border-bottom: 1px solid var(--border); }
+th.num, td.num { text-align: right; font-weight: 500; }
+td { padding: 12px 0; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover { background: var(--muted); }
+.sub-recipe { font-weight: 500; }
+.brand { display: inline-block; font-size: 12px; color: var(--muted-fg); margin-left: 6px; }
+.brand::before { content: "·"; margin-right: 4px; }
+.citation { display: inline-flex; align-items: center; padding: 2px 6px; background: var(--secondary); border-radius: 4px; font-size: 11px; color: var(--muted-fg); margin-left: 8px; cursor: help; }
+.badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; padding: 2px 10px; border-radius: 6px; border: 1px solid; }
+.badge-destructive { color: var(--destructive); border-color: var(--destructive); background: var(--background); }
+.badge-outline { color: var(--foreground); border-color: var(--border); background: var(--background); }
+.macro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.macro-cell { padding: 12px; background: var(--secondary); border-radius: 6px; }
+.macro-num { font-size: 20px; font-weight: 600; line-height: 1.0; }
+.macro-label { font-size: 12px; color: var(--muted-fg); margin-top: 4px; }
+.margin-row { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.margin-row:last-child { border-bottom: none; }
+.margin-row.primary { padding: 12px 0; }
+.margin-row.primary .margin-num { font-size: 18px; font-weight: 600; }
+.margin-status { color: var(--success); }
+.allergen-row { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.allergen-row:last-child { border-bottom: none; }
+.allergen-row .label { font-size: 12px; color: var(--muted-fg); margin-bottom: 6px; }
+.flags { display: flex; flex-wrap: wrap; gap: 6px; }
+.recipe-summary { display: flex; justify-content: space-between; align-items: baseline; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.live-cost { font-size: 18px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="banner"><b>Variant D — Neutral baseline.</b> shadcn/ui defaults verbatim (slate, Inter, no custom motion). Brand voice deferred to M2.1+ when real signal arrives. Lowest pivot cost.</div>
+
+<header>
+  <h1>Tagliatelle Bolognesa <span class="sub">— Ragù base</span></h1>
+  <div class="actions">
+    <button class="btn">Discard</button>
+    <button class="btn">Generate label</button>
+    <button class="btn btn-primary">Save recipe</button>
+  </div>
+</header>
+
+<div class="layout">
+  <main>
+    <div class="card">
+      <h2>Ingredients</h2>
+      <table>
+        <thead>
+          <tr><th>Component</th><th>Source</th><th class="num">Qty</th><th class="num">Yield %</th><th class="num">Cost</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="sub-recipe">Salsa de tomate <span class="muted">(sub-recipe)</span></td><td class="muted">rolled up</td><td class="num">200 g</td><td class="num">100%</td><td class="num">€0.42</td></tr>
+          <tr><td>Crushed tomato <span class="brand">Heinz</span></td><td class="muted">Distribuidora García</td><td class="num">200 g</td><td class="num">100% <span class="citation">USDA</span></td><td class="num">€0.45</td></tr>
+          <tr><td>Onion</td><td class="muted">Verduras del Sol</td><td class="num">100 g</td><td class="num">85% <span class="citation">CIA</span></td><td class="num">€0.18</td></tr>
+          <tr><td>Carrot</td><td class="muted">Verduras del Sol</td><td class="num">80 g</td><td class="num">80% <span class="citation">USDA</span></td><td class="num">€0.12</td></tr>
+          <tr><td>Celery</td><td class="muted">Verduras del Sol</td><td class="num">60 g</td><td class="num">75% <span class="citation">USDA</span></td><td class="num">€0.10</td></tr>
+          <tr><td>Ground beef</td><td class="muted">Carnicería X</td><td class="num">300 g</td><td class="num">95% <span class="citation">CIA</span></td><td class="num">€1.62</td></tr>
+          <tr><td>Red wine</td><td class="muted">Bodega Real</td><td class="num">50 ml</td><td class="num">100%</td><td class="num">€0.18</td></tr>
+        </tbody>
+      </table>
+      <div class="recipe-summary">
+        <div><span class="muted">Waste 18%</span> <span class="citation">stew avg · ICN</span></div>
+        <div><span class="muted">Live cost</span> <span class="live-cost">€3.45 / kg</span></div>
+      </div>
+    </div>
+  </main>
+
+  <aside style="display:flex; flex-direction:column; gap:16px;">
+    <div class="card">
+      <h2>Macros (per 100g)</h2>
+      <div class="macro-grid">
+        <div class="macro-cell"><div class="macro-num">180</div><div class="macro-label">kcal</div></div>
+        <div class="macro-cell"><div class="macro-num">14g</div><div class="macro-label">carbs</div></div>
+        <div class="macro-cell"><div class="macro-num">9g</div><div class="macro-label">fat</div></div>
+        <div class="macro-cell"><div class="macro-num">8g</div><div class="macro-label">protein</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Allergens & diet</h2>
+      <div class="allergen-row">
+        <div class="label">Contains</div>
+        <span class="badge badge-destructive">⚠ Gluten</span>
+      </div>
+      <div class="allergen-row">
+        <div class="label">Diet flags</div>
+        <div class="flags">
+          <span class="muted">None applicable (beef, gluten, alcohol)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Menu · Palafito Centro / Dine-in</h2>
+      <div class="margin-row"><span>Cost</span><span>€3.45</span></div>
+      <div class="margin-row"><span>Sale price</span><span>€18.00</span></div>
+      <div class="margin-row primary"><span>Margin</span><span class="margin-num margin-status">80.8% ✓</span></div>
+      <div class="margin-row"><span class="muted">Target</span><span class="muted">70.0%</span></div>
+    </div>
+  </aside>
+</div>
+
+</body>
+</html>

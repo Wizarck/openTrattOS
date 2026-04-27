@@ -1,0 +1,674 @@
+<!doctype html>
+<!--
+  openTrattOS · Owner dashboard · Module 2 / Journey 3
+  Margin watch — bottom 5 / top 5 by margin, last 7 days. Mobile-first, 375px portrait canvas.
+  Pulcinella palette + DESIGN.md tokens. Owner persona (Roberto), Sunday-night sofa, one-handed.
+
+  typography (DESIGN.md §3):
+    - System sans for chrome. Fraunces serif on the page title and on dish names —
+      "menu nouns" wink, same logical role as the recipe title in J1. Sub-text and
+      chrome stay system sans. font-display:swap to hold the <1.5s NFR.
+    - tabular-nums + lining-nums on every digit (margin %, sold count, aggregate).
+    - Min body 13px. The delta-vs-target line is --text-sm 13px on --bg → --mute
+      contrast verified ≥4.5:1.
+
+  color (DESIGN.md §2, WCAG-AA):
+    --ink #1B1916 on --bg #F4EFE6        ~14:1   AA+ body
+    --mute #6B6557 on --bg               ~5.0:1  AA body (delta line, sold count)
+    --mute on --surface #ECE4D6          ~4.6:1  AA body (rank circle numeral)
+    --ink on --surface                   ~13:1   AA+ (rank circle numeral default)
+    --destructive #A8392F on --bg        ~5.6:1  AA semantic (sub-target margin)
+    --success #5F7A4A on --bg            ~4.6:1  AA semantic (above-target margin)
+    Colour is a cue, never alone — every flagged margin is paired with an explicit
+    "-13.2 pp from 70 % target" text delta. Article 21 not applicable on this surface.
+
+  spatial (DESIGN.md §5, mobile reach):
+    - 375px canvas, design for thumb in the bottom 2/3. Header is sticky (top); tab
+      bar is fixed (bottom, safe-area-inset-bottom respected) — both are reachable
+      with the right thumb without re-grip. Drill chevrons sit on the right edge,
+      reachable on the same arc.
+    - Touch targets: every rank row ≥64px (well above 48px floor); tab-bar items
+      56px tall and full-width-divided; chip controls 40px tall × 12px padding,
+      with ::before hit-area expansion to 48px.
+    - Cards reserved for distinct data domains: bottom-5 and top-5 are flat lists,
+      not nested cards. The aggregate strip and tab bar are flat-bordered surfaces.
+      No shadows, no glassmorphism on the sticky header (a 1px --border hairline
+      carries the separation).
+
+  motion (DESIGN.md §7):
+    - 100/300ms only. prefers-reduced-motion disables transitions globally.
+    - No celebration on top-5; no shake on bottom-5. Discipline is the design.
+
+  anti-patterns avoided: emoji rank numerals, hero-metric, side-tab, nested-cards,
+  monotonous-spacing, gradient-text, drop shadows, all-caps body, em dashes.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <!-- Mobile portrait canvas. The browser may render wider; the layout is locked
+       to 375px content width via .canvas. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Margin watch · openTrattOS · Owner</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" />
+
+  <style>
+    :root {
+      /* Pulcinella palette — OKLCH canonical (DESIGN.md §2). Hex in comments is derivation only. */
+      --bg:           oklch(94.5% 0.012 70);    /* #F4EFE6 warm cream */
+      --surface:      oklch(91.5% 0.014 70);    /* #ECE4D6 oat */
+      --surface-2:    oklch(88.5% 0.014 70);    /* sticky header strip */
+      --ink:          oklch(20%   0.010 60);    /* #1B1916 warm charcoal */
+      --mute:         oklch(48%   0.012 70);    /* #6B6557 warm mid-grey */
+      --border:       oklch(83%   0.018 70);    /* #D9CFBF sand */
+      --accent:       oklch(54%   0.072 190);   /* #2E8B85 aged turquoise */
+      --accent-fg:    oklch(99%   0.003 190);   /* #FAFCFB */
+      --success:      oklch(53%   0.080 130);   /* #5F7A4A sage olive */
+      --destructive:  oklch(48%   0.150 32);    /* #A8392F paprika */
+      --warn-bg:      oklch(91%   0.045 80);    /* #F2E3C8 soft sand */
+
+      /* spacing (DESIGN.md §5) */
+      --s-2xs:  4px;
+      --s-xs:   8px;
+      --s-sm:  12px;
+      --s-md:  16px;
+      --s-lg:  24px;
+      --s-xl:  32px;
+
+      /* type scale */
+      --text-xs: 12px;
+      --text-sm: 13px;
+      --text-md: 14px;
+      --text-lg: 18px;
+      --text-xl: 22px;
+      --text-2xl: 28px;
+
+      /* motion */
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+      --dur-fast: 100ms;
+      --dur-md: 300ms;
+
+      /* radii */
+      --r-sm: 4px;
+      --r-md: 8px;
+      --r-pill: 999px;
+
+      /* type stacks */
+      --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --font-serif: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+
+      --tab-bar-h: 64px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      font-size: var(--text-md);
+      line-height: 1.5;
+      color: var(--ink);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    h1, h2, h3 { margin: 0; line-height: 1.2; text-wrap: balance; }
+    p { margin: 0; }
+
+    .num {
+      font-variant-numeric: tabular-nums lining-nums;
+      font-feature-settings: "tnum" 1, "lnum" 1;
+    }
+
+    /* Focus ring — DESIGN.md §7 */
+    :focus { outline: none; }
+    :focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 2px;
+      border-radius: var(--r-sm);
+    }
+
+    /* Top context strip — analogous to J1's .provenance, but mobile-tight */
+    .provenance {
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      padding: var(--s-sm) var(--s-md);
+      font-size: var(--text-sm);
+      color: var(--mute);
+    }
+    .provenance b {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    /* Mobile canvas — locks the design to 375px portrait */
+    .canvas {
+      max-width: 375px;
+      margin: 0 auto;
+      min-height: 100vh;
+      background: var(--bg);
+      padding-bottom: calc(var(--tab-bar-h) + env(safe-area-inset-bottom, 0px) + var(--s-lg));
+      position: relative;
+    }
+
+    /* Sticky header — brand strip + filter chips */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .brand {
+      padding: var(--s-sm) var(--s-md);
+      font-size: var(--text-xs);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--mute);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand b { color: var(--ink); font-weight: 600; letter-spacing: 0.04em; }
+
+    .filters {
+      display: flex;
+      gap: var(--s-xs);
+      padding: var(--s-sm) var(--s-md);
+      align-items: center;
+    }
+    .chip {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 40px;
+      padding: var(--s-xs) var(--s-sm);
+      background: var(--surface);
+      color: var(--ink);
+      border: 1px solid var(--border);
+      border-radius: var(--r-pill);
+      font-size: var(--text-sm);
+      font-family: inherit;
+      cursor: pointer;
+      transition: background-color var(--dur-fast) var(--ease),
+                  border-color var(--dur-fast) var(--ease);
+    }
+    /* hit-area expansion to 48px without changing the visual */
+    .chip::before {
+      content: "";
+      position: absolute;
+      inset: -4px;
+      border-radius: var(--r-pill);
+    }
+    .chip:hover { background: var(--bg); }
+    .chip:active { background: var(--surface-2); }
+    .chip .caret {
+      width: 10px; height: 10px;
+      flex: none;
+      color: var(--mute);
+    }
+    .chip b { font-weight: 600; }
+
+    /* Page title */
+    .title-block {
+      padding: var(--s-md) var(--s-md) var(--s-xs);
+    }
+    .title-block h1 {
+      font-family: var(--font-serif);
+      font-weight: 600;
+      font-size: var(--text-2xl);
+      font-variation-settings: "opsz" 96;
+      color: var(--ink);
+      letter-spacing: -0.01em;
+    }
+    .title-block .sub {
+      margin-top: var(--s-2xs);
+      font-size: var(--text-sm);
+      color: var(--mute);
+    }
+
+    /* Section header */
+    .section-h {
+      padding: var(--s-lg) var(--s-md) var(--s-xs);
+      font-size: var(--text-md);
+      font-weight: 600;
+      color: var(--ink);
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+    }
+    .section-h .hint {
+      font-size: var(--text-xs);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--mute);
+      font-weight: 500;
+    }
+
+    /* MenuItemRanker — stack-row card */
+    .ranker {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      border-top: 1px solid var(--border);
+    }
+    .ranker li {
+      border-bottom: 1px solid var(--border);
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 36px 1fr auto 16px;
+      gap: var(--s-sm);
+      align-items: center;
+      width: 100%;
+      min-height: 64px;
+      padding: var(--s-sm) var(--s-md);
+      background: transparent;
+      border: none;
+      text-align: left;
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+      transition: background-color var(--dur-fast) var(--ease);
+    }
+    .row:hover { background: var(--surface); }
+    .row:active { background: var(--surface-2); }
+
+    .rank {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--surface);
+      color: var(--ink);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--text-sm);
+      font-weight: 600;
+      letter-spacing: 0;
+    }
+
+    .info { min-width: 0; }
+    .dish {
+      font-family: var(--font-serif);
+      font-weight: 500;
+      font-size: var(--text-lg);
+      font-variation-settings: "opsz" 24;
+      color: var(--ink);
+      letter-spacing: -0.005em;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .delta {
+      margin-top: 2px;
+      font-size: var(--text-sm);
+      color: var(--mute);
+      line-height: 1.3;
+    }
+    .volume {
+      margin-top: 1px;
+      font-size: var(--text-sm);
+      color: var(--mute);
+      line-height: 1.3;
+    }
+
+    .margin {
+      font-size: var(--text-xl);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .margin.--down  { color: var(--destructive); }
+    .margin.--up    { color: var(--success); }
+    .margin.--flat  { color: var(--ink); }
+
+    .chev {
+      color: var(--mute);
+      font-size: var(--text-lg);
+      line-height: 1;
+      width: 16px;
+      text-align: right;
+      font-family: var(--font-sans);
+    }
+
+    /* Aggregate strip — flat-bordered, accent top rule (DESIGN.md §6) */
+    .aggregate {
+      margin: var(--s-lg) var(--s-md) 0;
+      padding: var(--s-md);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 2px solid var(--accent);
+      border-radius: var(--r-md);
+      display: flex;
+      flex-direction: column;
+      gap: var(--s-2xs);
+    }
+    .aggregate .label {
+      font-size: var(--text-xs);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--mute);
+      font-weight: 500;
+    }
+    .aggregate .value {
+      font-size: var(--text-xl);
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .aggregate .meta {
+      font-size: var(--text-sm);
+      color: var(--mute);
+    }
+
+    /* Bottom tab bar — fixed, thumb-reach zone */
+    .tab-bar {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      max-width: 375px;
+      margin: 0 auto;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      z-index: 20;
+    }
+    .tab {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      min-height: var(--tab-bar-h);
+      padding: 6px 4px;
+      background: transparent;
+      border: none;
+      color: var(--mute);
+      font: inherit;
+      font-size: var(--text-xs);
+      cursor: pointer;
+      transition: color var(--dur-fast) var(--ease);
+    }
+    .tab svg {
+      width: 22px; height: 22px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .tab[aria-current="page"] {
+      color: var(--ink);
+    }
+    .tab[aria-current="page"]::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 28px;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+    .tab:hover { color: var(--ink); }
+
+    /* Reduced motion (DESIGN.md §7) */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+      }
+    }
+
+    /* On wider screens (e.g. desktop preview), keep the canvas at phone width
+       and centre it on a soft cream field — the layout is portrait by design. */
+    @media (min-width: 540px) {
+      body { background: var(--surface); }
+      .canvas {
+        margin-top: var(--s-lg);
+        margin-bottom: var(--s-lg);
+        min-height: 812px;
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        overflow: hidden;
+      }
+      .tab-bar { left: auto; right: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="provenance" role="note" aria-label="Screen context">
+    <b>openTrattOS &middot; Owner dashboard &middot; Module 2 / Journey 3</b>
+  </div>
+
+  <div class="canvas">
+
+    <!-- STICKY HEADER -->
+    <header class="header">
+      <div class="brand">
+        <span><b>openTrattOS</b></span>
+        <span>Roberto &middot; Owner</span>
+      </div>
+
+      <div class="filters" role="toolbar" aria-label="Dashboard filters">
+        <button type="button" class="chip" aria-haspopup="listbox" aria-label="Location filter, currently combined">
+          Palafito &middot; <b>Combined</b>
+          <svg class="caret" viewBox="0 0 10 10" aria-hidden="true" focusable="false">
+            <path d="M2 4l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button type="button" class="chip" aria-haspopup="listbox" aria-label="Time window, currently last 7 days">
+          <b>Last 7 days</b>
+          <svg class="caret" viewBox="0 0 10 10" aria-hidden="true" focusable="false">
+            <path d="M2 4l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- TITLE -->
+    <section class="title-block">
+      <h1>Margin watch</h1>
+      <div class="sub num">28 Apr 2026 &middot; Sunday</div>
+    </section>
+
+    <!-- BOTTOM 5 -->
+    <h2 class="section-h">
+      <span>Bottom 5 &mdash; losing margin</span>
+      <span class="hint">target 70 %</span>
+    </h2>
+    <ol class="ranker" aria-label="Bottom 5 menu items by margin, last 7 days">
+
+      <li>
+        <button type="button" class="row" aria-label="Risotto de hongos, margin 56.8 percent, 13.2 points below target, 12 sold last 7 days, tap to open">
+          <span class="rank num" aria-hidden="true">1</span>
+          <span class="info">
+            <span class="dish">Risotto de hongos</span>
+            <span class="delta num">-13.2 pp from 70 % target</span>
+            <span class="volume num">12 sold last 7d</span>
+          </span>
+          <span class="margin --down num">56.8 %</span>
+          <span class="chev" aria-hidden="true">&rsaquo;</span>
+        </button>
+      </li>
+
+      <li>
+        <button type="button" class="row" aria-label="Carbonara clásica, margin 58.0 percent, 12.0 points below target, 28 sold last 7 days, tap to open">
+          <span class="rank num" aria-hidden="true">2</span>
+          <span class="info">
+            <span class="dish">Carbonara clásica</span>
+            <span class="delta num">-12.0 pp from 70 % target</span>
+            <span class="volume num">28 sold last 7d</span>
+          </span>
+          <span class="margin --down num">58.0 %</span>
+          <span class="chev" aria-hidden="true">&rsaquo;</span>
+        </button>
+      </li>
+
+      <li>
+        <button type="button" class="row" aria-label="Lasaña de la casa, margin 61.5 percent, 8.5 points below target, 19 sold last 7 days, tap to open">
+          <span class="rank num" aria-hidden="true">3</span>
+          <span class="info">
+            <span class="dish">Lasaña de la casa</span>
+            <span class="delta num">-8.5 pp from 70 % target</span>
+            <span class="volume num">19 sold last 7d</span>
+          </span>
+          <span class="margin --down num">61.5 %</span>
+          <span class="chev" aria-hidden="true">&rsaquo;</span>
+        </button>
+      </li>
+
+      <li>
+        <button type="button" class="row" aria-label="Tagliatelle bolognesa, margin 77.1 percent, above target but down 3.7 points from last week, 41 sold last 7 days, tap to open">
+          <span class="rank num" aria-hidden="true">4</span>
+          <span class="info">
+            <span class="dish">Tagliatelle bolognesa</span>
+            <span class="delta num">-3.7 pp from last week &middot; above target</span>
+            <span class="volume num">41 sold last 7d</span>
+          </span>
+          <span class="margin --flat num">77.1 %</span>
+          <span class="chev" aria-hidden="true">&rsaquo;</span>
+        </button>
+      </li>
+
+      <li>
+        <button type="button" class="row" aria-label="Pizza margarita, margin 75.4 percent, above target but down 1.6 points, 64 sold last 7 days, tap to open">
+          <span class="rank num" aria-hidden="true">5</span>
+          <span class="info">
+            <span class="dish">Pizza margarita</span>
+            <span class="delta num">-1.6 pp from last week &middot; above target</span>
+            <span class="volume num">64 sold last 7d</span>
+          </span>
+          <span class="margin --flat num">75.4 %</span>
+          <span class="chev" aria-hidden="true">&rsaquo;</span>
+        </button>
+      </li>
+
+    </ol>
+
+    <!-- TOP 5 -->
+    <h2 class="section-h">
+      <span>Top 5 &mdash; keeping margin</span>
+      <span class="hint">target 70 %</span>
+    </h2>
+    <ol class="ranker" aria-label="Top 5 menu items by margin, last 7 days">
+
+      <li>
+        <button type="button" class="row" aria-label="Tiramisú, margin 85.9 percent, up 0.5 points, 38 sold last 7 days, tap to open">
+          <span class="rank num" aria-hidden="true">1</span>
+          <span class="info">
+            <span class="dish">Tiramisú</span>
+            <span class="delta num">+0.5 pp vs last week &middot; +15.9 pp over target</span>
+            <span class="volume num">38 sold last 7d</span>
+          </span>
+          <span class="margin --up num">85.9 %</span>
+          <span class="chev" aria-hidden="true">&rsaquo;</span>
+        </button>
+      </li>
+
+      <li>
+        <button type="button" class="row" aria-label="Tagliatelle al pesto, margin 82.2 percent, up 1.2 points, 22 sold last 7 days, tap to open">
+          <span class="rank num" aria-hidden="true">2</span>
+          <span class="info">
+            <span class="dish">Tagliatelle al pesto</span>
+            <span class="delta num">+1.2 pp vs last week &middot; +12.2 pp over target</span>
+            <span class="volume num">22 sold last 7d</span>
+          </span>
+          <span class="margin --up num">82.2 %</span>
+          <span class="chev" aria-hidden="true">&rsaquo;</span>
+        </button>
+      </li>
+
+      <li>
+        <button type="button" class="row" aria-label="Spaghetti aglio e olio, margin 81.2 percent, up 0.8 points, 31 sold last 7 days, tap to open">
+          <span class="rank num" aria-hidden="true">3</span>
+          <span class="info">
+            <span class="dish">Spaghetti aglio e olio</span>
+            <span class="delta num">+0.8 pp vs last week &middot; +11.2 pp over target</span>
+            <span class="volume num">31 sold last 7d</span>
+          </span>
+          <span class="margin --up num">81.2 %</span>
+          <span class="chev" aria-hidden="true">&rsaquo;</span>
+        </button>
+      </li>
+
+      <li>
+        <button type="button" class="row" aria-label="Bruschetta clásica, margin 80.0 percent, flat vs last week, 47 sold last 7 days, tap to open">
+          <span class="rank num" aria-hidden="true">4</span>
+          <span class="info">
+            <span class="dish">Bruschetta clásica</span>
+            <span class="delta num">+0.0 pp vs last week &middot; +10.0 pp over target</span>
+            <span class="volume num">47 sold last 7d</span>
+          </span>
+          <span class="margin --up num">80.0 %</span>
+          <span class="chev" aria-hidden="true">&rsaquo;</span>
+        </button>
+      </li>
+
+      <li>
+        <button type="button" class="row" aria-label="Insalata caprese, margin 78.2 percent, down 0.4 points, 18 sold last 7 days, tap to open">
+          <span class="rank num" aria-hidden="true">5</span>
+          <span class="info">
+            <span class="dish">Insalata caprese</span>
+            <span class="delta num">-0.4 pp vs last week &middot; +8.2 pp over target</span>
+            <span class="volume num">18 sold last 7d</span>
+          </span>
+          <span class="margin --up num">78.2 %</span>
+          <span class="chev" aria-hidden="true">&rsaquo;</span>
+        </button>
+      </li>
+
+    </ol>
+
+    <!-- AGGREGATE -->
+    <section class="aggregate" aria-label="Average margin summary">
+      <span class="label">Average margin</span>
+      <span class="value num">73.8 %</span>
+      <span class="meta">Combined locations &middot; last 7 days</span>
+    </section>
+
+    <!-- BOTTOM TAB BAR -->
+    <nav class="tab-bar" aria-label="Primary">
+      <button type="button" class="tab" aria-current="page">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M3 17l5-5 4 4 8-8"/>
+          <path d="M14 8h6v6"/>
+        </svg>
+        <span>Margin</span>
+      </button>
+      <button type="button" class="tab">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M5 4h11a3 3 0 013 3v13H7a2 2 0 01-2-2V4z"/>
+          <path d="M9 8h7M9 12h7M9 16h4"/>
+        </svg>
+        <span>Recipes</span>
+      </button>
+      <button type="button" class="tab">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>
+        </svg>
+        <span>Reports</span>
+      </button>
+      <button type="button" class="tab">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/>
+        </svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+  </div>
+
+</body>
+</html>

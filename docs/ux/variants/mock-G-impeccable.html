@@ -1,0 +1,574 @@
+<!doctype html>
+<!--
+  Mock G — earlier variant of the openTrattOS recipe view. Kept as a fallback in case
+  the canonical Mock G' direction needs to be reverted. The canonical design system is
+  defined in docs/ux/DESIGN.md; this file is a historical artifact and should not be
+  edited going forward — changes to the design system happen in DESIGN.md only.
+
+  Differences from the canonical (G'):
+   - Brand hue: clay/terracotta (warm-on-warm). G' switched to aged-turquoise as the
+     complementary cool note in an otherwise warm palette.
+   - Typography: 100% system-font stack on every text. G' adds one transitional serif
+     on the recipe title only as a chalkboard-menu wink.
+-->
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Tagliatelle Bolognesa · Ragù base · openTrattOS</title>
+  <style>
+    /* ---------- design tokens (tinted neutrals, OKLCH, semantic names) ---------- */
+    :root {
+      /* brand hue: clay/terracotta — kitchen, not "food=red" reflex. Picked AFTER scene sentence. */
+      --hue: 45;            /* oklch hue */
+      --chroma-brand: 0.13;
+      --chroma-tint:  0.008; /* tinted-neutrals trick (color-and-contrast.md L13-19) */
+
+      /* neutrals — chroma 0.008 toward clay, never #fff/#000 */
+      --bg:        oklch(98%   var(--chroma-tint) var(--hue));
+      --surface:   oklch(96%   var(--chroma-tint) var(--hue));
+      --surface-2: oklch(93%   var(--chroma-tint) var(--hue));
+      --border:    oklch(85%   var(--chroma-tint) var(--hue));
+      --border-strong: oklch(74% var(--chroma-tint) var(--hue));
+      --text-mute: oklch(46%   var(--chroma-tint) var(--hue)); /* 4.6:1 on --bg, AA pass */
+      --text:      oklch(22%   var(--chroma-tint) var(--hue)); /* ~13:1 on --bg */
+      --text-strong: oklch(14% var(--chroma-tint) var(--hue));
+
+      /* brand + semantic — Restrained strategy: brand only on primary action */
+      --brand:     oklch(58%   var(--chroma-brand) var(--hue));
+      --brand-ink: oklch(99%   0.005 var(--hue));    /* not pure white */
+      --brand-press: oklch(50% 0.13  var(--hue));
+
+      --ok:        oklch(52%   0.14  148);  /* semantic green (margin OK) — AA on bg */
+      --warn:      oklch(70%   0.16  75);   /* amber for allergen */
+      --warn-ink:  oklch(20%   0.06  75);
+      --danger:    oklch(54%   0.18  25);   /* used only on actual error states */
+
+      /* spacing — 4pt base (spatial-design.md L7) */
+      --space-2xs: 4px;
+      --space-xs:  8px;
+      --space-sm:  12px;
+      --space-md:  16px;
+      --space-lg:  24px;
+      --space-xl:  32px;
+      --space-2xl: 48px;
+
+      /* type — 5 steps, ratio 1.25 (typography.md L23) */
+      --fs-xs:   13px;  /* hard floor — anti-pattern tiny-text guards >12 */
+      --fs-sm:   14px;
+      --fs-base: 16px;
+      --fs-lg:   20px;
+      --fs-xl:   26px;
+      --fs-2xl:  32px;
+
+      /* line-heights match base unit (typography.md L7-9) */
+      --lh-tight: 1.2;
+      --lh-base:  1.55;
+
+      /* motion */
+      --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+      --dur-fast: 150ms;
+
+      /* radii */
+      --r-sm: 4px;
+      --r-md: 6px;
+
+      /* z scale — semantic, not arbitrary */
+      --z-toast: 500;
+    }
+
+    /* ---------- reset, modest ---------- */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: var(--fs-base);
+      line-height: var(--lh-base);
+      color: var(--text);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    h1, h2, h3 { text-wrap: balance; line-height: var(--lh-tight); margin: 0; }
+    p { margin: 0; }
+
+    /* tabular numerics on every table digit + the live banner */
+    .num, table td.num, .live-cost b, .macro b, .menu-row b { font-variant-numeric: tabular-nums; }
+
+    /* ---------- focus, eight-state interactions (interaction-design.md L21) ---------- */
+    :focus { outline: none; }
+    :focus-visible {
+      outline: 3px solid var(--brand);
+      outline-offset: 2px;
+      border-radius: var(--r-sm);
+    }
+
+    /* ---------- mock provenance banner ---------- */
+    .provenance {
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      padding: var(--space-sm) var(--space-lg);
+      font-size: var(--fs-sm);
+      color: var(--text-mute);
+    }
+    .provenance b { color: var(--text-strong); font-weight: 600; }
+
+    /* ---------- app shell ---------- */
+    .shell {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: var(--space-lg) var(--space-xl);
+    }
+    @media (max-width: 720px) {
+      .shell { padding: var(--space-md); }
+    }
+
+    /* ---------- header (no hero-metric template; just identity + actions) ---------- */
+    .head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--space-lg);
+      flex-wrap: wrap;
+      padding-bottom: var(--space-md);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: var(--space-lg);
+    }
+    .head .titles { min-width: 0; }
+    .eyebrow {
+      font-size: var(--fs-xs);
+      letter-spacing: 0.06em;       /* short label tracking, typography.md L143 */
+      text-transform: uppercase;
+      color: var(--text-mute);
+      margin-bottom: var(--space-2xs);
+    }
+    h1 {
+      font-size: var(--fs-2xl);
+      font-weight: 600;             /* not 800 — utilitarian, not screaming */
+      color: var(--text-strong);
+      letter-spacing: -0.005em;
+    }
+    .sub {
+      font-size: var(--fs-sm);
+      color: var(--text-mute);
+      margin-top: var(--space-xs);
+    }
+
+    /* ---------- actions (eight-state, ≥48px hit, verb+object labels) ---------- */
+    .actions { display: inline-flex; gap: var(--space-xs); flex-wrap: wrap; }
+    .btn {
+      position: relative;
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text-strong);
+      font: inherit;
+      font-weight: 500;
+      padding: 12px 18px;          /* coarse-pointer tuned (responsive-design.md L23) */
+      min-height: 44px;
+      border-radius: var(--r-md);
+      cursor: pointer;
+      transition: background-color var(--dur-fast) var(--ease-out-quart),
+                  transform var(--dur-fast) var(--ease-out-quart),
+                  border-color var(--dur-fast) var(--ease-out-quart);
+    }
+    .btn::before {                 /* expand tap target without enlarging visual */
+      content: ""; position: absolute; inset: -4px; border-radius: var(--r-md);
+    }
+    .btn:hover  { background: var(--surface-2); }
+    .btn:active { transform: translateY(1px); }
+    .btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+    .btn--primary {
+      background: var(--brand); color: var(--brand-ink); border-color: var(--brand);
+      font-weight: 600;
+    }
+    .btn--primary:hover  { background: var(--brand-press); }
+    .btn--primary:active { background: var(--brand-press); }
+    .btn--ghost {                  /* "Discard": secondary, not destructive-red — Undo > Confirm */
+      background: transparent; border-color: transparent; color: var(--text-mute);
+    }
+    .btn--ghost:hover { background: var(--surface-2); color: var(--text-strong); }
+
+    @media (pointer: coarse) {
+      .btn { padding: 14px 20px; min-height: 48px; }
+    }
+
+    /* ---------- main grid: 60% table / 40% sidebar at tablet+ ---------- */
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
+      gap: var(--space-xl);
+      align-items: start;
+    }
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: 1fr; gap: var(--space-lg); }
+    }
+
+    /* ---------- ingredient table — NOT in a card; just clean tabular layout ---------- */
+    section.ingredients h2 {
+      font-size: var(--fs-lg);
+      font-weight: 600;
+      color: var(--text-strong);
+      margin-bottom: var(--space-sm);
+    }
+    table.ingr {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--fs-sm);
+    }
+    .ingr thead th {
+      text-align: left;
+      font-weight: 600;
+      font-size: var(--fs-xs);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+      padding: var(--space-sm) var(--space-md);
+      border-bottom: 1px solid var(--border-strong);
+      background: var(--bg);
+    }
+    .ingr tbody td {
+      padding: var(--space-sm) var(--space-md);
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      line-height: 1.45;
+    }
+    .ingr tbody tr:last-child td { border-bottom: none; }
+    .ingr td.num { text-align: right; white-space: nowrap; }
+    .component { font-weight: 500; color: var(--text-strong); }
+    .source { color: var(--text-mute); font-size: var(--fs-xs); margin-top: 2px; }
+    .sub-recipe-tag {
+      display: inline-block;
+      font-size: var(--fs-xs);
+      color: var(--text-mute);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-sm);
+      padding: 1px 6px;
+      margin-left: var(--space-xs);
+      background: var(--surface);
+    }
+    .cite {
+      font-size: 11px;             /* citations only, not body — still readable */
+      color: var(--text-mute);
+      cursor: help;
+      border-bottom: 1px dotted var(--border-strong);
+    }
+
+    .summary {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      margin-top: var(--space-md);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      font-size: var(--fs-sm);
+      flex-wrap: wrap;
+    }
+    .summary .live-cost b {
+      font-size: var(--fs-lg);
+      color: var(--text-strong);
+      font-weight: 600;
+    }
+
+    /* ---------- sidebar panels (NOT nested cards; flat full-bordered panels) ---------- */
+    aside.side {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: var(--space-md) var(--space-lg);
+    }
+    .panel h3 {
+      font-size: var(--fs-sm);
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+      margin-bottom: var(--space-sm);
+    }
+
+    /* macros — varied spacing, not identical-card-grid */
+    .macros {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-sm) var(--space-md);
+      font-size: var(--fs-sm);
+    }
+    .macro b {
+      display: block;
+      font-size: var(--fs-lg);
+      font-weight: 600;
+      color: var(--text-strong);
+    }
+    .macro span {
+      color: var(--text-mute);
+      font-size: var(--fs-xs);
+    }
+    @media (max-width: 360px) {
+      .macros { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* allergen badge: icon + text + border — NEVER color-only (EU 1169 + a11y) */
+    .badge-allergen {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--warn);
+      background: oklch(95% 0.04 75); /* tinted, not pure */
+      color: var(--warn-ink);
+      font-size: var(--fs-sm);
+      font-weight: 500;
+    }
+    .badge-allergen svg { flex: none; }
+    .allergen-note {
+      margin-top: var(--space-sm);
+      font-size: var(--fs-xs);
+      color: var(--text-mute);
+      line-height: 1.5;
+    }
+
+    /* menu panel: cost / sale / margin / target — flat key/value, no template hero */
+    .menu-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: var(--space-xs) 0;
+      border-bottom: 1px dashed var(--border);
+      font-size: var(--fs-sm);
+    }
+    .menu-row:last-of-type { border-bottom: none; }
+    .menu-row span { color: var(--text-mute); }
+    .menu-row b { font-weight: 600; color: var(--text-strong); }
+    .menu-row .ok {
+      color: var(--ok);
+      font-weight: 600;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .menu-loc {
+      font-size: var(--fs-xs);
+      color: var(--text-mute);
+      margin-bottom: var(--space-sm);
+    }
+
+    /* ---------- reduced motion ---------- */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* ---------- mobile table → row layout (responsive-design.md L98) ---------- */
+    @media (max-width: 540px) {
+      .ingr thead { display: none; }
+      .ingr, .ingr tbody, .ingr tr, .ingr td { display: block; width: 100%; }
+      .ingr tr { border-bottom: 1px solid var(--border); padding: var(--space-sm) 0; }
+      .ingr td { border: none; padding: 2px var(--space-xs); }
+      .ingr td.num { text-align: left; }
+      .ingr td.num::before {
+        content: attr(data-label) ": ";
+        color: var(--text-mute);
+        font-size: var(--fs-xs);
+        margin-right: 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="provenance" role="note" aria-label="Mock provenance">
+    <b>Mock G</b> · earlier variant kept as fallback · See <a href="mock-G2-trattoria.html">Mock G&#39;</a> for the canonical design and <a href="../DESIGN.md">DESIGN.md</a> for the design system.
+  </div>
+
+  <main class="shell">
+
+    <header class="head">
+      <div class="titles">
+        <div class="eyebrow">Recipe · Sub-recipe used by 4 dishes</div>
+        <h1>Tagliatelle Bolognesa</h1>
+        <div class="sub">Ragù base · last edited today, 12:14 by Lourdes</div>
+      </div>
+
+      <nav class="actions" aria-label="Recipe actions">
+        <button type="button" class="btn btn--ghost">Discard</button>
+        <button type="button" class="btn">Generate label</button>
+        <button type="button" class="btn btn--primary">Save recipe</button>
+      </nav>
+    </header>
+
+    <div class="grid">
+
+      <!-- INGREDIENT TABLE -->
+      <section class="ingredients" aria-labelledby="ingr-h">
+        <h2 id="ingr-h">Ingredients</h2>
+
+        <table class="ingr" aria-describedby="ingr-summary">
+          <thead>
+            <tr>
+              <th scope="col">Component</th>
+              <th scope="col">Source</th>
+              <th scope="col" style="text-align:right;">Qty</th>
+              <th scope="col" style="text-align:right;">Yield %</th>
+              <th scope="col" style="text-align:right;">Cost</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            <tr>
+              <td>
+                <div class="component">Salsa de tomate <span class="sub-recipe-tag">sub-recipe</span></div>
+                <div class="source">rolled up</div>
+              </td>
+              <td><span style="color:var(--text-mute);">(rolled up)</span></td>
+              <td class="num" data-label="Qty">200 g</td>
+              <td class="num" data-label="Yield">100%</td>
+              <td class="num" data-label="Cost">€0.42</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="component">Crushed tomato &middot; Heinz</div>
+                <div class="source">Distribuidora García</div>
+              </td>
+              <td>Distribuidora García</td>
+              <td class="num" data-label="Qty">200 g</td>
+              <td class="num" data-label="Yield">100% <span class="cite" title="USDA FoodData Central — yield reference">[USDA]</span></td>
+              <td class="num" data-label="Cost">€0.45</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="component">Onion</div>
+                <div class="source">Verduras del Sol</div>
+              </td>
+              <td>Verduras del Sol</td>
+              <td class="num" data-label="Qty">100 g</td>
+              <td class="num" data-label="Yield">85% <span class="cite" title="The Culinary Institute of America — peeling/trim yields">[CIA]</span></td>
+              <td class="num" data-label="Cost">€0.18</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="component">Carrot</div>
+                <div class="source">Verduras del Sol</div>
+              </td>
+              <td>Verduras del Sol</td>
+              <td class="num" data-label="Qty">80 g</td>
+              <td class="num" data-label="Yield">80% <span class="cite" title="USDA FoodData Central">[USDA]</span></td>
+              <td class="num" data-label="Cost">€0.12</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="component">Celery</div>
+                <div class="source">Verduras del Sol</div>
+              </td>
+              <td>Verduras del Sol</td>
+              <td class="num" data-label="Qty">60 g</td>
+              <td class="num" data-label="Yield">75% <span class="cite" title="USDA FoodData Central">[USDA]</span></td>
+              <td class="num" data-label="Cost">€0.10</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="component">Ground beef</div>
+                <div class="source">Carnicería X</div>
+              </td>
+              <td>Carnicería X</td>
+              <td class="num" data-label="Qty">300 g</td>
+              <td class="num" data-label="Yield">95% <span class="cite" title="The Culinary Institute of America — cooking yields">[CIA]</span></td>
+              <td class="num" data-label="Cost">€1.62</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="component">Red wine</div>
+                <div class="source">Bodega Real</div>
+              </td>
+              <td>Bodega Real</td>
+              <td class="num" data-label="Qty">50 ml</td>
+              <td class="num" data-label="Yield">100%</td>
+              <td class="num" data-label="Cost">€0.18</td>
+            </tr>
+
+          </tbody>
+        </table>
+
+        <div class="summary" id="ingr-summary">
+          <div>
+            Recipe waste 18% <span class="cite" title="ICN — Instituto Culinario Nacional, stew average reduction">[stew avg, ICN]</span>
+          </div>
+          <div class="live-cost" aria-live="polite">
+            Live cost <b>€3.45</b> <span style="color:var(--text-mute);">/ kg</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SIDEBAR -->
+      <aside class="side" aria-label="Recipe summary">
+
+        <!-- Macros -->
+        <section class="panel" aria-labelledby="macros-h">
+          <h3 id="macros-h">Macros per 100&nbsp;g</h3>
+          <div class="macros">
+            <div class="macro"><b>180</b><span>kcal</span></div>
+            <div class="macro"><b>14&nbsp;g</b><span>carbs</span></div>
+            <div class="macro"><b>9&nbsp;g</b><span>fat</span></div>
+            <div class="macro"><b>8&nbsp;g</b><span>protein</span></div>
+          </div>
+        </section>
+
+        <!-- Allergens & diet -->
+        <section class="panel" aria-labelledby="all-h">
+          <h3 id="all-h">Allergens &amp; diet</h3>
+
+          <div class="badge-allergen" role="status" aria-label="Contains gluten">
+            <!-- icon: warning triangle, NOT decorative — has aria via parent label -->
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+              <path d="M8 6v3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <circle cx="8" cy="11.6" r="0.9" fill="currentColor"/>
+            </svg>
+            <span>Contains <b>Gluten</b></span>
+          </div>
+
+          <p class="allergen-note">
+            Diet flags: none applicable. Recipe contains beef, gluten, and alcohol.
+          </p>
+        </section>
+
+        <!-- Menu pricing -->
+        <section class="panel" aria-labelledby="menu-h">
+          <h3 id="menu-h">Menu</h3>
+          <div class="menu-loc">Palafito Centro &middot; Dine-in</div>
+
+          <div class="menu-row"><span>Cost</span><b>€3.45</b></div>
+          <div class="menu-row"><span>Sale</span><b>€18.00</b></div>
+          <div class="menu-row">
+            <span>Margin</span>
+            <span class="ok" aria-label="Margin 80.8 percent, above target">
+              <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path d="M3 8.5l3.2 3.2L13 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              80.8%
+            </span>
+          </div>
+          <div class="menu-row"><span>Target</span><b>70%</b></div>
+        </section>
+
+      </aside>
+
+    </div>
+  </main>
+
+</body>
+</html>

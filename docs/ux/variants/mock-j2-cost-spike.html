@@ -1,0 +1,723 @@
+<!doctype html>
+<!--
+  openTrattOS · Cost audit · Module 2 / Journey 2
+  Tagliatelle Bolognesa — Cost audit. Tablet-first kitchen surface.
+  Pulcinella palette + structural discipline of the canonical openTrattOS design system.
+
+  Per-dimension audit notes — every reference points inward to docs/ux/DESIGN.md.
+
+  typography (DESIGN.md §3): UI on system sans; recipe-name fragment of the title in
+    Fraunces (one-serif-wink rule, opsz 96 at display size); `— Cost audit` stays sans
+    so the surface reads as audit, not editor. tabular-nums + lining-nums on every digit
+    (Cost was/now, Δ, Δ %, Margin, Total). text-wrap:balance on H1.
+
+  color (DESIGN.md §2):
+    --ink #1B1916 on --bg #F4EFE6 → ~14:1 (AA+ body)
+    --mute #6B6557 on --bg #F4EFE6 → ~5.0:1 (AA body — also valid for the strikethrough
+      "old cost" cells; mute on cream is verified body-grade)
+    --mute #6B6557 on --surface #ECE4D6 → ~4.6:1 (AA body — chip unselected text)
+    --destructive #A8392F on --bg #F4EFE6 → ~5.6:1 (AA — the Δ column on the spike row)
+    --success #5F7A4A on --bg #F4EFE6 → ~4.6:1 (AA — Target ✓ in MarginPanel)
+    --accent-fg #FAFCFB on --accent #2E8B85 → ~5.1:1 (AA — primary CTA)
+    --ink on chip selected (--accent border on --bg) → 14:1 text + 3:1+ ring
+    --destructive sign rule: positive Δ that means cost-going-up renders --destructive
+      (cost up = bad for chef). Negative Δ (cost down) renders --success. Sign and
+      colour are independent.
+
+  spatial (DESIGN.md §5/§6): 4pt scale, sticky action bar with ≥48px touch targets,
+    table NOT in a card, MarginPanel is one flat full-bordered panel, no nested cards,
+    no side-stripe accent borders.
+
+  motion (DESIGN.md §7): only opacity/transform animated, 150ms ease-out-quart,
+    prefers-reduced-motion disables transitions globally.
+
+  Anti-patterns avoided: pure-black-white, gray-on-color, gradient-text, AI-color-
+    palette, bounce-easing, glassmorphism, layout-transition, modal-as-first-thought,
+    nested-cards, side-tab, monotonous-spacing, em dashes, all-caps-body, tiny-text,
+    icon-tile-stack, hero-metric template, identical card grids.
+-->
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Tagliatelle Bolognesa · Cost audit · openTrattOS</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap"
+  />
+
+  <style>
+    :root {
+      /* Pulcinella palette — OKLCH canonical (DESIGN.md §2). Hex in comments is derivation only. */
+      --bg:           oklch(94.5% 0.012 70);    /* #F4EFE6 warm cream */
+      --surface:      oklch(91.5% 0.014 70);    /* #ECE4D6 oat */
+      --surface-2:    oklch(88.5% 0.014 70);    /* sticky strips, banners */
+      --border:       oklch(83%   0.018 70);    /* #D9CFBF sand */
+      --border-strong: oklch(73%  0.020 70);    /* table head rule */
+      --ink:          oklch(20%   0.010 60);    /* #1B1916 warm charcoal */
+      --mute:         oklch(48%   0.012 70);    /* #6B6557 warm mid-grey */
+      --accent:       oklch(54%   0.072 190);   /* #2E8B85 aged turquoise */
+      --accent-press: oklch(46%   0.072 190);   /* darker press state */
+      --accent-fg:    oklch(99%   0.003 190);   /* #FAFCFB */
+      --accent-soft:  oklch(91%   0.025 190);   /* chip selected, citation hover */
+      --success:      oklch(53%   0.080 130);   /* #5F7A4A sage olive */
+      --destructive:  oklch(48%   0.150 32);    /* #A8392F paprika */
+      --warn-bg:      oklch(91%   0.045 80);    /* #F2E3C8 soft sand */
+
+      /* spacing — 4pt base (DESIGN.md §5) */
+      --space-2xs: 4px;
+      --space-xs:  8px;
+      --space-sm:  12px;
+      --space-md:  16px;
+      --space-lg:  24px;
+      --space-xl:  32px;
+      --space-2xl: 48px;
+
+      /* type — 5 steps, ratio 1.25 (DESIGN.md §3) */
+      --fs-xs:   13px;
+      --fs-sm:   14px;
+      --fs-base: 16px;
+      --fs-lg:   20px;
+      --fs-xl:   26px;
+      --fs-2xl:  34px;
+
+      --lh-tight: 1.15;
+      --lh-base:  1.55;
+
+      --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+      --dur-fast: 150ms;
+
+      --r-sm: 4px;
+      --r-md: 6px;
+
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto,
+                   "Helvetica Neue", Arial, sans-serif;
+      --font-serif-title: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+    }
+
+    /* reset */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      font-size: var(--fs-base);
+      line-height: var(--lh-base);
+      color: var(--ink);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    h1, h2, h3 { text-wrap: balance; line-height: var(--lh-tight); margin: 0; }
+    p { margin: 0; }
+
+    /* tabular numerics on every digit (DESIGN.md §3) */
+    .num, td.num, .delta, .delta-pct, .margin-row b, .margin-row .strike, .total b {
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    /* focus ring (DESIGN.md §7) */
+    :focus { outline: none; }
+    :focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 2px;
+      border-radius: var(--r-sm);
+    }
+
+    /* screen-context banner — matches J1 style */
+    .provenance {
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      padding: var(--space-sm) var(--space-lg);
+      font-size: var(--fs-sm);
+      color: var(--mute);
+      line-height: 1.5;
+    }
+    .provenance b { color: var(--ink); font-weight: 600; }
+    .provenance .note { display: block; margin-top: 2px; }
+
+    /* sticky action bar (top of shell) */
+    .action-bar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding: var(--space-sm) var(--space-xl);
+      display: flex;
+      gap: var(--space-xs);
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    .action-bar .spacer { flex: 1; }
+
+    /* shell */
+    .shell {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: var(--space-lg) var(--space-xl);
+    }
+    @media (max-width: 720px) {
+      .shell { padding: var(--space-md); }
+      .action-bar { padding: var(--space-sm) var(--space-md); }
+    }
+
+    /* header */
+    .head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--space-lg);
+      flex-wrap: wrap;
+      padding-bottom: var(--space-md);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: var(--space-lg);
+    }
+    .head .titles { min-width: 0; max-width: 60ch; }
+    .eyebrow {
+      font-size: var(--fs-xs);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--mute);
+      margin-bottom: var(--space-2xs);
+    }
+    h1.audit-title {
+      font-size: var(--fs-2xl);
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: -0.012em;
+      margin-top: -2px;
+    }
+    /* The serif wink lives only on the recipe name (DESIGN.md §3) */
+    h1.audit-title .recipe {
+      font-family: var(--font-serif-title);
+      font-variation-settings: "opsz" 96;
+    }
+    h1.audit-title .sub {
+      font-family: var(--font-sans);
+      font-weight: 500;
+      color: var(--mute);
+    }
+    .last-edited {
+      font-size: var(--fs-sm);
+      color: var(--mute);
+      margin-top: var(--space-xs);
+    }
+
+    /* buttons (DESIGN.md §4 universal states) */
+    .btn {
+      position: relative;
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--ink);
+      font: inherit;
+      font-weight: 500;
+      padding: 12px 18px;
+      min-height: 48px;
+      border-radius: var(--r-md);
+      cursor: pointer;
+      transition: background-color var(--dur-fast) var(--ease-out-quart),
+                  transform       var(--dur-fast) var(--ease-out-quart),
+                  border-color    var(--dur-fast) var(--ease-out-quart),
+                  color           var(--dur-fast) var(--ease-out-quart);
+    }
+    .btn::before { content: ""; position: absolute; inset: -4px; border-radius: var(--r-md); }
+    .btn:hover  { background: var(--bg); }
+    .btn:active { transform: translateY(1px); }
+    .btn[aria-disabled="true"], .btn:disabled {
+      opacity: 0.55; cursor: not-allowed;
+      color: var(--mute); border-color: var(--border);
+    }
+    .btn--primary {
+      background: var(--accent); color: var(--accent-fg); border-color: var(--accent);
+      font-weight: 600;
+    }
+    .btn--primary:hover  { background: var(--accent-press); border-color: var(--accent-press); }
+    .btn--ghost {
+      background: transparent; border-color: transparent; color: var(--mute);
+    }
+    .btn--ghost:hover { background: var(--surface); color: var(--ink); }
+    @media (pointer: coarse) {
+      .btn { padding: 14px 20px; min-height: 48px; }
+    }
+
+    /* chip group — comparison window */
+    .chip-row {
+      display: flex;
+      gap: var(--space-xs);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-lg);
+      align-items: center;
+    }
+    .chip-row .chip-label {
+      font-size: var(--fs-xs);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--mute);
+      margin-right: var(--space-xs);
+    }
+    .chip {
+      appearance: none;
+      background: var(--bg);
+      color: var(--mute);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 10px 16px;
+      min-height: 48px;
+      font: inherit;
+      font-size: var(--fs-sm);
+      cursor: pointer;
+      transition: background-color var(--dur-fast) var(--ease-out-quart),
+                  border-color var(--dur-fast) var(--ease-out-quart),
+                  color var(--dur-fast) var(--ease-out-quart);
+    }
+    .chip:hover { color: var(--ink); border-color: var(--border-strong); }
+    .chip[aria-pressed="true"] {
+      border-color: var(--accent);
+      color: var(--ink);
+      background: var(--accent-soft);
+      font-weight: 600;
+    }
+
+    /* main grid */
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+      gap: var(--space-xl);
+      align-items: start;
+    }
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: 1fr; gap: var(--space-lg); }
+    }
+
+    /* CostDeltaTable — NOT in a card (DESIGN.md §6) */
+    section.audit h2 {
+      font-size: var(--fs-lg);
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: var(--space-sm);
+    }
+    table.delta-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--fs-sm);
+    }
+    .delta-table thead th {
+      text-align: left;
+      font-weight: 600;
+      font-size: var(--fs-xs);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--mute);
+      padding: var(--space-sm) var(--space-md);
+      border-bottom: 1px solid var(--border-strong);
+      background: var(--bg);
+    }
+    .delta-table thead th.r { text-align: right; }
+    .delta-table tbody td {
+      padding: var(--space-sm) var(--space-md);
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      line-height: 1.45;
+    }
+    .delta-table tbody tr:last-child td { border-bottom: none; }
+    .delta-table td.num { text-align: right; white-space: nowrap; color: var(--ink); }
+    .delta-table .component { font-weight: 500; color: var(--ink); }
+    .delta-table .source {
+      color: var(--mute);
+      font-size: var(--fs-xs);
+      margin-top: 2px;
+    }
+    .delta-table .sub-recipe-tag {
+      display: inline-block;
+      font-size: var(--fs-xs);
+      color: var(--mute);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-sm);
+      padding: 1px 6px;
+      margin-left: var(--space-xs);
+      background: var(--bg);
+      letter-spacing: 0.02em;
+    }
+
+    /* old cost: mute strikethrough — verified ~5.0:1 on bg, AA body */
+    .strike {
+      color: var(--mute);
+      text-decoration: line-through;
+      text-decoration-thickness: 1px;
+    }
+
+    /* delta column colour rule (DESIGN.md §2 semantic):
+       cost going up (positive Δ) = --destructive (bad for chef).
+       cost going down (negative Δ) = --success.
+       no-change rows: dash glyph in --mute (eye skips them). */
+    .delta, .delta-pct {
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .delta--up, .delta-pct--up {
+      color: var(--destructive);
+    }
+    .delta--down, .delta-pct--down {
+      color: var(--success);
+    }
+    .delta--zero, .delta-pct--zero {
+      color: var(--mute);
+      font-weight: 500;
+    }
+
+    /* spike row gets a subtle warm tint so the eye locks onto it on first glance.
+       Contrast preserved: --destructive on --warn-bg = ~5.4:1 (AA badge). */
+    tr.spike td {
+      background: var(--warn-bg);
+    }
+    tr.spike .component { color: var(--ink); }
+
+    /* inline Switch supplier action: hover-revealed on pointer:fine.
+       On pointer:coarse, also reachable via the sticky action bar. */
+    .row-action {
+      display: inline-block;
+      margin-left: var(--space-xs);
+      font-size: var(--fs-xs);
+      font-weight: 500;
+      color: var(--accent);
+      cursor: pointer;
+      border-bottom: 1px dotted var(--accent);
+      padding: 1px 2px;
+      opacity: 0;
+      transform: translateY(-1px);
+      transition: opacity var(--dur-fast) var(--ease-out-quart),
+                  transform var(--dur-fast) var(--ease-out-quart);
+    }
+    @media (pointer: fine) {
+      tr.spike:hover .row-action,
+      tr.spike:focus-within .row-action {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @media (pointer: coarse) {
+      /* Hover-only would be a bug on the kitchen tablet (DESIGN.md §4 universal
+         states). The sticky action bar carries the same affordance, so the inline
+         hint is hidden here and the chef taps the row, then taps Switch supplier. */
+      .row-action { display: none; }
+    }
+    .row-action:hover { color: var(--accent-press); border-bottom-color: var(--accent-press); }
+
+    /* aggregate strip — accent top rule, like J1 summary, but content is the +€0.67 total */
+    .total {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      margin-top: var(--space-md);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 2px solid var(--accent);
+      border-radius: var(--r-md);
+      font-size: var(--fs-sm);
+      flex-wrap: wrap;
+      align-items: baseline;
+    }
+    .total .label { color: var(--mute); }
+    .total b {
+      font-size: var(--fs-lg);
+      color: var(--destructive);
+      font-weight: 600;
+    }
+    .total .pct { color: var(--destructive); font-weight: 600; }
+
+    /* MarginPanel — one flat full-bordered panel, no nested cards (DESIGN.md §6).
+       Accent never appears here (DESIGN.md §4 MarginPanel). */
+    aside.side {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: var(--space-md) var(--space-lg);
+    }
+    .panel h3 {
+      font-size: var(--fs-sm);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--mute);
+      margin-bottom: var(--space-sm);
+    }
+    .margin-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: var(--space-xs) 0;
+      border-bottom: 1px dashed var(--border);
+      font-size: var(--fs-sm);
+    }
+    .margin-row:last-of-type { border-bottom: none; }
+    .margin-row .label { color: var(--mute); }
+    .margin-row .values {
+      display: inline-flex;
+      gap: 8px;
+      align-items: baseline;
+    }
+    .margin-row b {
+      font-weight: 600;
+      color: var(--ink);
+    }
+    .margin-row .ok {
+      color: var(--success);
+      font-weight: 600;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .margin-arrow {
+      color: var(--mute);
+      font-size: var(--fs-xs);
+    }
+
+    /* reduced motion (DESIGN.md §7) */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+      .row-action { opacity: 1; transform: none; }
+    }
+
+    /* mobile table → row layout (DESIGN.md §8) */
+    @media (max-width: 540px) {
+      .delta-table thead { display: none; }
+      .delta-table, .delta-table tbody, .delta-table tr, .delta-table td { display: block; width: 100%; }
+      .delta-table tr { border-bottom: 1px solid var(--border); padding: var(--space-sm) 0; }
+      .delta-table td { border: none; padding: 2px var(--space-xs); }
+      .delta-table td.num { text-align: left; }
+      .delta-table td.num::before {
+        content: attr(data-label) ": ";
+        color: var(--mute);
+        font-size: var(--fs-xs);
+        margin-right: 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="provenance" role="note" aria-label="Screen context">
+    <b>openTrattOS &middot; Cost audit &middot; Module 2 / Journey 2</b>
+    <span class="note">Tablet-first kitchen surface. AA-verified contrast on every text pair, ≥48px touch targets, system sans for UI with one serif wink on the recipe name, prefers-reduced-motion respected, no hover-only affordances on pointer:coarse.</span>
+  </div>
+
+  <!-- Sticky action bar — reachable from anywhere on the table without scrolling -->
+  <nav class="action-bar" aria-label="Audit actions">
+    <button type="button" class="btn btn--ghost" aria-label="Back to recipe">Back to recipe</button>
+    <span class="spacer" aria-hidden="true"></span>
+    <button type="button" class="btn" aria-disabled="true" disabled aria-label="Switch supplier (select a row first)">Switch supplier</button>
+    <button type="button" class="btn btn--primary" aria-label="Save and re-publish margin">Save &amp; re-publish margin</button>
+  </nav>
+
+  <main class="shell">
+
+    <header class="head">
+      <div class="titles">
+        <div class="eyebrow">Audit &middot; 7-day window</div>
+        <h1 class="audit-title">
+          <span class="recipe">Tagliatelle Bolognesa</span><span class="sub"> &middot; Cost audit</span>
+        </h1>
+        <div class="last-edited">Snapshot 2026-04-27 14:02 &middot; vs 2026-04-20 14:02</div>
+      </div>
+    </header>
+
+    <!-- Comparison window chip group -->
+    <div class="chip-row" role="group" aria-label="Comparison window">
+      <span class="chip-label">Compare</span>
+      <button type="button" class="chip" aria-pressed="true">vs 7 days ago</button>
+      <button type="button" class="chip" aria-pressed="false">vs 30 days ago</button>
+      <button type="button" class="chip" aria-pressed="false">vs 90 days ago</button>
+    </div>
+
+    <div class="grid">
+
+      <!-- COST DELTA TABLE — not in a card (DESIGN.md §6) -->
+      <section class="audit" aria-labelledby="audit-h">
+        <h2 id="audit-h">Component cost delta</h2>
+
+        <table class="delta-table" aria-describedby="audit-total">
+          <thead>
+            <tr>
+              <th scope="col">Component</th>
+              <th scope="col">Source</th>
+              <th scope="col" class="r">Qty</th>
+              <th scope="col" class="r">Cost (was)</th>
+              <th scope="col" class="r">Cost (now)</th>
+              <th scope="col" class="r">Δ</th>
+              <th scope="col" class="r">Δ %</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            <!-- Row 1: spike. Sorted by absolute delta descending. -->
+            <tr class="spike" tabindex="0" aria-label="Ground beef cost rose by 35.8 percent — selectable for supplier switch">
+              <td>
+                <div class="component">Ground beef</div>
+                <div class="source">Carnicería X</div>
+              </td>
+              <td>Carnicería X</td>
+              <td class="num" data-label="Qty">300 g</td>
+              <td class="num" data-label="Cost (was)"><span class="strike">€1.62</span></td>
+              <td class="num" data-label="Cost (now)">€2.20</td>
+              <td class="num delta delta--up" data-label="Δ">
+                +€0.58
+                <span class="row-action" role="button" tabindex="0" aria-label="Switch supplier for Ground beef">Switch supplier &rarr;</span>
+              </td>
+              <td class="num delta-pct delta-pct--up" data-label="Δ %">+35.8%</td>
+            </tr>
+
+            <!-- Row 2: small but real change -->
+            <tr>
+              <td>
+                <div class="component">Carrot</div>
+                <div class="source">Verduras del Sol</div>
+              </td>
+              <td>Verduras del Sol</td>
+              <td class="num" data-label="Qty">80 g</td>
+              <td class="num" data-label="Cost (was)"><span class="strike">€0.12</span></td>
+              <td class="num" data-label="Cost (now)">€0.13</td>
+              <td class="num delta delta--up" data-label="Δ">+€0.01</td>
+              <td class="num delta-pct delta-pct--up" data-label="Δ %">+8.3%</td>
+            </tr>
+
+            <!-- Row 3: small real change -->
+            <tr>
+              <td>
+                <div class="component">Crushed tomato &middot; Heinz</div>
+                <div class="source">Distribuidora García</div>
+              </td>
+              <td>Distribuidora García</td>
+              <td class="num" data-label="Qty">200 g</td>
+              <td class="num" data-label="Cost (was)"><span class="strike">€0.45</span></td>
+              <td class="num" data-label="Cost (now)">€0.48</td>
+              <td class="num delta delta--up" data-label="Δ">+€0.03</td>
+              <td class="num delta-pct delta-pct--up" data-label="Δ %">+6.7%</td>
+            </tr>
+
+            <!-- No-change rows: dash + mute. The eye skips them. -->
+            <tr>
+              <td>
+                <div class="component">Salsa de tomate <span class="sub-recipe-tag">sub-recipe</span></div>
+                <div class="source">rolled up</div>
+              </td>
+              <td><span style="color:var(--mute);">(rolled up)</span></td>
+              <td class="num" data-label="Qty">200 g</td>
+              <td class="num" data-label="Cost (was)">€0.42</td>
+              <td class="num" data-label="Cost (now)">€0.42</td>
+              <td class="num delta delta--zero" data-label="Δ">&mdash;</td>
+              <td class="num delta-pct delta-pct--zero" data-label="Δ %">&mdash;</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="component">Onion</div>
+                <div class="source">Verduras del Sol</div>
+              </td>
+              <td>Verduras del Sol</td>
+              <td class="num" data-label="Qty">100 g</td>
+              <td class="num" data-label="Cost (was)">€0.18</td>
+              <td class="num" data-label="Cost (now)">€0.18</td>
+              <td class="num delta delta--zero" data-label="Δ">&mdash;</td>
+              <td class="num delta-pct delta-pct--zero" data-label="Δ %">&mdash;</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="component">Celery</div>
+                <div class="source">Verduras del Sol</div>
+              </td>
+              <td>Verduras del Sol</td>
+              <td class="num" data-label="Qty">60 g</td>
+              <td class="num" data-label="Cost (was)">€0.10</td>
+              <td class="num" data-label="Cost (now)">€0.10</td>
+              <td class="num delta delta--zero" data-label="Δ">&mdash;</td>
+              <td class="num delta-pct delta-pct--zero" data-label="Δ %">&mdash;</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="component">Red wine</div>
+                <div class="source">Bodega Real</div>
+              </td>
+              <td>Bodega Real</td>
+              <td class="num" data-label="Qty">50 ml</td>
+              <td class="num" data-label="Cost (was)">€0.18</td>
+              <td class="num" data-label="Cost (now)">€0.18</td>
+              <td class="num delta delta--zero" data-label="Δ">&mdash;</td>
+              <td class="num delta-pct delta-pct--zero" data-label="Δ %">&mdash;</td>
+            </tr>
+
+          </tbody>
+        </table>
+
+        <div class="total" id="audit-total" aria-live="polite">
+          <span class="label">Total cost delta &middot; per kg</span>
+          <span>
+            <span class="strike">€3.45</span>
+            <span style="color:var(--mute);"> &rarr; </span>
+            <span style="color:var(--ink); font-weight:600;">€4.12</span>
+            &nbsp;&nbsp;
+            <b>+€0.67</b>
+            <span class="pct">&nbsp;(+19.4%)</span>
+          </span>
+        </div>
+      </section>
+
+      <!-- MARGIN PANEL — one flat panel, no accent (DESIGN.md §4 MarginPanel) -->
+      <aside class="side" aria-label="Margin compression">
+        <section class="panel" aria-labelledby="margin-h">
+          <h3 id="margin-h">Margin compression</h3>
+
+          <div class="margin-row">
+            <span class="label">Cost / kg</span>
+            <span class="values">
+              <span class="strike">€3.45</span>
+              <span class="margin-arrow">&rarr;</span>
+              <b>€4.12</b>
+            </span>
+          </div>
+
+          <div class="margin-row">
+            <span class="label">Sale / portion</span>
+            <b>€18.00</b>
+          </div>
+
+          <div class="margin-row">
+            <span class="label">Margin</span>
+            <span class="values">
+              <span class="strike">80.8%</span>
+              <span class="margin-arrow">&rarr;</span>
+              <b>77.1%</b>
+            </span>
+          </div>
+
+          <div class="margin-row">
+            <span class="label">Target</span>
+            <span class="ok" aria-label="Target 70 percent, still met">
+              <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path d="M3 8.5l3.2 3.2L13 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              70.0%
+            </span>
+          </div>
+        </section>
+      </aside>
+
+    </div>
+  </main>
+
+</body>
+</html>

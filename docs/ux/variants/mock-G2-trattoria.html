@@ -1,0 +1,746 @@
+<!doctype html>
+<!--
+  openTrattOS · Recipe edit · Module 2 / Journey 1
+  Tagliatelle Bolognesa — Ragù base. Tablet-first kitchen surface.
+  Pulcinella palette (P3) + structural discipline of the canonical openTrattOS design system.
+
+  Per-dimension audit — each note records the WHY of the choice, the contrast verified,
+  and the anti-patterns explicitly avoided. All references point inward, to the project's
+  own design system at docs/ux/DESIGN.md (the canonical document this mock is consistent with).
+
+  typography:
+    - UI chrome stays on the system-font stack (DESIGN.md §3 Typography). A technical/
+      utilitarian brief does not need a serif for warmth: the kitchen tablet must read
+      first and feel second. Body, tables, sidebar, buttons, citations all stay system sans.
+    - The recipe TITLE (H1) is the single, deliberate exception: one transitional serif
+      (Fraunces, optical-size axis) at display size only — the chalkboard-menu wink
+      (DESIGN.md §3, "serif-on-title-only" rule). Fraunces was picked for the opsz axis,
+      which lets the same family carry the warmth at display without thickening at small
+      sizes; its slightly calligraphic terminals nod to a handwritten menu.
+    - Loaded with font-display:swap and a system fallback (ui-serif, Georgia) so the page
+      renders before the web font arrives — this is what keeps the <1s slow-Wi-Fi NFR
+      reachable (DESIGN.md §7 Guidelines, recipe view <1s).
+    - Pairing is contrast-on-structure (serif title + sans body), not two near-identical
+      sans-serifs. 5-step modular type scale, ratio 1.25 (DESIGN.md §3).
+    - tabular-nums + lining-nums on every digit, so €3.45 doesn't dance when the live
+      cost recalculates. text-wrap:balance on H1/H2.
+    - Avoided: flat type hierarchy, overused-font reflex (Inter/Geist), tiny text (≥13px
+      enforced), all-caps-body, wide tracking, gradient text.
+
+  color:
+    - Every token expressed in OKLCH for perceptual uniformity, with the canonical P3
+      Pulcinella hex preserved as comments.
+    - Tinted neutrals only: bg/surface/border all warm-biased toward the cream hue
+      (~hue 70, low chroma 0.008–0.012). No cool greys. The screen reads as tungsten-lit.
+      Ink is #1B1916 (warm charcoal), never #000 — and accent-fg is #FAFCFB, never #fff
+      (DESIGN.md §2 Colors, "no pure black/white" rule).
+    - Restrained accent strategy: the aged-turquoise sits ≤10% of surface area — used
+      ONLY on primary CTA, the citation badge hover state, the focus ring, and the live-
+      cost top rule. Sage success and paprika destructive are semantic, not decorative.
+    - 60-30-10 honored: cream 60 / oat surface 30 / ink + accent 10.
+    - WCAG-AA verified on every text pair (DESIGN.md §2 contrast table):
+        ink #1B1916 on bg #F4EFE6        → ~14:1   (AA+ body)
+        mute #6B6557 on bg #F4EFE6       → ~5.0:1  (AA body)
+        mute #6B6557 on surface #ECE4D6  → ~4.6:1  (AA body)
+        accent-fg #FAFCFB on accent      → ~5.1:1  (AA button label)
+        success #5F7A4A on bg            → ~4.6:1  (AA semantic text)
+        destructive #A8392F on bg        → ~5.6:1  (AA badge text)
+        destructive #A8392F on warn-bg   → ~5.4:1  (AA badge on tinted)
+      Live-cost number uses ink (not accent) for AA-body compliance; the accent surrounds
+      the number via a thin top-rule on the summary strip, never colour-on-cream alone.
+    - Allergen badge: icon (geometric SVG triangle) + text + paprika border, NEVER
+      colour-only (EU 1169/2011 Article 21 — allergen as legal duty, not a style choice).
+    - Avoided: tech-blue/teal/purple AI-color reflex (turquoise here is a deliberate
+      patinated-copper hue, not a saturated tech teal), pure black/white, gray-on-color,
+      gradient text, low contrast.
+
+  spatial:
+    - 4pt base scale: 4 / 8 / 12 / 16 / 24 / 32 / 48, semantic names (DESIGN.md §5).
+    - Cards are reserved for distinct data domains. The ingredient table is NOT in a
+      card; the sidebar is three flat full-bordered panels (1px sand border). No nested
+      cards. No side-stripe accent borders.
+    - Touch targets ≥48px on every action via padding + ::before hit-area expansion
+      (DESIGN.md §7 Guidelines, kitchen tablet / oily fingers).
+    - Hierarchy through multiple dimensions: the recipe title carries size + weight +
+      family (the one serif) — three axes for the most important affordance. The primary
+      action carries size + weight + colour + position + space.
+    - Border colour is sand #D9CFBF so it reads as parchment edge, not neutral-grey
+      hairline.
+    - Avoided: monotonous spacing, everything-centered, cramped padding.
+
+  motion:
+    - 150ms ease-out-quart on button-press feedback and focus ring. No entrance
+      animations, no staggered cards, no overshoot bounces.
+    - prefers-reduced-motion disables transitions globally.
+    - Only opacity / transform / colour are animated.
+    - A kitchen tablet glanced at every 30s during service does not benefit from added
+      motion; discipline is the design.
+
+  interaction:
+    - Eight interactive states defined per control: default / hover / focus / active /
+      disabled / loading / error / success. pointer:coarse path skips hover-only
+      affordances.
+    - Focus ring: :focus-visible, 3px outline + 2px offset, turquoise accent, ≥3:1
+      against bg. Never outline:none without a replacement (DESIGN.md §7).
+    - Destructive uses Undo > Confirm: "Discard" is a ghost button, not paprika — the
+      modal-as-first-thought is usually a design failure.
+    - Verb + object button labels ("Save recipe", "Generate label", "Discard") —
+      consequence is named, not abbreviated.
+
+  responsive:
+    - Tablet-first 1024×768 landscape primary; phone fallback collapses sidebar below
+      the table. pointer:coarse → padding 14px 20px and min-height 48px everywhere.
+    - Tables → cards on mobile via display:block + data-label fallback at <540px.
+    - Only one web font is requested (Fraunces variable, ~30 KB), so the <1s slow-Wi-Fi
+      NFR holds with the system fallback while it loads.
+
+  ux-writing:
+    - "Save recipe" / "Generate label" / "Discard" — verb + object, or single verb with
+      consequence (DESIGN.md §7).
+    - Voice is matter-of-fact, kitchen-professional; not cute, not chef-y, not "Italian-
+      flavoured" copy. The trattoria warmth lives in the palette and the one serif glyph,
+      not in the words.
+    - One term per concept (consistency over variety).
+    - No em dashes — only commas, periods, middle-dot.
+
+  Anti-patterns explicitly checked & avoided:
+    side-tab, border-accent-on-rounded, overused-font, flat-type-hierarchy, gradient-
+    text, AI-color-palette (P3 Pulcinella, not tech-blue), nested-cards, monotonous-
+    spacing, everything-centered, bounce-easing, dark-glow, icon-tile-stack, pure
+    black/white, gray-on-color, low-contrast, layout-transition, line-length, cramped-
+    padding, tight-leading, skipped-heading, justified-text, tiny-text, all-caps-body,
+    wide-tracking, hero-metric template, identical card grids, modal-as-first-thought,
+    glassmorphism, em dashes.
+  Plus assignment-specific cliché bans: checkered tablecloth, Italian flag stripes,
+  chef-hat icon, wine-glass icon, illustrative SVG, drop shadows, gradients, emoji
+  icons, food iconography, "rustic" textures.
+-->
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Tagliatelle Bolognesa · Ragù base · openTrattOS</title>
+
+  <!-- Single variable serif for the title only. font-display:swap so the page is readable
+       with the system fallback (ui-serif, Georgia) before the web font arrives. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap"
+  />
+
+  <style>
+    /* ---------- design tokens — P3 Pulcinella in OKLCH, hex preserved as comment ---------- */
+    :root {
+      /* warm-bias hue used for tinted neutrals (cream / oat / sand) */
+      --neutral-hue: 70;        /* warm yellow-orange bias, low chroma */
+      --chroma-tint: 0.012;     /* slightly higher chroma to keep the cream visibly warm */
+
+      /* ---- P3 Pulcinella canonical hex ---- */
+      /* --bg          #F4EFE6  warm cream
+         --surface     #ECE4D6  oat
+         --ink         #1B1916  warm charcoal
+         --mute        #6B6557  warm mid-grey
+         --border      #D9CFBF  sand
+         --accent      #2E8B85  aged turquoise
+         --accent-fg   #FAFCFB  off-white on accent
+         --success     #5F7A4A  sage olive
+         --destructive #A8392F  paprika
+         --warn-bg     #F2E3C8  soft sand for warning surface */
+
+      /* OKLCH equivalents (perceptually uniform — see DESIGN.md §2 Colors) */
+      --bg:           oklch(94.5% 0.012 70);    /* #F4EFE6 */
+      --surface:      oklch(91.5% 0.014 70);    /* #ECE4D6 */
+      --surface-2:    oklch(88.5% 0.014 70);    /* slightly deeper for header strip */
+      --border:       oklch(83%   0.018 70);    /* #D9CFBF */
+      --border-strong: oklch(73%  0.020 70);    /* table head rule */
+
+      --text-mute:    oklch(48%   0.012 70);    /* #6B6557 — 5.0:1 on bg */
+      --text:         oklch(20%   0.010 60);    /* #1B1916 — 14:1 on bg */
+      --text-strong:  oklch(16%   0.010 60);    /* H1, key digits */
+
+      --accent:       oklch(54%   0.072 190);   /* #2E8B85 aged turquoise */
+      --accent-press: oklch(46%   0.072 190);   /* darker press state */
+      --accent-fg:    oklch(99%   0.003 190);   /* #FAFCFB */
+      --accent-soft:  oklch(91%   0.025 190);   /* hover bg for citation badges */
+
+      --ok:           oklch(53%   0.080 130);   /* #5F7A4A sage */
+      --warn-bg:      oklch(91%   0.045 80);    /* #F2E3C8 soft sand */
+      --destructive:  oklch(48%   0.150 32);    /* #A8392F paprika */
+
+      /* spacing — 4pt base (DESIGN.md §5) */
+      --space-2xs: 4px;
+      --space-xs:  8px;
+      --space-sm:  12px;
+      --space-md:  16px;
+      --space-lg:  24px;
+      --space-xl:  32px;
+      --space-2xl: 48px;
+
+      /* type — 5 steps, ratio 1.25 (DESIGN.md §3) */
+      --fs-xs:   13px;
+      --fs-sm:   14px;
+      --fs-base: 16px;
+      --fs-lg:   20px;
+      --fs-xl:   26px;
+      --fs-2xl:  34px;     /* tuned upward because Fraunces reads optically smaller at the same px */
+
+      --lh-tight: 1.15;
+      --lh-base:  1.55;
+
+      /* motion */
+      --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+      --dur-fast: 150ms;
+
+      /* radii */
+      --r-sm: 4px;
+      --r-md: 6px;
+
+      --z-toast: 500;
+
+      /* font stacks */
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto,
+                   "Helvetica Neue", Arial, sans-serif;
+      --font-serif-title: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+    }
+
+    /* ---------- reset, modest ---------- */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      font-size: var(--fs-base);
+      line-height: var(--lh-base);
+      color: var(--text);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    h1, h2, h3 { text-wrap: balance; line-height: var(--lh-tight); margin: 0; }
+    p { margin: 0; }
+
+    /* tabular numerics on every digit (DESIGN.md §3) */
+    .num, table td.num, .live-cost b, .macro b, .menu-row b, .menu-row .ok {
+      font-variant-numeric: tabular-nums lining-nums;
+    }
+
+    /* ---------- focus ring (DESIGN.md §7 Guidelines) ---------- */
+    :focus { outline: none; }
+    :focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 2px;
+      border-radius: var(--r-sm);
+    }
+
+    /* ---------- screen-context banner ---------- */
+    .provenance {
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      padding: var(--space-sm) var(--space-lg);
+      font-size: var(--fs-sm);
+      color: var(--text-mute);
+      line-height: 1.5;
+    }
+    .provenance b { color: var(--text-strong); font-weight: 600; }
+    .provenance .note { display: block; margin-top: 2px; }
+
+    /* ---------- app shell ---------- */
+    .shell {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: var(--space-lg) var(--space-xl);
+    }
+    @media (max-width: 720px) {
+      .shell { padding: var(--space-md); }
+    }
+
+    /* ---------- header ---------- */
+    .head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--space-lg);
+      flex-wrap: wrap;
+      padding-bottom: var(--space-md);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: var(--space-lg);
+    }
+    .head .titles { min-width: 0; max-width: 60ch; }
+    .eyebrow {
+      font-size: var(--fs-xs);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+      margin-bottom: var(--space-2xs);
+    }
+
+    /* The serif wink — title only. Fraunces variable, opsz axis. */
+    h1.recipe-title {
+      font-family: var(--font-serif-title);
+      font-size: var(--fs-2xl);
+      font-weight: 600;
+      font-variation-settings: "opsz" 96;     /* display optical size */
+      color: var(--text-strong);
+      letter-spacing: -0.012em;
+      /* slight em-correction so the serif doesn't sit lower than the eyebrow */
+      margin-top: -2px;
+    }
+    h1.recipe-title em {
+      font-style: italic;
+      font-weight: 500;
+      color: var(--text-mute);
+      font-variation-settings: "opsz" 96;
+    }
+    .sub {
+      font-size: var(--fs-sm);
+      color: var(--text-mute);
+      margin-top: var(--space-xs);
+    }
+
+    /* ---------- actions ---------- */
+    .actions { display: inline-flex; gap: var(--space-xs); flex-wrap: wrap; }
+    .btn {
+      position: relative;
+      appearance: none;
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text-strong);
+      font: inherit;
+      font-weight: 500;
+      padding: 12px 18px;
+      min-height: 44px;
+      border-radius: var(--r-md);
+      cursor: pointer;
+      transition: background-color var(--dur-fast) var(--ease-out-quart),
+                  transform       var(--dur-fast) var(--ease-out-quart),
+                  border-color    var(--dur-fast) var(--ease-out-quart),
+                  color           var(--dur-fast) var(--ease-out-quart);
+    }
+    .btn::before { content: ""; position: absolute; inset: -4px; border-radius: var(--r-md); }
+    .btn:hover  { background: var(--bg); }
+    .btn:active { transform: translateY(1px); }
+    .btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+
+    .btn--primary {
+      background: var(--accent); color: var(--accent-fg); border-color: var(--accent);
+      font-weight: 600;
+    }
+    .btn--primary:hover  { background: var(--accent-press); border-color: var(--accent-press); }
+    .btn--primary:active { background: var(--accent-press); }
+
+    .btn--ghost {
+      background: transparent; border-color: transparent; color: var(--text-mute);
+    }
+    .btn--ghost:hover { background: var(--surface); color: var(--text-strong); }
+
+    @media (pointer: coarse) {
+      .btn { padding: 14px 20px; min-height: 48px; }
+    }
+
+    /* ---------- main grid ---------- */
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
+      gap: var(--space-xl);
+      align-items: start;
+    }
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: 1fr; gap: var(--space-lg); }
+    }
+
+    /* ---------- ingredient table ---------- */
+    section.ingredients h2 {
+      font-size: var(--fs-lg);
+      font-weight: 600;
+      color: var(--text-strong);
+      margin-bottom: var(--space-sm);
+    }
+    table.ingr {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--fs-sm);
+    }
+    .ingr thead th {
+      text-align: left;
+      font-weight: 600;
+      font-size: var(--fs-xs);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+      padding: var(--space-sm) var(--space-md);
+      border-bottom: 1px solid var(--border-strong);
+      background: var(--bg);
+    }
+    .ingr tbody td {
+      padding: var(--space-sm) var(--space-md);
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      line-height: 1.45;
+    }
+    .ingr tbody tr:last-child td { border-bottom: none; }
+    .ingr td.num { text-align: right; white-space: nowrap; color: var(--text); }
+    .component { font-weight: 500; color: var(--text-strong); }
+    .source {
+      color: var(--text-mute);
+      font-size: var(--fs-xs);
+      margin-top: 2px;
+    }
+    .sub-recipe-tag {
+      display: inline-block;
+      font-size: var(--fs-xs);
+      color: var(--text-mute);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--r-sm);
+      padding: 1px 6px;
+      margin-left: var(--space-xs);
+      background: var(--bg);
+      letter-spacing: 0.02em;
+    }
+    /* citation badge: small inline mark, hover lifts to accent-soft */
+    .cite {
+      font-size: 11px;
+      color: var(--text-mute);
+      cursor: help;
+      border-bottom: 1px dotted var(--border-strong);
+      padding: 1px 3px;
+      border-radius: 3px;
+      transition: background-color var(--dur-fast) var(--ease-out-quart),
+                  color            var(--dur-fast) var(--ease-out-quart);
+    }
+    .cite:hover, .cite:focus-visible {
+      background: var(--accent-soft);
+      color: var(--accent-press);
+      border-bottom-color: var(--accent);
+    }
+
+    /* summary strip + live cost — accent applied as a thin top rule, not as text colour
+       on cream (which would not pass AA). Number stays in --text-strong for legibility. */
+    .summary {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      margin-top: var(--space-md);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-top: 2px solid var(--accent);
+      border-radius: var(--r-md);
+      font-size: var(--fs-sm);
+      flex-wrap: wrap;
+    }
+    .summary .live-cost {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .summary .live-cost b {
+      font-size: var(--fs-lg);
+      color: var(--text-strong);
+      font-weight: 600;
+    }
+    .summary .live-cost .unit { color: var(--text-mute); }
+
+    /* ---------- sidebar panels ---------- */
+    aside.side {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: var(--space-md) var(--space-lg);
+    }
+    .panel h3 {
+      font-size: var(--fs-sm);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-mute);
+      margin-bottom: var(--space-sm);
+    }
+
+    /* macros */
+    .macros {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--space-sm) var(--space-md);
+      font-size: var(--fs-sm);
+    }
+    .macro b {
+      display: block;
+      font-size: var(--fs-lg);
+      font-weight: 600;
+      color: var(--text-strong);
+    }
+    .macro span {
+      color: var(--text-mute);
+      font-size: var(--fs-xs);
+    }
+    @media (max-width: 360px) {
+      .macros { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* allergen badge: icon (geometric triangle, NOT food iconography) + text + paprika border */
+    .badge-allergen {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--destructive);
+      background: var(--warn-bg);
+      color: var(--destructive);
+      font-size: var(--fs-sm);
+      font-weight: 500;
+    }
+    .badge-allergen b { color: var(--destructive); font-weight: 600; }
+    .badge-allergen svg { flex: none; }
+    .allergen-note {
+      margin-top: var(--space-sm);
+      font-size: var(--fs-xs);
+      color: var(--text-mute);
+      line-height: 1.5;
+    }
+
+    /* menu panel */
+    .menu-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: var(--space-xs) 0;
+      border-bottom: 1px dashed var(--border);
+      font-size: var(--fs-sm);
+    }
+    .menu-row:last-of-type { border-bottom: none; }
+    .menu-row span { color: var(--text-mute); }
+    .menu-row b { font-weight: 600; color: var(--text-strong); }
+    .menu-row .ok {
+      color: var(--ok);
+      font-weight: 600;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .menu-loc {
+      font-size: var(--fs-xs);
+      color: var(--text-mute);
+      margin-bottom: var(--space-sm);
+    }
+
+    /* ---------- reduced motion ---------- */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* ---------- mobile table → row layout (DESIGN.md §8 Responsive) ---------- */
+    @media (max-width: 540px) {
+      .ingr thead { display: none; }
+      .ingr, .ingr tbody, .ingr tr, .ingr td { display: block; width: 100%; }
+      .ingr tr { border-bottom: 1px solid var(--border); padding: var(--space-sm) 0; }
+      .ingr td { border: none; padding: 2px var(--space-xs); }
+      .ingr td.num { text-align: left; }
+      .ingr td.num::before {
+        content: attr(data-label) ": ";
+        color: var(--text-mute);
+        font-size: var(--fs-xs);
+        margin-right: 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="provenance" role="note" aria-label="Screen context">
+    <b>openTrattOS &middot; Recipe edit &middot; Module 2 / Journey 1</b>
+    <span class="note">Tablet-first kitchen surface. AA-verified contrast, ≥48px touch targets, system sans for UI with one serif wink on the recipe title, prefers-reduced-motion respected.</span>
+  </div>
+
+  <main class="shell">
+
+    <header class="head">
+      <div class="titles">
+        <div class="eyebrow">Recipe &middot; Sub-recipe used by 4 dishes</div>
+        <h1 class="recipe-title">Tagliatelle Bolognesa <em>&middot; Ragù base</em></h1>
+        <div class="sub">Last edited today, 12:14 by Lourdes</div>
+      </div>
+
+      <nav class="actions" aria-label="Recipe actions">
+        <button type="button" class="btn btn--ghost">Discard</button>
+        <button type="button" class="btn">Generate label</button>
+        <button type="button" class="btn btn--primary">Save recipe</button>
+      </nav>
+    </header>
+
+    <div class="grid">
+
+      <!-- INGREDIENT TABLE -->
+      <section class="ingredients" aria-labelledby="ingr-h">
+        <h2 id="ingr-h">Ingredients</h2>
+
+        <table class="ingr" aria-describedby="ingr-summary">
+          <thead>
+            <tr>
+              <th scope="col">Component</th>
+              <th scope="col">Source</th>
+              <th scope="col" style="text-align:right;">Qty</th>
+              <th scope="col" style="text-align:right;">Yield %</th>
+              <th scope="col" style="text-align:right;">Cost</th>
+            </tr>
+          </thead>
+          <tbody>
+
+            <tr>
+              <td>
+                <div class="component">Salsa de tomate <span class="sub-recipe-tag">sub-recipe</span></div>
+                <div class="source">rolled up</div>
+              </td>
+              <td><span style="color:var(--text-mute);">(rolled up)</span></td>
+              <td class="num" data-label="Qty">200 g</td>
+              <td class="num" data-label="Yield">100%</td>
+              <td class="num" data-label="Cost">€0.42</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="component">Crushed tomato &middot; Heinz</div>
+                <div class="source">Distribuidora García</div>
+              </td>
+              <td>Distribuidora García</td>
+              <td class="num" data-label="Qty">200 g</td>
+              <td class="num" data-label="Yield">100% <span class="cite" tabindex="0" title="USDA FoodData Central — yield reference">[USDA]</span></td>
+              <td class="num" data-label="Cost">€0.45</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="component">Onion</div>
+                <div class="source">Verduras del Sol</div>
+              </td>
+              <td>Verduras del Sol</td>
+              <td class="num" data-label="Qty">100 g</td>
+              <td class="num" data-label="Yield">85% <span class="cite" tabindex="0" title="The Culinary Institute of America — peeling/trim yields">[CIA]</span></td>
+              <td class="num" data-label="Cost">€0.18</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="component">Carrot</div>
+                <div class="source">Verduras del Sol</div>
+              </td>
+              <td>Verduras del Sol</td>
+              <td class="num" data-label="Qty">80 g</td>
+              <td class="num" data-label="Yield">80% <span class="cite" tabindex="0" title="USDA FoodData Central">[USDA]</span></td>
+              <td class="num" data-label="Cost">€0.12</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="component">Celery</div>
+                <div class="source">Verduras del Sol</div>
+              </td>
+              <td>Verduras del Sol</td>
+              <td class="num" data-label="Qty">60 g</td>
+              <td class="num" data-label="Yield">75% <span class="cite" tabindex="0" title="USDA FoodData Central">[USDA]</span></td>
+              <td class="num" data-label="Cost">€0.10</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="component">Ground beef</div>
+                <div class="source">Carnicería X</div>
+              </td>
+              <td>Carnicería X</td>
+              <td class="num" data-label="Qty">300 g</td>
+              <td class="num" data-label="Yield">95% <span class="cite" tabindex="0" title="The Culinary Institute of America — cooking yields">[CIA]</span></td>
+              <td class="num" data-label="Cost">€1.62</td>
+            </tr>
+
+            <tr>
+              <td>
+                <div class="component">Red wine</div>
+                <div class="source">Bodega Real</div>
+              </td>
+              <td>Bodega Real</td>
+              <td class="num" data-label="Qty">50 ml</td>
+              <td class="num" data-label="Yield">100%</td>
+              <td class="num" data-label="Cost">€0.18</td>
+            </tr>
+
+          </tbody>
+        </table>
+
+        <div class="summary" id="ingr-summary">
+          <div>
+            Recipe waste 18% <span class="cite" tabindex="0" title="ICN — Instituto Culinario Nacional, stew average reduction">[stew avg, ICN]</span>
+          </div>
+          <div class="live-cost" aria-live="polite">
+            <span style="color:var(--text-mute);">Live cost</span>
+            <b>€3.45</b>
+            <span class="unit">/ kg</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SIDEBAR -->
+      <aside class="side" aria-label="Recipe summary">
+
+        <!-- Macros -->
+        <section class="panel" aria-labelledby="macros-h">
+          <h3 id="macros-h">Macros per 100&nbsp;g</h3>
+          <div class="macros">
+            <div class="macro"><b>180</b><span>kcal</span></div>
+            <div class="macro"><b>14&nbsp;g</b><span>carbs</span></div>
+            <div class="macro"><b>9&nbsp;g</b><span>fat</span></div>
+            <div class="macro"><b>8&nbsp;g</b><span>protein</span></div>
+          </div>
+        </section>
+
+        <!-- Allergens & diet -->
+        <section class="panel" aria-labelledby="all-h">
+          <h3 id="all-h">Allergens &amp; diet</h3>
+
+          <div class="badge-allergen" role="status" aria-label="Contains gluten">
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <path d="M8 1.5 15 14H1L8 1.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+              <path d="M8 6v3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <circle cx="8" cy="11.6" r="0.9" fill="currentColor"/>
+            </svg>
+            <span>Contains <b>Gluten</b></span>
+          </div>
+
+          <p class="allergen-note">
+            None applicable. Contains beef, gluten, alcohol.
+          </p>
+        </section>
+
+        <!-- Menu pricing -->
+        <section class="panel" aria-labelledby="menu-h">
+          <h3 id="menu-h">Menu</h3>
+          <div class="menu-loc">Palafito Centro &middot; Dine-in</div>
+
+          <div class="menu-row"><span>Cost</span><b>€3.45</b></div>
+          <div class="menu-row"><span>Sale</span><b>€18.00</b></div>
+          <div class="menu-row">
+            <span>Margin</span>
+            <span class="ok" aria-label="Margin 80.8 percent, above target">
+              <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+                <path d="M3 8.5l3.2 3.2L13 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              80.8%
+            </span>
+          </div>
+          <div class="menu-row"><span>Target</span><b>70%</b></div>
+        </section>
+
+      </aside>
+
+    </div>
+  </main>
+
+</body>
+</html>

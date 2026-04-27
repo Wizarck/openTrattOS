@@ -1,3 +1,9 @@
+# Research scratch (vendored skill repos, not part of the project)
+_bmad-output/research/skills/
+
+# Auto-generated context injection (Hindsight memory) — per-session noise
+.claude/injected-context.md
+
 # Logs
 logs
 *.log

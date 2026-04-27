@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mock C — Playful AGPL community</title>
+<link href="https://fonts.cdnfonts.com/css/geist-sans" rel="stylesheet">
+<link href="https://fonts.cdnfonts.com/css/geist-mono" rel="stylesheet">
+<style>
+:root {
+  --background: #fdfdfb;
+  --surface: #f6f7f4;
+  --surface-elevated: #eceee8;
+  --border: #dedfd6;
+  --text: #1c1d18;
+  --text-muted: #6b6c63;
+  --brand-green: #2d8859;
+  --brand-green-soft: #e8f3ec;
+  --brand-amber: #c47a14;
+  --brand-amber-soft: #faf0dc;
+  --brand-gradient: linear-gradient(135deg, #2d8859 0%, #c47a14 100%);
+  --success: #2d8859;
+  --warning: #c47a14;
+  --danger: #c54040;
+  --font-sans: 'Geist Sans', 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); font-size: 14px; line-height: 1.5; color: var(--text); background: var(--background); padding: 28px; }
+.banner { background: var(--brand-green-soft); border-left: 4px solid var(--brand-green); border-radius: 8px; padding: 14px 18px; margin-bottom: 28px; font-size: 13px; color: var(--text-muted); }
+.banner b { color: var(--brand-green); font-weight: 600; }
+header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 28px; }
+.title-block { display: flex; align-items: center; gap: 12px; }
+.brand-mark { width: 32px; height: 32px; border-radius: 8px; background: var(--brand-gradient); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; letter-spacing: -0.04em; }
+h1 { font-size: 26px; font-weight: 600; line-height: 1.15; letter-spacing: -0.02em; }
+h1 .sub { font-weight: 400; color: var(--text-muted); font-size: 18px; }
+.actions { display: flex; gap: 8px; }
+.btn { font-family: var(--font-sans); font-size: 14px; font-weight: 500; padding: 9px 18px; border-radius: 8px; cursor: pointer; transition: all 150ms ease; border: 1px solid var(--border); background: var(--background); color: var(--text); }
+.btn:hover { background: var(--surface-elevated); }
+.btn-primary { background: var(--brand-green); color: white; border-color: var(--brand-green); }
+.btn-primary:hover { background: #246d48; }
+.btn-primary:active { transform: scale(0.98); }
+.layout { display: grid; grid-template-columns: 1fr 360px; gap: 24px; }
+@media (max-width: 1023px) { .layout { grid-template-columns: 1fr; } }
+.card { background: var(--background); border: 1px solid var(--border); border-radius: 10px; padding: 20px; box-shadow: 0 1px 2px rgba(45,136,89,0.04); }
+.card h2 { font-size: 17px; font-weight: 600; margin-bottom: 14px; letter-spacing: -0.01em; }
+.muted { color: var(--text-muted); font-size: 12px; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); padding: 10px 0; border-bottom: 1px solid var(--border); }
+th.num, td.num { text-align: right; font-family: var(--font-mono); font-weight: 500; }
+td { padding: 14px 0; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover { background: var(--surface); transition: background 150ms; }
+.sub-recipe { font-weight: 500; color: var(--brand-green); display: flex; align-items: center; gap: 6px; }
+.sub-recipe::before { content: "🍅"; font-size: 14px; }
+.brand-tag { display: inline-block; font-size: 11px; color: var(--brand-amber); font-weight: 500; padding: 2px 6px; background: var(--brand-amber-soft); border-radius: 4px; margin-left: 6px; }
+.brand-tag::before { content: "·"; margin-right: 4px; color: var(--text-muted); }
+.citation { display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; background: var(--surface-elevated); border-radius: 4px; font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); margin-left: 8px; cursor: help; transition: background 150ms; }
+.citation:hover { background: var(--brand-green-soft); color: var(--brand-green); }
+.badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; padding: 5px 12px; border-radius: 999px; border: 1.5px solid; }
+.badge-allergen { color: var(--danger); border-color: var(--danger); background: var(--background); }
+.badge-success { color: var(--brand-green); border-color: var(--brand-green); background: var(--background); }
+.macro-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.macro-cell { padding: 12px; background: var(--surface); border-radius: 8px; position: relative; overflow: hidden; }
+.macro-cell::before { content: ""; position: absolute; bottom: 0; left: 0; height: 3px; background: var(--brand-green); border-radius: 0 0 8px 8px; }
+.macro-cell:nth-child(1)::before { width: 60%; }
+.macro-cell:nth-child(2)::before { width: 45%; background: var(--brand-amber); }
+.macro-cell:nth-child(3)::before { width: 35%; background: var(--brand-amber); }
+.macro-cell:nth-child(4)::before { width: 25%; }
+.macro-num { font-family: var(--font-mono); font-size: 22px; font-weight: 600; }
+.macro-label { font-size: 11px; color: var(--text-muted); letter-spacing: 0.04em; text-transform: uppercase; margin-top: 2px; }
+.margin-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.margin-row:last-child { border-bottom: none; }
+.margin-row.primary { padding: 14px 0; background: linear-gradient(90deg, var(--brand-green-soft) 0%, transparent 80%); margin: 0 -20px; padding-left: 20px; padding-right: 20px; border-radius: 6px; border-bottom: none; }
+.margin-row.primary .margin-num { font-family: var(--font-mono); font-size: 22px; font-weight: 600; color: var(--brand-green); }
+.margin-num { font-family: var(--font-mono); font-weight: 500; }
+.allergen-row { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.allergen-row:last-child { border-bottom: none; }
+.allergen-row .label { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
+.flags { display: flex; flex-wrap: wrap; gap: 6px; }
+.recipe-summary { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.live-cost { font-family: var(--font-mono); font-weight: 600; font-size: 22px; color: var(--brand-green); }
+</style>
+</head>
+<body>
+
+<div class="banner"><b>Variant C — Playful AGPL community.</b> Brand-green + brand-amber identity, Geist sans + Geist Mono numerics, food-emoji on non-critical paths, character moments. Tablet + mobile both flagship.</div>
+
+<header>
+  <div class="title-block">
+    <div class="brand-mark">o</div>
+    <h1>Tagliatelle Bolognesa <span class="sub">— Ragù base</span></h1>
+  </div>
+  <div class="actions">
+    <button class="btn">Discard</button>
+    <button class="btn">Generate label</button>
+    <button class="btn btn-primary">Save recipe</button>
+  </div>
+</header>
+
+<div class="layout">
+  <main>
+    <div class="card">
+      <h2>Ingredients</h2>
+      <table>
+        <thead>
+          <tr><th>Component</th><th>Source</th><th class="num">Qty</th><th class="num">Yield %</th><th class="num">Cost</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="sub-recipe">Salsa de tomate</span> <span class="muted">(sub-recipe)</span></td><td class="muted">rolled up</td><td class="num">200 g</td><td class="num">100%</td><td class="num">€0.42</td></tr>
+          <tr><td>Crushed tomato <span class="brand-tag">Heinz</span></td><td class="muted">Distribuidora García</td><td class="num">200 g</td><td class="num">100% <span class="citation">USDA</span></td><td class="num">€0.45</td></tr>
+          <tr><td>Onion</td><td class="muted">Verduras del Sol</td><td class="num">100 g</td><td class="num">85% <span class="citation">CIA</span></td><td class="num">€0.18</td></tr>
+          <tr><td>Carrot</td><td class="muted">Verduras del Sol</td><td class="num">80 g</td><td class="num">80% <span class="citation">USDA</span></td><td class="num">€0.12</td></tr>
+          <tr><td>Celery</td><td class="muted">Verduras del Sol</td><td class="num">60 g</td><td class="num">75% <span class="citation">USDA</span></td><td class="num">€0.10</td></tr>
+          <tr><td>Ground beef</td><td class="muted">Carnicería X</td><td class="num">300 g</td><td class="num">95% <span class="citation">CIA</span></td><td class="num">€1.62</td></tr>
+          <tr><td>Red wine</td><td class="muted">Bodega Real</td><td class="num">50 ml</td><td class="num">100%</td><td class="num">€0.18</td></tr>
+        </tbody>
+      </table>
+      <div class="recipe-summary">
+        <div><span class="muted" style="font-weight:500">Waste 18%</span> <span class="citation" style="margin-left:6px">stew avg · ICN</span></div>
+        <div><span class="muted">Live cost</span> <span class="live-cost">€3.45 / kg</span></div>
+      </div>
+    </div>
+  </main>
+
+  <aside style="display:flex; flex-direction:column; gap:14px;">
+    <div class="card">
+      <h2>Macros · per 100g</h2>
+      <div class="macro-grid">
+        <div class="macro-cell"><div class="macro-num">180</div><div class="macro-label">kcal</div></div>
+        <div class="macro-cell"><div class="macro-num">14g</div><div class="macro-label">carbs</div></div>
+        <div class="macro-cell"><div class="macro-num">9g</div><div class="macro-label">fat</div></div>
+        <div class="macro-cell"><div class="macro-num">8g</div><div class="macro-label">protein</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Allergens & diet</h2>
+      <div class="allergen-row">
+        <div class="label">Contains</div>
+        <span class="badge badge-allergen">🌾 Gluten</span>
+      </div>
+      <div class="allergen-row">
+        <div class="label">Diet flags</div>
+        <div class="flags">
+          <span class="muted">— None applicable (beef + gluten + alcohol)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Menu · Palafito Centro / Dine-in</h2>
+      <div class="margin-row"><span>Cost</span><span class="margin-num">€3.45</span></div>
+      <div class="margin-row"><span>Sale price</span><span class="margin-num">€18.00</span></div>
+      <div class="margin-row primary"><span style="font-weight:600">Margin</span><span class="margin-num">80.8% ✓</span></div>
+      <div class="margin-row"><span class="muted">Target</span><span class="muted margin-num">70.0%</span></div>
+    </div>
+  </aside>
+</div>
+
+</body>
+</html>

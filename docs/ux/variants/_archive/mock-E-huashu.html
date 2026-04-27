@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mock E — Tagliatelle Bolognesa · openTrattOS</title>
+
+<!--
+==============================================================================
+ MOCK E · openTrattOS J1 (Create Recipe — Lourdes / kitchen tablet 1024×768)
+ Generated applying huashu-design methodology (skill at:
+   _bmad-output/research/skills/huashu-design/)
+------------------------------------------------------------------------------
+ PHILOSOPHY CHOSEN
+   #04 · Fathom Information Design — "Scientific narrative"
+   Source: references/design-styles.md §一·信息建筑派 (lines 114-134)
+   Tradition: 一、信息建筑派 (Information Architecture school)
+
+ WHY THIS PHILOSOPHY FITS openTrattOS
+   Quote from skill (line 116): "哲学：每一个像素都必须承载信息"
+   ("every pixel must carry information"). The recipe escandallo screen IS
+   a quantitative artifact — yields, costs, macros, allergens, citation
+   provenance ([USDA], [CIA], [ICN]). Lourdes does not need delight; she
+   needs a glance to read true. Fathom's "Footnote/citation design
+   integrated into layout" (line 129) is the only philosophy in the catalog
+   that treats citations as a first-class design citizen — exactly what
+   the AI-suggested-data trust mechanism requires.
+   Anti-fit philosophies rejected:
+     - Sagmeister/Walsh "joyful" (#12): kitchen tool, not toy
+     - Active Theory WebGL (#06): no GPU on a 10" tablet on slow Wi-Fi
+     - Kenya Hara emptiness (#18): density is required, not whitespace
+
+ DESIGN TOKENS — extracted directly from huashu-design references
+ ─────────────────────────────────────────────────────────────────────
+   TOKEN              VALUE                  SOURCE
+   ─────────────────  ─────────────────────  ────────────────────────────
+   Display font       "Source Serif 4"       demos/c5-infographic-en.html
+                                              line 8 (Fathom-style demo)
+   Body / sans        "Inter" 100-700        demos/c5-infographic-en.html
+                                              line 8
+   Mono / data HUD    "JetBrains Mono"       demos/c5-infographic-en.html
+                                              line 8 + design-styles.md
+                                              §1 line 129 (sans-serif
+                                              "GT America/Graphik" — we
+                                              substitute Inter, free CDN)
+   Accent (citation)  oklch(0.55 0.16 35)    Fathom DNA "navy + one
+                       ≈ #B85D3D rust         highlight color" (line 127);
+                                              palette warm not cold per
+                                              "neutral scheme (grays,
+                                              navy, ONE highlight)"
+   Ink                #1A1918                demos/c5-infographic-en.html
+                                              line 25 (--cd-ink)
+   Paper              #F5F4F0                demos/c5-infographic-en.html
+                                              line 23 (--cd-bg "Brand
+                                              Reveal" panel)
+   Hairline           rgba(26,25,24,0.10)    Fathom: "Footnote design
+                                              integrated into layout"
+                                              implies hairline rules,
+                                              not boxes
+   Spacing rhythm     8 / 12 / 20 / 32 / 56  Müller-Brockmann 8pt baseline
+                                              (design-styles.md §10
+                                              line 277), used here as
+                                              fallback per design-context
+                                              §3 — Fathom inherits Swiss
+                                              grid discipline
+   Letter-spacing     0.18em–0.30em on       demos/c5-infographic-en.html
+   (mono labels)      mono uppercase         line 64, 108, 162
+                                              (.watermark, .json-label,
+                                              .ig-masthead .issue)
+
+ RATIONALE (2 lines)
+   Line 1: Treat the recipe as a scientific journal page — masthead,
+           rule, headline, body, footnoted citations — so AI-suggested
+           yields earn trust by *looking* sourced, not by claiming so.
+   Line 2: Density without clutter (Fathom DNA line 130): tabular numbers,
+           hairline rules instead of cards, mono for data, serif for
+           the human "Tagliatelle Bolognesa" voice — one accent (rust)
+           reserved for citations + margin signal.
+
+ DEVIATIONS from huashu-design (declared honestly)
+   - huashu-design Phase 5 calls for parallel subagent demo generation;
+     this is a single-output task so we go straight to the Junior pass.
+   - No Playwright click-test (per skill §step 7) — this is a static
+     mock, no JS interactivity beyond a tooltip.
+   - No core-asset protocol §1.a logo download — openTrattOS logo
+     placeholder is a typographic wordmark (honest placeholder over
+     a hand-drawn SVG, per skill rule 4).
+   - Allergen contrast bumped beyond Fathom's neutrality because
+     EU 1169/2011 Article 21 mandates emphasis (legal hard rule >
+     aesthetic philosophy).
+==============================================================================
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300..700;1,8..60,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ─── Tokens (lifted from huashu-design demos/c5-infographic-en.html) ─── */
+:root {
+  --paper:       #F5F4F0;
+  --paper-2:     #FFFFFF;
+  --ink:         #1A1918;
+  --ink-70:      rgba(26,25,24,0.72);
+  --ink-50:      rgba(26,25,24,0.52);
+  --ink-30:      rgba(26,25,24,0.30);
+  --hairline:    rgba(26,25,24,0.10);
+  --hairline-2:  rgba(26,25,24,0.18);
+  --accent:      #B85D3D;          /* Fathom "one highlight" — citations */
+  --accent-soft: rgba(184,93,61,0.08);
+  --warn-ink:    #6B2A0E;          /* allergen text — high contrast on cream */
+  --warn-paper:  #FBE9DD;
+  --ok:          #2F5A3D;          /* margin OK — used in body, not as label */
+
+  --serif: "Source Serif 4", Georgia, "Iowan Old Style", serif;
+  --sans:  "Inter", -apple-system, system-ui, sans-serif;
+  --mono:  "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+
+  /* 8pt baseline — Müller-Brockmann inheritance via Fathom */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 20px; --s5: 32px; --s6: 56px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1, "tnum" 1;
+}
+
+/* tabular numerals everywhere data lives */
+.tabular, table, .num { font-variant-numeric: tabular-nums; }
+
+/* ============ Banner (huashu-design footer note, Fathom voice) ============ */
+.banner {
+  background: var(--paper-2);
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--hairline-2);
+  padding: 14px 32px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--ink-70);
+  text-transform: uppercase;
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.banner .lead {
+  color: var(--ink);
+  font-weight: 500;
+}
+.banner .accent { color: var(--accent); }
+
+/* ============ Page frame — journal-spread proportions ============ */
+.spread {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--s5) 32px var(--s6);
+}
+
+/* ── Masthead (mirrors c5-infographic-en.html .ig-masthead) ── */
+.masthead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid var(--hairline-2);
+  padding-bottom: var(--s3);
+  margin-bottom: var(--s4);
+}
+.masthead .issue {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.30em;
+  color: var(--ink-50);
+  text-transform: uppercase;
+}
+.masthead .issue .accent { color: var(--accent); }
+.masthead .dept {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.30em;
+  color: var(--ink-70);
+  text-transform: uppercase;
+}
+
+/* ── Display headline (Source Serif 4 light, lifted from .ig-display) ── */
+.display {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: 56px;
+  line-height: 1.02;
+  letter-spacing: -0.022em;
+  color: var(--ink);
+  margin-bottom: 6px;
+  font-feature-settings: "liga" 1, "dlig" 1, "kern" 1;
+  text-wrap: pretty;
+}
+.deck {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 19px;
+  line-height: 1.45;
+  color: var(--ink-70);
+  letter-spacing: -0.005em;
+  margin-bottom: var(--s4);
+}
+
+/* ── Action rail (no buttons-in-cards — flush right of masthead row) ── */
+.action-rail {
+  display: flex;
+  gap: var(--s4);
+  align-items: center;
+  margin-bottom: var(--s5);
+  padding-bottom: var(--s3);
+  border-bottom: 1px solid var(--hairline);
+}
+.action {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-70);
+  background: none;
+  border: none;
+  padding: var(--s2) 0;
+  cursor: pointer;
+  position: relative;
+  transition: color 120ms;
+}
+.action:hover { color: var(--ink); }
+.action.discard:hover { color: var(--warn-ink); }
+.action.primary {
+  color: var(--paper-2);
+  background: var(--ink);
+  padding: 10px 18px;
+  margin-left: auto;
+}
+.action.primary:hover { background: var(--accent); }
+.action.secondary {
+  border: 1px solid var(--hairline-2);
+  padding: 10px 18px;
+}
+.action.secondary:hover { border-color: var(--ink); }
+
+/* ============ Two-column journal layout 60 / 40 ============ */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 0.66fr;
+  gap: var(--s6);
+}
+
+/* ─── Ingredients table (Fathom: tabular precision + footnote citations) ─── */
+.section-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  color: var(--ink-50);
+  text-transform: uppercase;
+  margin-bottom: var(--s3);
+  padding-bottom: var(--s2);
+  border-bottom: 1px solid var(--hairline);
+  display: flex;
+  justify-content: space-between;
+}
+.section-label .count { color: var(--ink-30); }
+
+table.ingredients {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+table.ingredients thead th {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-50);
+  text-align: left;
+  padding: var(--s2) var(--s3) var(--s2) 0;
+  border-bottom: 1px solid var(--hairline-2);
+}
+table.ingredients thead th.num,
+table.ingredients tbody td.num { text-align: right; }
+table.ingredients tbody td {
+  padding: var(--s3) var(--s3) var(--s3) 0;
+  border-bottom: 1px solid var(--hairline);
+  vertical-align: baseline;
+}
+table.ingredients tbody tr:hover td { background: var(--accent-soft); }
+table.ingredients .name {
+  font-weight: 500;
+  color: var(--ink);
+}
+table.ingredients .name .sub {
+  font-style: italic;
+  font-family: var(--serif);
+  font-weight: 400;
+  color: var(--ink-70);
+  font-size: 13px;
+  margin-left: 6px;
+}
+table.ingredients .source {
+  color: var(--ink-50);
+  font-size: 12.5px;
+}
+table.ingredients .source.rolled {
+  font-style: italic;
+  font-family: var(--serif);
+}
+table.ingredients .qty {
+  font-family: var(--mono);
+  color: var(--ink);
+}
+table.ingredients .yield {
+  font-family: var(--mono);
+  color: var(--ink-70);
+}
+table.ingredients .cost {
+  font-family: var(--mono);
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* ── Footnote-style citation badge (Fathom signature) ── */
+.cite {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  text-transform: uppercase;
+  vertical-align: super;
+  margin-left: 5px;
+  padding: 1px 5px;
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+  cursor: help;
+  position: relative;
+  line-height: 1.3;
+  background: var(--paper-2);
+}
+.cite:hover { background: var(--accent); color: var(--paper-2); }
+.cite[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: -4px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--sans);
+  font-weight: 400;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 8px 10px;
+  width: 220px;
+  z-index: 10;
+  border-radius: 2px;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+/* ── Footer of table: waste factor + live cost ── */
+.table-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: var(--s3) 0;
+  margin-top: var(--s2);
+  border-top: 2px solid var(--ink);
+  font-size: 13px;
+}
+.table-footer .waste {
+  color: var(--ink-70);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+}
+.table-footer .live {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.table-footer .live .label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--ink-50);
+  text-transform: uppercase;
+  margin-right: var(--s2);
+}
+
+/* ============ Right column — three sidebar entries ============ */
+aside { display: flex; flex-direction: column; gap: var(--s5); }
+.entry { /* no card — hairline rule on top, Fathom-style footnote feel */ }
+.entry-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  color: var(--ink-50);
+  text-transform: uppercase;
+  padding-bottom: var(--s2);
+  border-bottom: 1px solid var(--hairline-2);
+  margin-bottom: var(--s3);
+}
+
+/* Macros — tabular block */
+.macros {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s3) var(--s4);
+}
+.macro .v {
+  font-family: var(--serif);
+  font-size: 28px;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.0;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.macro .v .unit {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ink-50);
+  margin-left: 3px;
+}
+.macro .k {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--ink-50);
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+.macros-foot {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--ink-30);
+  text-transform: uppercase;
+  margin-top: var(--s4);
+  padding-top: var(--s2);
+  border-top: 1px solid var(--hairline);
+}
+
+/* Allergen badge — EU 1169/2011 Article 21: icon + bold text + contrast */
+.allergens-block { }
+.allergen-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--warn-paper);
+  color: var(--warn-ink);
+  border: 1.5px solid var(--warn-ink);
+  border-radius: 2px;
+  padding: 8px 12px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  margin-bottom: var(--s3);
+}
+.allergen-icon {
+  width: 18px; height: 18px;
+  flex-shrink: 0;
+}
+.allergen-prefix {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--warn-ink);
+  opacity: 0.8;
+}
+.diet-flag {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-70);
+  line-height: 1.5;
+  padding-top: var(--s2);
+  border-top: 1px dashed var(--hairline);
+}
+
+/* Menu pricing — tabular */
+.menu-meta {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  color: var(--ink-70);
+  text-transform: uppercase;
+  margin-bottom: var(--s3);
+}
+.menu-meta .channel { color: var(--ink); }
+.menu-rows { display: grid; grid-template-columns: 1fr auto; gap: 6px var(--s3); }
+.menu-rows .k {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-50);
+  align-self: baseline;
+}
+.menu-rows .v {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.menu-rows .v.price {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.menu-rows .v.margin-ok {
+  color: var(--ok);
+  font-weight: 500;
+}
+.margin-bar {
+  margin-top: var(--s3);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--hairline);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--ink-50);
+  text-transform: uppercase;
+}
+.margin-bar .target { color: var(--ink-30); }
+.check {
+  color: var(--ok);
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 12px;
+  margin-left: 4px;
+  letter-spacing: 0;
+}
+
+/* ============ Footnotes legend (Fathom: footnote design integrated) ============ */
+.legend {
+  margin-top: var(--s6);
+  padding-top: var(--s4);
+  border-top: 2px solid var(--ink);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s5);
+  font-size: 12px;
+  color: var(--ink-70);
+  line-height: 1.5;
+}
+.legend .lab {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-right: 6px;
+  border: 1px solid var(--accent);
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+.legend .src-name {
+  font-family: var(--serif);
+  font-weight: 500;
+  color: var(--ink);
+}
+
+/* ============ Responsive — mobile gracefully collapses ============ */
+@media (max-width: 900px) {
+  .spread { padding: var(--s4) 20px; }
+  .display { font-size: 38px; }
+  .layout { grid-template-columns: 1fr; gap: var(--s5); }
+  .legend { grid-template-columns: 1fr; gap: var(--s3); }
+  table.ingredients { font-size: 13px; }
+  table.ingredients .source { display: block; font-size: 11.5px; margin-top: 2px; }
+  .action-rail { flex-wrap: wrap; }
+  .action.primary { width: 100%; text-align: center; margin-left: 0; margin-top: var(--s2); }
+}
+@media (max-width: 600px) {
+  .masthead { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .macros { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Banner — declares philosophy + rationale, per task brief -->
+<div class="banner">
+  <span class="lead">Mock E · Generated applying huashu-design methodology</span>
+  <span>Philosophy <span class="accent">#04 · Fathom Information Design</span> — scientific journal aesthetic, citation as first-class design citizen</span>
+  <span>Why: recipe is a quantitative artefact; AI-suggested yields earn trust by <em>looking</em> sourced</span>
+</div>
+
+<main class="spread">
+
+  <!-- Masthead row -->
+  <div class="masthead">
+    <div class="issue">openTrattOS · J1 <span class="accent">create recipe</span> · esc/0001</div>
+    <div class="dept">Palafito Centro · Lourdes G.</div>
+  </div>
+
+  <h1 class="display">Tagliatelle <em style="font-family:var(--serif); font-style:italic; color:var(--accent); font-weight:300;">Bolognesa</em></h1>
+  <p class="deck">Ragù base — sub-recipe, beef &amp; soffritto, 18% stew waste factor</p>
+
+  <!-- Action rail — flush, no card chrome -->
+  <div class="action-rail">
+    <button class="action discard" type="button">Descartar</button>
+    <button class="action secondary" type="button">Generar etiqueta</button>
+    <button class="action primary" type="button">Guardar receta</button>
+  </div>
+
+  <!-- Two-column journal spread -->
+  <div class="layout">
+
+    <!-- LEFT · Ingredients ledger -->
+    <section>
+      <div class="section-label">
+        <span>Ingredientes</span>
+        <span class="count">7 líneas</span>
+      </div>
+
+      <table class="ingredients" role="table" aria-label="Recipe ingredients with cost and yield">
+        <thead>
+          <tr>
+            <th scope="col">Componente</th>
+            <th scope="col">Origen</th>
+            <th scope="col" class="num">Cant.</th>
+            <th scope="col" class="num">Yield</th>
+            <th scope="col" class="num">Coste</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="name">Salsa de tomate <span class="sub">— sub-receta</span></td>
+            <td class="source rolled">rolled-up</td>
+            <td class="num qty">200&nbsp;g</td>
+            <td class="num yield">100%</td>
+            <td class="num cost">€0,42</td>
+          </tr>
+          <tr>
+            <td class="name">Tomate triturado <span class="sub">— Heinz</span></td>
+            <td class="source">Distribuidora García</td>
+            <td class="num qty">200&nbsp;g</td>
+            <td class="num yield">100%<span class="cite" data-tip="USDA FoodData Central — National Nutrient Database for Standard Reference. Yield reference for crushed canned tomato.">USDA</span></td>
+            <td class="num cost">€0,45</td>
+          </tr>
+          <tr>
+            <td class="name">Cebolla</td>
+            <td class="source">Verduras del Sol</td>
+            <td class="num qty">100&nbsp;g</td>
+            <td class="num yield">85%<span class="cite" data-tip="The Culinary Institute of America — Yield Test Reference. Onion peeled & trimmed, average loss 15%.">CIA</span></td>
+            <td class="num cost">€0,18</td>
+          </tr>
+          <tr>
+            <td class="name">Zanahoria</td>
+            <td class="source">Verduras del Sol</td>
+            <td class="num qty">80&nbsp;g</td>
+            <td class="num yield">80%<span class="cite" data-tip="USDA FoodData Central — yield factor for peeled & trimmed carrot, raw.">USDA</span></td>
+            <td class="num cost">€0,12</td>
+          </tr>
+          <tr>
+            <td class="name">Apio</td>
+            <td class="source">Verduras del Sol</td>
+            <td class="num qty">60&nbsp;g</td>
+            <td class="num yield">75%<span class="cite" data-tip="USDA FoodData Central — celery stalk, leaves & base trimmed.">USDA</span></td>
+            <td class="num cost">€0,10</td>
+          </tr>
+          <tr>
+            <td class="name">Carne picada de ternera</td>
+            <td class="source">Carnicería X</td>
+            <td class="num qty">300&nbsp;g</td>
+            <td class="num yield">95%<span class="cite" data-tip="The Culinary Institute of America — yield for ground beef, pan-seared, average shrinkage 5%.">CIA</span></td>
+            <td class="num cost">€1,62</td>
+          </tr>
+          <tr>
+            <td class="name">Vino tinto</td>
+            <td class="source">Bodega Real</td>
+            <td class="num qty">50&nbsp;ml</td>
+            <td class="num yield">100%</td>
+            <td class="num cost">€0,18</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="table-footer">
+        <span class="waste">Factor merma · 18%<span class="cite" style="margin-left:8px; vertical-align:baseline;" data-tip="Internal Cooking Norms — internal openTrattOS dataset. 'Stew avg' = mean shrinkage measured across 240 long-simmer ragù trials.">ICN · stew avg</span></span>
+        <span class="live"><span class="label">Coste vivo</span>€3,45 <span style="color:var(--ink-50); font-family:var(--mono); font-size:13px;">/ kg</span></span>
+      </div>
+    </section>
+
+    <!-- RIGHT · sidebar entries (no cards — hairline rules) -->
+    <aside>
+
+      <!-- 1. Macros -->
+      <div class="entry">
+        <div class="entry-label">Macros · por 100&nbsp;g</div>
+        <div class="macros">
+          <div class="macro"><div class="v">180<span class="unit">kcal</span></div><div class="k">Energía</div></div>
+          <div class="macro"><div class="v">14<span class="unit">g</span></div><div class="k">Carbohidratos</div></div>
+          <div class="macro"><div class="v">9<span class="unit">g</span></div><div class="k">Grasa</div></div>
+          <div class="macro"><div class="v">8<span class="unit">g</span></div><div class="k">Proteína</div></div>
+        </div>
+        <div class="macros-foot">EU 1169/2011 · Anexo XV · base 100 g</div>
+      </div>
+
+      <!-- 2. Allergens & diet — EU 1169/2011 Article 21 -->
+      <div class="entry">
+        <div class="entry-label">Alérgenos &amp; régimen</div>
+
+        <div class="allergen-prefix" style="margin-bottom:6px;">Contiene</div>
+        <div class="allergen-badge" role="status" aria-label="Contains gluten allergen warning">
+          <!-- Wheat icon — geometric, no AI-illustration slop -->
+          <svg class="allergen-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 22V8"/>
+            <path d="M12 14l-4-2 1-3 3 1z"/>
+            <path d="M12 14l4-2-1-3-3 1z"/>
+            <path d="M12 10l-3-1.5 1-2.5 2 1z"/>
+            <path d="M12 10l3-1.5-1-2.5-2 1z"/>
+            <path d="M12 6l-2-1 .5-2 1.5 1z"/>
+            <path d="M12 6l2-1-.5-2-1.5 1z"/>
+          </svg>
+          <span>Gluten</span>
+        </div>
+
+        <div class="diet-flag">
+          — Sin distintivos dietéticos aplicables (contiene ternera, gluten, alcohol).
+        </div>
+      </div>
+
+      <!-- 3. Menu pricing -->
+      <div class="entry">
+        <div class="entry-label">Carta · márgen</div>
+        <div class="menu-meta">
+          <span class="channel">Palafito Centro</span> · sala
+        </div>
+        <div class="menu-rows">
+          <span class="k">Coste</span>      <span class="v">€3,45</span>
+          <span class="k">PVP</span>        <span class="v price">€18,00</span>
+          <span class="k">Márgen</span>     <span class="v margin-ok">80,8%<span class="check">✓</span></span>
+        </div>
+        <div class="margin-bar">
+          <span>Objetivo</span>
+          <span class="target">70,0%</span>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <!-- Citation legend — Fathom: footnote design integrated into layout -->
+  <footer class="legend">
+    <div>
+      <span class="lab">USDA</span>
+      <span class="src-name">USDA FoodData Central</span> — U.S. Department of Agriculture standard reference for raw &amp; trimmed yields.
+    </div>
+    <div>
+      <span class="lab">CIA</span>
+      <span class="src-name">The Culinary Institute of America</span> — professional yield-test handbook, 5th ed.
+    </div>
+    <div>
+      <span class="lab">ICN</span>
+      <span class="src-name">Internal Cooking Norms</span> — openTrattOS in-house dataset; n = 240 trials.
+    </div>
+  </footer>
+
+</main>
+
+</body>
+</html>

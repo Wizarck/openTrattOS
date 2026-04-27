@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<!--
+  ============================================================================
+  openTrattOS — Mock I — Linear DESIGN.md (awesome-design-md collection)
+  ============================================================================
+  Brand:        Linear (linear.app)
+  Source path:  awesome-design-md/design-md/linear.app/README.md
+                → resolves to https://getdesign.md/linear.app/design-md
+                → fetched verbatim via `npx getdesign@latest add linear.app`
+  Tagline:      "Project management for engineers. Ultra-minimal, precise,
+                purple accent." (DESIGN.md §1)
+
+  Why Linear over Sentry / Stripe / Vercel / Notion:
+    Head Chef Lourdes IS the engineer-of-the-kitchen. Linear is built for
+    operators who glance at structured data under time pressure — exactly
+    Lourdes during service. Distinctive purple accent makes it instantly
+    recognisable side-by-side with the other 8 mocks.
+
+  Tokens extracted from DESIGN.md (verbatim):
+  ----------------------------------------------------------------------------
+  §2 Color Palette & Roles
+    Marketing Black     #08090a   (page bg)
+    Panel Dark          #0f1011   (sidebar / panel bg)
+    Level 3 Surface     #191a1b   (cards, dropdowns)
+    Secondary Surface   #28282c   (hover)
+    Primary Text        #f7f8f8   (near-white, NOT #fff)
+    Secondary Text      #d0d6e0   (silver)
+    Tertiary Text       #8a8f98   (muted)
+    Quaternary Text     #62666d   (subdued)
+    Brand Indigo        #5e6ad2   (CTA bg)
+    Accent Violet       #7170ff   (interactive)
+    Accent Hover        #828fff   (hover state)
+    Success Green       #27a644 / #10b981
+    Border subtle       rgba(255,255,255,0.05)
+    Border standard     rgba(255,255,255,0.08)
+
+  §3 Typography Rules
+    Primary             Inter Variable, font-feature-settings "cv01","ss03"
+    Mono                Berkeley Mono → ui-monospace, SF Mono, Menlo
+    Signature weight    510 (between 400 and 500)
+    Display tracking    -1.056px @ 48px, -0.704px @ 32px, -0.24px @ 20px
+    Three-tier weights  400 (read) / 510 (emphasise) / 590 (announce)
+    NEVER weight 700 — max is 590
+
+  §4 Component Stylings
+    Buttons             radius 6px, padding 8px 16px
+    Ghost btn bg        rgba(255,255,255,0.02), border rgba(255,255,255,0.08)
+    Primary btn bg      #5e6ad2, hover #828fff, white text
+    Cards               translucent rgba(255,255,255,0.02–0.05), radius 8px
+    Pill                radius 9999px, border 1px solid #23252a
+    Badge subtle        bg rgba(255,255,255,0.05), radius 2px, 10px wt 510
+
+  §5 Layout Principles
+    Base unit           8px
+    Scale               1, 4, 7, 8, 11, 12, 16, 19, 20, 22, 24, 28, 32, 35
+    Radius scale        2 / 4 / 6 / 8 / 12 / 22 / 9999 / 50%
+    Max content width   ~1200px
+
+  §6 Depth & Elevation
+    Surface             rgba(255,255,255,0.05) bg + 1px rgba(255,255,255,0.08)
+    Ring                rgba(0,0,0,0.2) 0 0 0 1px
+    Elevated            rgba(0,0,0,0.4) 0 2px 4px
+    Dialog              multi-layer stack
+    Philosophy          luminance-stepping, NOT drop-shadow on dark
+
+  §7 Do's and Don'ts (applied)
+    DO use #f7f8f8 not #fff · DO weight 510 default · DO -1.056px @ 48px
+    DON'T solid btn bg · DON'T weight 700 · DON'T warm colours · DON'T pure white
+
+  §8 Responsive — tablet 640–768px, two-column grids begin
+  §9 Agent Prompt Guide — applied verbatim to hero, cards, pills
+
+  Constraint compliance:
+    - Allergen badge: icon (⚠) + text "Gluten" (EU 1169/2011 Art 21) ✓
+    - Tablet-first: optimised for 1024×768 landscape, tested down to 768px ✓
+    - Single-file HTML, embedded CSS, Google Fonts CDN only ✓
+  ============================================================================
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Mock I — openTrattOS · Linear DESIGN.md</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   Linear DESIGN.md tokens — applied verbatim
+   ============================================================ */
+:root {
+  /* §2 Background surfaces (luminance stack) */
+  --bg-marketing: #08090a;
+  --bg-panel:     #0f1011;
+  --bg-surface:   #191a1b;
+  --bg-secondary: #28282c;
+
+  /* §2 Text (cool gray, never #fff) */
+  --text-primary:    #f7f8f8;
+  --text-secondary:  #d0d6e0;
+  --text-tertiary:   #8a8f98;
+  --text-quaternary: #62666d;
+
+  /* §2 Brand & accent — the ONLY chromatic colour */
+  --brand-indigo:    #5e6ad2;
+  --accent-violet:   #7170ff;
+  --accent-hover:    #828fff;
+
+  /* §2 Status */
+  --status-green:    #27a644;
+  --status-emerald:  #10b981;
+  --status-amber:    #f5a623; /* allergen warning, derived from same scale */
+  --status-rose:     #e5484d; /* destructive, used minimally */
+
+  /* §2 Borders — semi-transparent white */
+  --border-subtle:   rgba(255,255,255,0.05);
+  --border-standard: rgba(255,255,255,0.08);
+  --border-solid-1:  #23252a;
+  --border-solid-2:  #34343a;
+
+  /* §2 Button transparency stack */
+  --btn-bg-1: rgba(255,255,255,0.02);
+  --btn-bg-2: rgba(255,255,255,0.04);
+  --btn-bg-3: rgba(255,255,255,0.05);
+
+  /* §5 Spacing scale */
+  --s-1:  4px;
+  --s-2:  8px;
+  --s-3:  12px;
+  --s-4:  16px;
+  --s-5:  20px;
+  --s-6:  24px;
+  --s-7:  28px;
+  --s-8:  32px;
+
+  /* §5 Radius scale */
+  --r-micro:  2px;
+  --r-small:  4px;
+  --r-comf:   6px;
+  --r-card:   8px;
+  --r-panel:  12px;
+  --r-large:  22px;
+  --r-pill:   9999px;
+
+  /* §6 Shadows — multi-layer dialog stack */
+  --shadow-ring:     rgba(0,0,0,0.2) 0 0 0 1px;
+  --shadow-elevated: rgba(0,0,0,0.4) 0 2px 4px;
+  --shadow-dialog:
+      rgba(0,0,0,0)    0px 8px 2px,
+      rgba(0,0,0,0.01) 0px 5px 2px,
+      rgba(0,0,0,0.04) 0px 3px 2px,
+      rgba(0,0,0,0.07) 0px 1px 1px,
+      rgba(0,0,0,0.08) 0px 0px 1px;
+  --shadow-focus:    rgba(94,106,210,0.35) 0 0 0 3px;
+}
+
+/* ============================================================
+   §3 Typography — Inter Variable + cv01/ss03 + weight 510
+   (Google Fonts ships static cuts; we approximate 510 via 500)
+   ============================================================ */
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-marketing);
+  color: var(--text-primary);
+  font-family: 'Inter', 'SF Pro Display', -apple-system, system-ui,
+               'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  font-feature-settings: "cv01", "ss03"; /* §3 non-negotiable */
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  font-feature-settings: normal;
+}
+
+/* ============================================================
+   Banner — Mock identification (per spec §4)
+   ============================================================ */
+.mock-banner {
+  background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-marketing) 100%);
+  border-bottom: 1px solid var(--border-standard);
+  padding: var(--s-3) var(--s-6);
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  font-size: 12px;
+  font-weight: 510;
+  letter-spacing: -0.13px;
+  color: var(--text-secondary);
+}
+.mock-banner .badge {
+  background: var(--brand-indigo);
+  color: #fff;
+  padding: 3px var(--s-2);
+  border-radius: var(--r-micro);
+  font-size: 10px;
+  font-weight: 510;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.mock-banner .rationale {
+  color: var(--text-tertiary);
+  font-weight: 400;
+  font-size: 12px;
+}
+.mock-banner .rationale strong { color: var(--text-secondary); font-weight: 510; }
+
+/* ============================================================
+   App chrome — top bar (Linear-style)
+   ============================================================ */
+.appbar {
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0 var(--s-6);
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: 14px;
+  font-weight: 590;
+  letter-spacing: -0.182px;
+  color: var(--text-primary);
+}
+.brand-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-small);
+  background: linear-gradient(135deg, var(--brand-indigo), var(--accent-violet));
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 590;
+  color: #fff;
+}
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: 13px;
+  color: var(--text-tertiary);
+  font-weight: 510;
+  margin-left: var(--s-3);
+}
+.crumbs .sep { color: var(--text-quaternary); }
+.crumbs .here { color: var(--text-primary); }
+
+.appbar .spacer { flex: 1; }
+
+.kbd-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px var(--s-2);
+  background: var(--btn-bg-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-comf);
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 510;
+}
+.kbd {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  background: rgba(255,255,255,0.04);
+  padding: 1px 5px;
+  border-radius: var(--r-micro);
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   Page header — recipe title + actions
+   ============================================================ */
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--s-7) var(--s-6) var(--s-8);
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-5);
+  margin-bottom: var(--s-7);
+}
+.title-block { min-width: 0; }
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 2px 10px 2px 5px;
+  border: 1px solid var(--border-solid-1);
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 510;
+  letter-spacing: -0.13px;
+  margin-bottom: var(--s-3);
+}
+.eyebrow .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent-violet);
+}
+h1 {
+  /* §3 Display 48px @ weight 510 @ -1.056px */
+  font-size: 36px;
+  font-weight: 510;
+  line-height: 1.05;
+  letter-spacing: -0.792px;
+  margin: 0 0 var(--s-2) 0;
+  color: var(--text-primary);
+}
+h1 .accent-divider {
+  color: var(--text-quaternary);
+  font-weight: 400;
+  margin: 0 var(--s-2);
+}
+h1 .sub {
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+.subhead {
+  font-size: 14px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+  letter-spacing: -0.182px;
+}
+
+.actions {
+  display: flex;
+  gap: var(--s-2);
+  flex-shrink: 0;
+}
+
+/* §4 Buttons — Linear ghost / subtle / primary */
+.btn {
+  font-family: inherit;
+  font-feature-settings: "cv01","ss03";
+  font-size: 13px;
+  font-weight: 510;
+  letter-spacing: -0.13px;
+  padding: 7px 12px;
+  border-radius: var(--r-comf);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 120ms ease, color 120ms ease, box-shadow 120ms ease;
+  white-space: nowrap;
+}
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.btn-ghost {
+  background: var(--btn-bg-1);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-standard);
+}
+.btn-ghost:hover {
+  background: var(--btn-bg-3);
+  color: var(--text-primary);
+}
+
+.btn-destructive {
+  background: var(--btn-bg-1);
+  color: var(--text-tertiary);
+  border: 1px solid var(--border-standard);
+}
+.btn-destructive:hover {
+  background: rgba(229,72,77,0.08);
+  border-color: rgba(229,72,77,0.3);
+  color: var(--status-rose);
+}
+
+.btn-primary {
+  background: var(--brand-indigo);
+  color: #fff;
+  border: 1px solid var(--brand-indigo);
+  box-shadow: var(--shadow-elevated);
+}
+.btn-primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.icon { width: 14px; height: 14px; flex-shrink: 0; }
+
+/* ============================================================
+   Two-column grid — ingredients (60%) + sidebar (40%)
+   ============================================================ */
+.layout {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: var(--s-5);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  .actions { flex-wrap: wrap; }
+  h1 { font-size: 28px; letter-spacing: -0.616px; }
+}
+
+/* ============================================================
+   §4 Cards — translucent, never solid
+   ============================================================ */
+.card {
+  background: var(--btn-bg-1);
+  border: 1px solid var(--border-standard);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.card-title {
+  font-size: 13px;
+  font-weight: 590;
+  letter-spacing: -0.182px;
+  color: var(--text-primary);
+  text-transform: none;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.card-title .count {
+  background: var(--btn-bg-3);
+  border: 1px solid var(--border-subtle);
+  padding: 1px 7px;
+  border-radius: var(--r-pill);
+  font-size: 11px;
+  font-weight: 510;
+  color: var(--text-tertiary);
+}
+.card-meta {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 510;
+}
+
+/* ============================================================
+   Ingredients table
+   ============================================================ */
+.ing-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ing-table thead th {
+  text-align: left;
+  padding: var(--s-2) var(--s-4);
+  font-size: 11px;
+  font-weight: 510;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(255,255,255,0.012);
+}
+.ing-table tbody tr {
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 100ms ease;
+}
+.ing-table tbody tr:last-child { border-bottom: none; }
+.ing-table tbody tr:hover { background: var(--btn-bg-1); }
+.ing-table td {
+  padding: var(--s-3) var(--s-4);
+  vertical-align: middle;
+  color: var(--text-secondary);
+}
+.ing-table td.col-name { color: var(--text-primary); font-weight: 510; }
+.ing-table td.col-name .sub-recipe {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ing-table td.col-name .chev {
+  color: var(--text-quaternary);
+  font-size: 10px;
+}
+.ing-table td.col-name .pill-sub {
+  font-size: 10px;
+  font-weight: 510;
+  background: rgba(113,112,255,0.08);
+  color: var(--accent-violet);
+  border: 1px solid rgba(113,112,255,0.2);
+  padding: 1px 6px;
+  border-radius: var(--r-micro);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-left: var(--s-2);
+}
+.ing-table td.col-supplier { color: var(--text-tertiary); font-size: 12px; }
+.ing-table td.col-qty { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: var(--text-secondary); }
+.ing-table td.col-yield { color: var(--text-secondary); }
+.ing-table td.col-yield .src {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--text-quaternary);
+  margin-left: 6px;
+  background: var(--btn-bg-3);
+  padding: 1px 5px;
+  border-radius: var(--r-micro);
+  border: 1px solid var(--border-subtle);
+}
+.ing-table td.col-cost {
+  text-align: right;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 510;
+}
+
+.ing-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-4) var(--s-5);
+  background: rgba(255,255,255,0.015);
+  border-top: 1px solid var(--border-subtle);
+  gap: var(--s-4);
+  flex-wrap: wrap;
+}
+.ing-foot-left { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
+.metric {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 510;
+}
+.metric .v { color: var(--text-primary); font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 13px; }
+.metric .src {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  color: var(--text-quaternary);
+  background: var(--btn-bg-3);
+  padding: 1px 5px;
+  border-radius: var(--r-micro);
+  border: 1px solid var(--border-subtle);
+}
+.cost-live {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 510;
+}
+.cost-live .v {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 18px;
+  font-weight: 510;
+  letter-spacing: -0.24px;
+  color: var(--text-primary);
+}
+.cost-live .pulse {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--status-emerald);
+  margin-right: 6px;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+  50%      { opacity: 0.6; box-shadow: 0 0 0 4px rgba(16,185,129,0); }
+}
+
+/* ============================================================
+   Sidebar cards
+   ============================================================ */
+.sidebar { display: flex; flex-direction: column; gap: var(--s-4); }
+
+/* Macros */
+.macros-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border-subtle);
+}
+.macros-grid > div {
+  background: var(--bg-panel);
+  padding: var(--s-4) var(--s-3);
+  text-align: center;
+}
+.macro-v {
+  display: block;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 18px;
+  font-weight: 510;
+  letter-spacing: -0.24px;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+.macro-l {
+  font-size: 11px;
+  font-weight: 510;
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Allergens */
+.allergen-list {
+  padding: var(--s-4) var(--s-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+/* §spec constraint #2 — allergen MUST be icon + text (EU 1169/2011 Art 21) */
+.allergen-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: 6px var(--s-3);
+  background: rgba(245,166,35,0.08);
+  border: 1px solid rgba(245,166,35,0.25);
+  border-radius: var(--r-comf);
+  font-size: 13px;
+  font-weight: 510;
+  color: #f5a623;
+  width: fit-content;
+}
+.allergen-badge .icon {
+  width: 16px; height: 16px;
+  display: grid; place-items: center;
+  background: rgba(245,166,35,0.18);
+  border-radius: 50%;
+  color: #f5a623;
+  font-size: 11px;
+  font-weight: 590;
+}
+.diet-note {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+  letter-spacing: -0.13px;
+  line-height: 1.5;
+}
+.diet-note .em { color: var(--text-secondary); font-weight: 510; }
+
+/* Menu card */
+.menu-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-4) var(--s-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.menu-venue {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: 13px;
+  font-weight: 510;
+  color: var(--text-primary);
+  letter-spacing: -0.182px;
+}
+.menu-venue .marker {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent-violet);
+}
+.menu-channel {
+  font-size: 11px;
+  font-weight: 510;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  background: var(--btn-bg-3);
+  padding: 2px 7px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border-subtle);
+}
+.menu-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border-subtle);
+}
+.menu-grid > div {
+  background: var(--bg-panel);
+  padding: var(--s-4);
+}
+.menu-grid .menu-cell-label {
+  font-size: 11px;
+  font-weight: 510;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-quaternary);
+  margin-bottom: 4px;
+}
+.menu-grid .menu-cell-v {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 17px;
+  font-weight: 510;
+  letter-spacing: -0.24px;
+  color: var(--text-primary);
+}
+.margin-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-3) var(--s-5);
+  background: rgba(39,166,68,0.06);
+  border-top: 1px solid var(--border-subtle);
+}
+.margin-label {
+  font-size: 12px;
+  font-weight: 510;
+  color: var(--text-tertiary);
+  letter-spacing: -0.13px;
+}
+.margin-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 590;
+  color: var(--status-emerald);
+}
+.margin-value .check {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--status-emerald);
+  display: grid; place-items: center;
+  color: var(--bg-marketing);
+  font-size: 9px;
+  font-weight: 700;
+}
+.margin-target {
+  font-size: 11px;
+  color: var(--text-quaternary);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  margin-left: 6px;
+}
+
+/* ============================================================
+   Tablet / mobile collapse
+   ============================================================ */
+@media (max-width: 768px) {
+  .page { padding: var(--s-5) var(--s-4); }
+  .ing-table thead th, .ing-table td { padding: var(--s-2) var(--s-3); font-size: 12px; }
+  .col-supplier { display: none; }
+  .macros-grid { grid-template-columns: repeat(2, 1fr); }
+  .menu-grid { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+/* Footer credit */
+.foot {
+  margin-top: var(--s-8);
+  padding-top: var(--s-5);
+  border-top: 1px solid var(--border-subtle);
+  font-size: 11px;
+  color: var(--text-quaternary);
+  font-weight: 400;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+}
+.foot .mono { color: var(--text-quaternary); }
+</style>
+</head>
+<body>
+
+<!-- =========================================================
+     SPEC: Mock identification banner (constraint #4)
+     ========================================================= -->
+<div class="mock-banner">
+  <span class="badge">Mock I</span>
+  <span>Generated applying <strong style="color:var(--text-primary)">Linear</strong>'s DESIGN.md from awesome-design-md collection</span>
+  <span class="rationale">— <strong>Why Linear:</strong> Head Chef Lourdes IS the engineer-of-the-kitchen — Linear is built for operators glancing at structured data under time pressure.</span>
+</div>
+
+<!-- =========================================================
+     App chrome
+     ========================================================= -->
+<header class="appbar">
+  <div class="brand">
+    <div class="brand-mark">o</div>
+    <span>openTrattOS</span>
+  </div>
+  <div class="crumbs">
+    <span>Recipes</span>
+    <span class="sep">/</span>
+    <span>Pasta</span>
+    <span class="sep">/</span>
+    <span class="here">Tagliatelle Bolognesa</span>
+  </div>
+  <div class="spacer"></div>
+  <span class="kbd-hint"><span class="kbd">Cmd</span><span class="kbd">K</span><span>quick action</span></span>
+</header>
+
+<!-- =========================================================
+     Page
+     ========================================================= -->
+<main class="page">
+
+  <div class="page-head">
+    <div class="title-block">
+      <span class="eyebrow"><span class="dot"></span> Recipe · draft · auto-saved 14:32</span>
+      <h1>Tagliatelle Bolognesa <span class="accent-divider">—</span> <span class="sub">Ragù base</span></h1>
+      <div class="subhead">7 ingredients · 1 sub-recipe · €3.45/kg live cost · last edited by Lourdes</div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-destructive" type="button">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h10M6.5 4V2.5h3V4M5 4v9.5h6V4"/></svg>
+        Discard
+      </button>
+      <button class="btn btn-ghost" type="button">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 11v2h10v-2M8 3v8m0 0L5 8m3 3l3-3"/></svg>
+        Generate label
+      </button>
+      <button class="btn btn-primary" type="button">
+        <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 8l3 3 7-7"/></svg>
+        Save recipe
+      </button>
+    </div>
+  </div>
+
+  <div class="layout">
+
+    <!-- ============= INGREDIENTS (60%) ============= -->
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">
+          Ingredients <span class="count">7</span>
+        </div>
+        <div class="card-meta">per 1 kg yield</div>
+      </div>
+
+      <table class="ing-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Supplier</th>
+            <th style="width:9%">Qty</th>
+            <th style="width:12%">Yield</th>
+            <th style="width:11%; text-align:right">Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="col-name">
+              <span class="sub-recipe">
+                <span class="chev">▸</span> Salsa de tomate
+                <span class="pill-sub">Sub-recipe</span>
+              </span>
+            </td>
+            <td class="col-supplier">— rolled up —</td>
+            <td class="col-qty">200 g</td>
+            <td class="col-yield">100%</td>
+            <td class="col-cost">€0.42</td>
+          </tr>
+          <tr>
+            <td class="col-name">Crushed tomato · Heinz</td>
+            <td class="col-supplier">Distribuidora García</td>
+            <td class="col-qty">200 g</td>
+            <td class="col-yield">100% <span class="src">USDA</span></td>
+            <td class="col-cost">€0.45</td>
+          </tr>
+          <tr>
+            <td class="col-name">Onion</td>
+            <td class="col-supplier">Verduras del Sol</td>
+            <td class="col-qty">100 g</td>
+            <td class="col-yield">85% <span class="src">CIA</span></td>
+            <td class="col-cost">€0.18</td>
+          </tr>
+          <tr>
+            <td class="col-name">Carrot</td>
+            <td class="col-supplier">Verduras del Sol</td>
+            <td class="col-qty">80 g</td>
+            <td class="col-yield">80% <span class="src">USDA</span></td>
+            <td class="col-cost">€0.12</td>
+          </tr>
+          <tr>
+            <td class="col-name">Celery</td>
+            <td class="col-supplier">Verduras del Sol</td>
+            <td class="col-qty">60 g</td>
+            <td class="col-yield">75% <span class="src">USDA</span></td>
+            <td class="col-cost">€0.10</td>
+          </tr>
+          <tr>
+            <td class="col-name">Ground beef</td>
+            <td class="col-supplier">Carnicería X</td>
+            <td class="col-qty">300 g</td>
+            <td class="col-yield">95% <span class="src">CIA</span></td>
+            <td class="col-cost">€1.62</td>
+          </tr>
+          <tr>
+            <td class="col-name">Red wine</td>
+            <td class="col-supplier">Bodega Real</td>
+            <td class="col-qty">50 ml</td>
+            <td class="col-yield">100%</td>
+            <td class="col-cost">€0.18</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="ing-foot">
+        <div class="ing-foot-left">
+          <span class="metric">Waste <span class="v">18%</span> <span class="src">stew avg, ICN</span></span>
+        </div>
+        <div class="cost-live">
+          <span class="pulse"></span>Live cost <span class="v">€3.45</span> / kg
+        </div>
+      </div>
+    </section>
+
+    <!-- ============= SIDEBAR (40%) ============= -->
+    <aside class="sidebar">
+
+      <!-- Macros -->
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">Macros</div>
+          <div class="card-meta">per 100 g</div>
+        </div>
+        <div class="macros-grid">
+          <div><span class="macro-v">180</span><span class="macro-l">kcal</span></div>
+          <div><span class="macro-v">14<span style="font-size:11px;color:var(--text-tertiary)">g</span></span><span class="macro-l">Carbs</span></div>
+          <div><span class="macro-v">9<span style="font-size:11px;color:var(--text-tertiary)">g</span></span><span class="macro-l">Fat</span></div>
+          <div><span class="macro-v">8<span style="font-size:11px;color:var(--text-tertiary)">g</span></span><span class="macro-l">Protein</span></div>
+        </div>
+      </section>
+
+      <!-- Allergens & diet -->
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">Allergens &amp; diet</div>
+          <div class="card-meta">EU 1169/2011 · Art 21</div>
+        </div>
+        <div class="allergen-list">
+          <!-- §spec constraint #2: icon + text -->
+          <span class="allergen-badge">
+            <span class="icon">⚠</span>
+            <span>Gluten</span>
+          </span>
+          <p class="diet-note">
+            <span class="em">— None applicable</span> (contains beef, gluten, alcohol).
+          </p>
+        </div>
+      </section>
+
+      <!-- Menu pricing -->
+      <section class="card">
+        <div class="menu-head-row">
+          <div class="menu-venue">
+            <span class="marker"></span>
+            Menu — Palafito Centro
+          </div>
+          <span class="menu-channel">Dine-in</span>
+        </div>
+        <div class="menu-grid">
+          <div>
+            <div class="menu-cell-label">Cost</div>
+            <div class="menu-cell-v">€3.45</div>
+          </div>
+          <div>
+            <div class="menu-cell-label">Sale price</div>
+            <div class="menu-cell-v">€18.00</div>
+          </div>
+        </div>
+        <div class="margin-row">
+          <span class="margin-label">Margin</span>
+          <span>
+            <span class="margin-value">
+              <span class="check">✓</span>
+              80.8%
+            </span>
+            <span class="margin-target">target 70%</span>
+          </span>
+        </div>
+      </section>
+
+    </aside>
+  </div>
+
+  <footer class="foot">
+    <span>openTrattOS · AGPL · Mock I — applying Linear DESIGN.md verbatim</span>
+    <span class="mono">awesome-design-md › linear.app</span>
+  </footer>
+</main>
+
+</body>
+</html>
