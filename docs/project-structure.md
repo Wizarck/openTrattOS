@@ -50,9 +50,14 @@ openTrattOS/
 │           │           ├── create-ingredient.dto.ts
 │           │           └── ingredient-response.dto.ts
 │           │
-│           ├── costing/            # Bounded Context: Recipes & Escandallos (M2)
-│           ├── haccp/              # Bounded Context: HACCP / APPCC (M3)
-│           ├── operations/         # Bounded Context: Inventory & Orders (M4)
+│           ├── recipes/            # Bounded Context: Recipes & Escandallos (M2 — ADR-010)
+│           │   └── cost/           #   InventoryCostResolver interface + M2DefaultCostResolver impl (ADR-011)
+│           ├── menus/              # Bounded Context: MenuItems & Margin Reporting (M2 — ADR-010)
+│           ├── labels/             # Bounded Context: EU 1169/2011 Label Generation (M2 — ADR-010, ADR-019)
+│           ├── nutrition-catalog/  # Bounded Context: Open Food Facts mirror + lookup (M2 — ADR-012)
+│           │   └── sync/           #   Weekly cron sync + active-passive table swap
+│           ├── haccp/              # Bounded Context: HACCP / APPCC (M4)
+│           ├── operations/         # Bounded Context: Inventory & Orders (M3)
 │           │
 │           └── shared/             # Cross-cutting concerns
 │               ├── auth/           # JWT Authentication guards
@@ -62,7 +67,10 @@ openTrattOS/
 │
 ├── packages/
 │   ├── types/                      # Shared TypeScript types (DTOs used by web+api)
-│   └── uom-engine/                 # The UoM conversion library (publishable to npm)
+│   ├── uom-engine/                 # The UoM conversion library (publishable to npm)
+│   ├── ui-kit/                     # M2: shadcn/ui-based shared component library (Storybook-curated per ai-playbook UX track v0.5.0)
+│   ├── mcp-server/                 # M2: MCP standard server wrapping the API — separable Docker image, zero coupling to apps/api (ADR-013)
+│   └── label-renderer/             # M2: @react-pdf/renderer EU 1169/2011 label components (ADR-019)
 │
 ├── docs/
 │   ├── prd-module-1-ingredients.md
