@@ -2,9 +2,9 @@
 schema: agents-md/v1
 version: 1.0.0
 inherits_from:
-  - github.com/Wizarck/ai-playbook@v0.5.0
+  - github.com/Wizarck/ai-playbook@v0.7.0
 skills_sources:
-  - Wizarck/ai-playbook@v0.5.0
+  - Wizarck/ai-playbook@v0.7.0
   - Wizarck/eligia-skills@v0.2.0
 updated: 2026-04-23
 project: openTrattOS
