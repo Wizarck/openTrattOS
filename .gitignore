@@ -122,3 +122,7 @@ dist
 .claude/skills/
 .gemini/skills/
 .skills-sources/
+
+# TypeScript incremental build cache + Turbo cache
+*.tsbuildinfo
+.turbo/
