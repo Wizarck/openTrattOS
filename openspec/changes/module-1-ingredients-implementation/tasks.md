@@ -21,11 +21,11 @@
 - [x] 2.10 Migration `0002_user.ts`: schema + UNIQUE (organizationId, email) + FK organizationId CASCADE + audit fields
 - [x] 2.11 Migration `0003_location.ts`: schema + FK organizationId CASCADE + type CHECK enum + audit fields
 - [x] 2.12 Migration `0004_user_location.ts`: join table + CASCADE both FKs + UNIQUE (userId, locationId)
-- [ ] 2.13 INT: `OrganizationRepository.int.spec.ts` — verify currencyCode immutability via repository update path (ignored if present in DTO)
-- [ ] 2.14 INT: `UserRepository.int.spec.ts` — email-unique-per-org enforcement; same-email-cross-org allowed
-- [ ] 2.15 GREEN: implement TypeORM `OrganizationRepository`, `UserRepository`, `LocationRepository`, `UserLocationRepository`
-- [ ] 2.16 Application service: `CreateOrganization` use-case (orchestrates Organization + seed Categories trigger from §6 below)
-- [ ] 2.17 Application service: `AssignUserToLocations` use-case
+- [x] 2.13 INT: `OrganizationRepository.int.spec.ts` — verify currencyCode immutability via repository update path (ignored if present in DTO) — written, deferred run pending docker
+- [x] 2.14 INT: `UserRepository.int.spec.ts` — email-unique-per-org enforcement; same-email-cross-org allowed — written, deferred run pending docker
+- [x] 2.15 GREEN: implement TypeORM `OrganizationRepository`, `UserRepository`, `LocationRepository`, `UserLocationRepository`
+- [x] 2.16 Application service: `CreateOrganization` use-case (orchestrates Organization + seed Categories trigger from §6 below)
+- [x] 2.17 Application service: `AssignUserToLocations` use-case
 
 ## 3. UoM module (canonical units + 100% coverage mandate)
 
