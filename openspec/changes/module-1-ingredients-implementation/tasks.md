@@ -29,13 +29,13 @@
 
 ## 3. UoM module (canonical units + 100% coverage mandate)
 
-- [ ] 3.1 Create `apps/api/src/ingredients/domain/uom/units.ts` — canonical units constants per design.md §D13 (5 WEIGHT + 5 VOLUME + 3 UNIT-family items with conversion factors)
-- [ ] 3.2 RED: write `uom-conversion.spec.ts` — within-WEIGHT (kg ↔ g, lb ↔ oz, kg ↔ lb), within-VOLUME, within-UNIT (with box quantity), cross-family WEIGHT↔VOLUME with density, cross-family forbidden any↔UNIT
-- [ ] 3.3 GREEN: implement `convert(value, fromUnit, toUnit, densityFactor?)` pure function in `ingredients/domain/uom/convert.ts`
-- [ ] 3.4 GREEN: implement `UoMError` hierarchy (`UoMConversionRequiresDensityError`, `UoMConversionForbiddenError`, `UoMUnknownUnitError`)
-- [ ] 3.5 Read-only endpoint `GET /uom` exposing canonical list to UI consumers
-- [ ] 3.6 Add `coverageThreshold: { 'ingredients/domain/uom/**': 100 }` to `apps/api` Jest config
-- [ ] 3.7 CI gate: `npm run test:cov` fails the slice PR if UoM coverage drops below 100%
+- [x] 3.1 Create `apps/api/src/ingredients/domain/uom/units.ts` — canonical units constants per design.md §D13 (5 WEIGHT + 5 VOLUME + 3 UNIT-family items with conversion factors)
+- [x] 3.2 RED: write `uom-conversion.spec.ts` — within-WEIGHT (kg ↔ g, lb ↔ oz, kg ↔ lb), within-VOLUME, within-UNIT (with box quantity), cross-family WEIGHT↔VOLUME with density, cross-family forbidden any↔UNIT
+- [x] 3.3 GREEN: implement `convert(value, fromUnit, toUnit, densityFactor?)` pure function in `ingredients/domain/uom/convert.ts`
+- [x] 3.4 GREEN: implement `UoMError` hierarchy (`UoMConversionRequiresDensityError`, `UoMConversionForbiddenError`, `UoMUnknownUnitError`)
+- [x] 3.5 Read-only endpoint `GET /uom` exposing canonical list to UI consumers
+- [x] 3.6 Add `coverageThreshold: { 'ingredients/domain/uom/**': 100 }` to `apps/api` Jest config
+- [x] 3.7 CI gate: `npm run test:cov` fails the slice PR if UoM coverage drops below 100%
 
 ## 4. Ingredients domain (Category, Ingredient)
 
