@@ -51,14 +51,14 @@
 
 ## 5. Suppliers domain (Supplier, SupplierItem)
 
-- [ ] 5.1 RED: write `Supplier.spec.ts` covering org-scoping, isActive default, contact fields nullable
-- [ ] 5.2 GREEN: implement `Supplier` domain class in `suppliers/domain/supplier.ts`
-- [ ] 5.3 RED: write `SupplierItem.spec.ts` covering costPerBaseUnit auto-calc (4 decimal precision), purchaseUnitType-vs-Ingredient family validation, single-preferred invariant
-- [ ] 5.4 GREEN: implement `SupplierItem` domain class in `suppliers/domain/supplier-item.ts` with `computeCostPerBaseUnit()` pure method (uses UoM module for unit reduction)
-- [ ] 5.5 Migration `0007_supplier.ts`: schema + FK organizationId CASCADE + audit fields
-- [ ] 5.6 Migration `0008_supplier_item.ts`: schema + FK supplierId CASCADE + FK ingredientId CASCADE + UNIQUE (ingredientId, isPreferred=true) partial index + audit fields
-- [ ] 5.7 INT: `SupplierItemRepository.int.spec.ts` — atomic single-preferred swap; 4-decimal precision round-trip
-- [ ] 5.8 GREEN: implement TypeORM `SupplierRepository`, `SupplierItemRepository`
+- [x] 5.1 RED: write `Supplier.spec.ts` covering org-scoping, isActive default, contact fields nullable
+- [x] 5.2 GREEN: implement `Supplier` domain class in `suppliers/domain/supplier.ts`
+- [x] 5.3 RED: write `SupplierItem.spec.ts` covering costPerBaseUnit auto-calc (4 decimal precision), purchaseUnitType-vs-Ingredient family validation, single-preferred invariant
+- [x] 5.4 GREEN: implement `SupplierItem` domain class in `suppliers/domain/supplier-item.ts` with `computeCostPerBaseUnit()` pure method (uses UoM module for unit reduction)
+- [x] 5.5 Migration `0007_supplier.ts`: schema + FK organizationId CASCADE + audit fields
+- [x] 5.6 Migration `0008_supplier_item.ts`: schema + FK supplierId CASCADE + FK ingredientId CASCADE + UNIQUE (ingredientId, isPreferred=true) partial index + audit fields
+- [x] 5.7 INT: `SupplierItemRepository.int.spec.ts` — atomic single-preferred swap; 4-decimal precision round-trip — written, deferred run pending docker
+- [x] 5.8 GREEN: implement TypeORM `SupplierRepository`, `SupplierItemRepository`
 
 ## 6. Category seed + i18n
 
