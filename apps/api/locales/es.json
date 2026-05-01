@@ -47,7 +47,10 @@
     "CATEGORY_AMBIGUOUS_NAME": "Varias categorías comparten este nombre. Usa la ruta de slug (p.ej. dry-pantry/oils-vinegars)",
     "INGREDIENT_NAME_REQUIRED": "El nombre del ingrediente es obligatorio",
     "INGREDIENT_INVALID_BASE_UNIT_TYPE": "El tipo de unidad base debe ser WEIGHT, VOLUME o UNIT",
-    "INGREDIENT_FACTORY_REJECTED": "La validación del ingrediente falló durante la importación"
+    "INGREDIENT_FACTORY_REJECTED": "La validación del ingrediente falló durante la importación",
+    "RECIPE_NOT_FOUND": "Receta no encontrada",
+    "RECIPE_IN_USE": "La receta está referenciada por MenuItems activos; desactívalos primero",
+    "CYCLE": "Ciclo de composición de receta detectado; resuélvelo antes de guardar"
   },
   "ui": {
     "swagger_title": "API de openTrattOS",
