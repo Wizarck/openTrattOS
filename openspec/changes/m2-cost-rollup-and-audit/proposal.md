@@ -1,10 +1,10 @@
 ## Why
 
-The "live food cost" headline of M2 only works if (a) cost resolves through arbitrary sub-recipe trees, (b) it stays current when underlying SupplierItem prices change, and (c) the chef can audit *what changed* between two timestamps. Journey 1 (recipe authoring) and Journey 2 (cost-spike investigation) both depend on this slice. The architectural seam to M3 batch-aware cost (`InventoryCostResolver` per ADR-014) lives here.
+The "live food cost" headline of M2 only works if (a) cost resolves through arbitrary sub-recipe trees, (b) it stays current when underlying SupplierItem prices change, and (c) the chef can audit *what changed* between two timestamps. Journey 1 (recipe authoring) and Journey 2 (cost-spike investigation) both depend on this slice. The architectural seam to M3 batch-aware cost (`InventoryCostResolver` per ADR-011) lives here.
 
 ## What Changes
 
-- `InventoryCostResolver` interface contract (architectural seam, ADR-014): stable signature M2 → M3, M2 implementation reads `isPreferred=true` SupplierItem (FR10–11).
+- `InventoryCostResolver` interface contract (architectural seam, ADR-011): stable signature M2 → M3, M2 implementation reads `isPreferred=true` SupplierItem (FR10–11).
 - Live food-cost computation walking the sub-recipe tree, summing `(ingredient cost × quantity × yield × (1 − waste))` per component (FR9).
 - Per-component cost-history with configurable window (default 14d), identifying the responsible source and price change (FR13).
 - Recompute of dependent recipe costs when an underlying SupplierItem price changes (FR14).

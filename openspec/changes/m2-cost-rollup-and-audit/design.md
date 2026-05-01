@@ -1,6 +1,6 @@
 ## Context
 
-The "live food cost" headline of M2 only works if (a) cost resolves through arbitrary sub-recipe trees, (b) it stays current when SupplierItem prices change, and (c) the chef can audit *what changed* between two timestamps. Journey 1 (recipe authoring) and Journey 2 (cost-spike investigation) depend on this slice. The architectural seam to M3 batch-aware cost (`InventoryCostResolver` per ADR-014) lives here.
+The "live food cost" headline of M2 only works if (a) cost resolves through arbitrary sub-recipe trees, (b) it stays current when SupplierItem prices change, and (c) the chef can audit *what changed* between two timestamps. Journey 1 (recipe authoring) and Journey 2 (cost-spike investigation) depend on this slice. The architectural seam to M3 batch-aware cost (`InventoryCostResolver` per ADR-011) lives here.
 
 ## Goals / Non-Goals
 
