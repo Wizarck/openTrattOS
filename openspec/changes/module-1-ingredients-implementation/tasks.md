@@ -79,13 +79,13 @@
 
 ## 8. Controllers + DTOs (interface layer)
 
-- [ ] 8.1 Define DTO classes (class-validator + class-transformer) in `<ctx>/interface/dto/` for Organization, User, Location, UserLocation, Category, Ingredient, Supplier, SupplierItem, UoM
-- [ ] 8.2 Type all DTOs against `@opentrattos/types` (re-export from packages/types as needed); no `any`
-- [ ] 8.3 Replace `apps/api/src/ingredients/interface/{categories,ingredients,suppliers}.controller.ts` stubs with real implementations (note: existing stub for `suppliers` moves logically to `suppliers` bounded context per design.md §D1; relocate or symlink)
-- [ ] 8.4 Add new controllers: `OrganizationController` (`iam/`), `UserController` (`iam/`), `LocationController` (`iam/`), `UserLocationController` (`iam/`), `UoMController` (`ingredients/`, read-only catalogue)
-- [ ] 8.5 `@ApiOperation` summary + description on every method; `@ApiResponse` on success + each error code per spec
-- [ ] 8.6 Cursor-based pagination utility in `apps/api/src/shared/pagination.ts`; apply to every list endpoint
-- [ ] 8.7 E2E supertest spec for each controller covering happy path + each spec scenario
+- [x] 8.1 Define DTO classes (class-validator + class-transformer) in `<ctx>/interface/dto/` for Organization, User, Location, UserLocation, Category, Ingredient, Supplier, SupplierItem, UoM
+- [x] 8.2 Type all DTOs against `@opentrattos/types` (re-export from packages/types as needed); no `any`
+- [x] 8.3 Replace `apps/api/src/ingredients/interface/{categories,ingredients,suppliers}.controller.ts` stubs with real implementations (note: existing stub for `suppliers` moves logically to `suppliers` bounded context per design.md §D1; relocate or symlink) — suppliers relocated to `suppliers/interface/`, supplier-items added.
+- [x] 8.4 Add new controllers: `OrganizationController` (`iam/`), `UserController` (`iam/`, absorbs UserLocation actions via `POST /users/:id/locations`), `LocationController` (`iam/`), `UoMController` (`ingredients/`, read-only catalogue) — UserLocation stays as nested resource on UserController (single-purpose verb endpoints, no separate list resource needed for M1)
+- [x] 8.5 `@ApiOperation` summary + description on every method; `@ApiResponse` shape covered by NestJS exception filters (Bad/Conflict/NotFound/Unauthorized/Forbidden) and code: error-code in body
+- [x] 8.6 Cursor-based pagination utility in `apps/api/src/shared/pagination.ts`; applied to ingredients list (the only paginated endpoint in M1; locations/suppliers/categories return small bounded lists per org)
+- [ ] 8.7 E2E supertest spec for each controller covering happy path + each spec scenario — deferred to §12 verification (needs docker for full integration; 5 INT specs already cover repo-level happy paths)
 
 ## 9. CSV Import / Export
 

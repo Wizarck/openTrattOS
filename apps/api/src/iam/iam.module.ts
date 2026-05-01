@@ -10,9 +10,13 @@ import { LocationRepository } from './infrastructure/location.repository';
 import { OrganizationRepository } from './infrastructure/organization.repository';
 import { UserLocationRepository } from './infrastructure/user-location.repository';
 import { UserRepository } from './infrastructure/user.repository';
+import { LocationController } from './interface/location.controller';
+import { OrganizationController } from './interface/organization.controller';
+import { UserController } from './interface/user.controller';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Organization, User, Location, UserLocation])],
+  controllers: [OrganizationController, UserController, LocationController],
   providers: [
     OrganizationRepository,
     UserRepository,

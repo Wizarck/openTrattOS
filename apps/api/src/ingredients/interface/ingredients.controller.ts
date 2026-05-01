@@ -1,69 +1,123 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  Body,
+  ConflictException,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  NotFoundException,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { QueryFailedError } from 'typeorm';
+import { Roles } from '../../shared/decorators/roles.decorator';
+import { CursorPaginationQueryDto, DEFAULT_PAGE_LIMIT } from '../../shared/pagination';
+import { Ingredient } from '../domain/ingredient.entity';
+import { IngredientRepository } from '../infrastructure/ingredient.repository';
+import { CreateIngredientDto, IngredientResponseDto, UpdateIngredientDto } from './dto/ingredient.dto';
 
 @ApiTags('Ingredients')
 @Controller('ingredients')
 export class IngredientsController {
+  constructor(private readonly ingredients: IngredientRepository) {}
+
   @Get()
-  @ApiOperation({
-    summary: 'List all ingredients',
-    description:
-      'Returns a paginated list of active ingredients for the current organization. ' +
-      'Supports filtering by categoryId and search by name.',
-  })
-  async findAll(
-    @Query('cursor') cursor?: string,
-    @Query('limit') limit?: number,
-    @Query('categoryId') categoryId?: string,
-    @Query('search') search?: string,
-  ) {
-    // TODO: Inject and call ListIngredientsUseCase
-    return { data: [], cursor: null, hasMore: false, total: 0 };
+  @Roles('OWNER', 'MANAGER', 'STAFF')
+  @ApiOperation({ summary: 'List ingredients (cursor-paginated; defaults to active only)' })
+  async list(
+    @Query('organizationId', new ParseUUIDPipe({ version: '4' })) organizationId: string,
+    @Query() page: CursorPaginationQueryDto,
+    @Query('includeInactive') includeInactive?: string,
+  ): Promise<{ items: IngredientResponseDto[]; nextCursor: string | null }> {
+    const onlyActive = includeInactive !== 'true';
+    const result = await this.ingredients.pageByOrganization(
+      organizationId,
+      page.cursor ?? null,
+      page.limit ?? DEFAULT_PAGE_LIMIT,
+      onlyActive,
+    );
+    return {
+      items: result.items.map(IngredientResponseDto.fromEntity),
+      nextCursor: result.nextCursor,
+    };
   }
 
   @Get(':id')
-  @ApiOperation({
-    summary: 'Get ingredient by ID',
-    description:
-      'Returns a single ingredient with its category and preferred supplier item.',
-  })
-  async findOne(@Param('id') id: string) {
-    // TODO: Inject and call GetIngredientUseCase
-    return {};
+  @Roles('OWNER', 'MANAGER', 'STAFF')
+  @ApiOperation({ summary: 'Get an ingredient by id' })
+  async getById(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string): Promise<IngredientResponseDto> {
+    const i = await this.ingredients.findOneBy({ id });
+    if (!i) throw new NotFoundException({ code: 'INGREDIENT_NOT_FOUND' });
+    return IngredientResponseDto.fromEntity(i);
   }
 
   @Post()
+  @Roles('OWNER', 'MANAGER')
   @ApiOperation({
     summary: 'Create a new ingredient',
-    description:
-      'Creates an ingredient with a name, category, and base unit type. ' +
-      'The baseUnitType is immutable after creation.',
+    description: 'baseUnitType is immutable post-creation. internalCode auto-generated if not provided.',
   })
-  async create(@Body() body: any) {
-    // TODO: Replace `any` with CreateIngredientDto + inject use case
-    return {};
+  async create(@Body() dto: CreateIngredientDto): Promise<IngredientResponseDto> {
+    const ing = Ingredient.create({
+      organizationId: dto.organizationId,
+      categoryId: dto.categoryId,
+      name: dto.name,
+      baseUnitType: dto.baseUnitType,
+      internalCode: dto.internalCode,
+      densityFactor: dto.densityFactor ?? null,
+      notes: dto.notes ?? null,
+    });
+    try {
+      const saved = await this.ingredients.save(ing);
+      return IngredientResponseDto.fromEntity(saved);
+    } catch (err) {
+      if (err instanceof QueryFailedError && /uq_ingredients_org_internal_code/.test(err.message)) {
+        throw new ConflictException({ code: 'INGREDIENT_DUPLICATE_INTERNAL_CODE' });
+      }
+      throw err;
+    }
   }
 
   @Patch(':id')
-  @ApiOperation({
-    summary: 'Update an ingredient',
-    description:
-      'Updates mutable fields of an ingredient. Cannot change baseUnitType.',
-  })
-  async update(@Param('id') id: string, @Body() body: any) {
-    // TODO: Replace `any` with UpdateIngredientDto + inject use case
-    return {};
+  @Roles('OWNER', 'MANAGER')
+  @ApiOperation({ summary: 'Update an ingredient (mutable fields only)' })
+  async update(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() dto: UpdateIngredientDto,
+  ): Promise<IngredientResponseDto> {
+    const i = await this.ingredients.findOneBy({ id });
+    if (!i) throw new NotFoundException({ code: 'INGREDIENT_NOT_FOUND' });
+    i.applyUpdate(dto);
+    const saved = await this.ingredients.save(i);
+    return IngredientResponseDto.fromEntity(saved);
   }
 
   @Delete(':id')
+  @Roles('OWNER', 'MANAGER')
+  @HttpCode(204)
   @ApiOperation({
-    summary: 'Deactivate an ingredient (soft delete)',
-    description:
-      'Sets isActive to false. The ingredient remains in the database for ' +
-      'historical recipe references but is hidden from default list views.',
+    summary: 'Soft-delete an ingredient (sets isActive=false)',
+    description: 'Idempotent. Recipes referring to this ingredient continue to read it (read-side soft-delete).',
   })
-  async remove(@Param('id') id: string) {
-    // TODO: Inject and call DeactivateIngredientUseCase
-    return {};
+  async deactivate(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string): Promise<void> {
+    const i = await this.ingredients.findOneBy({ id });
+    if (!i) throw new NotFoundException({ code: 'INGREDIENT_NOT_FOUND' });
+    i.deactivate();
+    await this.ingredients.save(i);
+  }
+
+  @Post(':id/reactivate')
+  @Roles('OWNER', 'MANAGER')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Reactivate a previously soft-deleted ingredient' })
+  async reactivate(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string): Promise<void> {
+    const i = await this.ingredients.findOneBy({ id });
+    if (!i) throw new NotFoundException({ code: 'INGREDIENT_NOT_FOUND' });
+    i.reactivate();
+    await this.ingredients.save(i);
   }
 }
