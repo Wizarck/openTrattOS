@@ -9,15 +9,15 @@
 
 ## 2. IAM domain (Organization, Location, User, UserLocation)
 
-- [ ] 2.1 RED: write `Organization.spec.ts` covering creation, ISO 4217 validation, currency immutability, defaultLocale validation, timezone field
-- [ ] 2.2 GREEN: implement `Organization` domain class + factory in `iam/domain/organization.ts`; ISO 4217 regex + locale enum
+- [x] 2.1 RED: write `Organization.spec.ts` covering creation, ISO 4217 validation, currency immutability, defaultLocale validation, timezone field
+- [x] 2.2 GREEN: implement `Organization` domain class + factory in `iam/domain/organization.ts`; ISO 4217 regex + locale enum
 - [ ] 2.3 RED: write `User.spec.ts` covering role enum (OWNER/MANAGER/STAFF), password-hashing contract (mock bcrypt), email format validation, email-unique-per-org constraint
 - [ ] 2.4 GREEN: implement `User` domain class in `iam/domain/user.ts`
 - [ ] 2.5 RED: write `Location.spec.ts` covering org-scoping invariant + type enum (RESTAURANT|BAR|DARK_KITCHEN|CATERING|CENTRAL_PRODUCTION) + isActive default
 - [ ] 2.6 GREEN: implement `Location` domain class in `iam/domain/location.ts`
 - [ ] 2.7 RED: write `UserLocation.spec.ts` covering M:N assignment + cascade-on-both-sides invariants
 - [ ] 2.8 GREEN: implement `UserLocation` join entity in `iam/domain/user-location.ts`
-- [ ] 2.9 Migration `0001_organization.ts`: schema + indexes (PK, currencyCode CHECK ISO 4217) + audit fields
+- [x] 2.9 Migration `0001_organization.ts`: schema + indexes (PK, currencyCode CHECK ISO 4217) + audit fields
 - [ ] 2.10 Migration `0002_user.ts`: schema + UNIQUE (organizationId, email) + FK organizationId CASCADE + audit fields
 - [ ] 2.11 Migration `0003_location.ts`: schema + FK organizationId CASCADE + type CHECK enum + audit fields
 - [ ] 2.12 Migration `0004_user_location.ts`: join table + CASCADE both FKs + UNIQUE (userId, locationId)
