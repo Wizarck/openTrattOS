@@ -13,14 +13,14 @@
 - [x] 2.2 GREEN: implement `Organization` domain class + factory in `iam/domain/organization.ts`; ISO 4217 regex + locale enum
 - [x] 2.3 RED: write `User.spec.ts` covering role enum (OWNER/MANAGER/STAFF), password-hashing contract (mock bcrypt), email format validation, email-unique-per-org constraint
 - [x] 2.4 GREEN: implement `User` domain class in `iam/domain/user.ts`
-- [ ] 2.5 RED: write `Location.spec.ts` covering org-scoping invariant + type enum (RESTAURANT|BAR|DARK_KITCHEN|CATERING|CENTRAL_PRODUCTION) + isActive default
-- [ ] 2.6 GREEN: implement `Location` domain class in `iam/domain/location.ts`
-- [ ] 2.7 RED: write `UserLocation.spec.ts` covering M:N assignment + cascade-on-both-sides invariants
-- [ ] 2.8 GREEN: implement `UserLocation` join entity in `iam/domain/user-location.ts`
+- [x] 2.5 RED: write `Location.spec.ts` covering org-scoping invariant + type enum (RESTAURANT|BAR|DARK_KITCHEN|CATERING|CENTRAL_PRODUCTION) + isActive default
+- [x] 2.6 GREEN: implement `Location` domain class in `iam/domain/location.ts`
+- [x] 2.7 RED: write `UserLocation.spec.ts` covering M:N assignment + cascade-on-both-sides invariants
+- [x] 2.8 GREEN: implement `UserLocation` join entity in `iam/domain/user-location.ts`
 - [x] 2.9 Migration `0001_organization.ts`: schema + indexes (PK, currencyCode CHECK ISO 4217) + audit fields
 - [x] 2.10 Migration `0002_user.ts`: schema + UNIQUE (organizationId, email) + FK organizationId CASCADE + audit fields
-- [ ] 2.11 Migration `0003_location.ts`: schema + FK organizationId CASCADE + type CHECK enum + audit fields
-- [ ] 2.12 Migration `0004_user_location.ts`: join table + CASCADE both FKs + UNIQUE (userId, locationId)
+- [x] 2.11 Migration `0003_location.ts`: schema + FK organizationId CASCADE + type CHECK enum + audit fields
+- [x] 2.12 Migration `0004_user_location.ts`: join table + CASCADE both FKs + UNIQUE (userId, locationId)
 - [ ] 2.13 INT: `OrganizationRepository.int.spec.ts` — verify currencyCode immutability via repository update path (ignored if present in DTO)
 - [ ] 2.14 INT: `UserRepository.int.spec.ts` — email-unique-per-org enforcement; same-email-cross-org allowed
 - [ ] 2.15 GREEN: implement TypeORM `OrganizationRepository`, `UserRepository`, `LocationRepository`, `UserLocationRepository`
