@@ -39,15 +39,15 @@
 
 ## 4. Ingredients domain (Category, Ingredient)
 
-- [ ] 4.1 RED: write `Category.spec.ts` covering tree invariants (no cycles, parentId chain), name+nameEs+nameEn required, sortOrder default, isDefault flag (true for seed only), RESTRICT cascade rule
-- [ ] 4.2 GREEN: implement `Category` domain class in `ingredients/domain/category.ts` with `parentId` self-FK
-- [ ] 4.3 RED: write `Ingredient.spec.ts` covering baseUnitType immutability, internalCode auto-generation, densityFactor cross-family invariant, soft-delete behaviour
-- [ ] 4.4 GREEN: implement `Ingredient` domain class in `ingredients/domain/ingredient.ts`
-- [ ] 4.5 Migration `0005_category.ts`: schema (id, organizationId, parentId, name, nameEs, nameEn, sortOrder, isDefault, audit) + self-FK ON DELETE RESTRICT + FK organizationId CASCADE + UNIQUE (organizationId, parentId, name)
-- [ ] 4.6 Migration `0006_ingredient.ts`: schema + FK categoryId RESTRICT + FK organizationId CASCADE + indexes (organizationId, categoryId, isActive, internalCode UNIQUE per org) + audit fields
-- [ ] 4.7 INT: `CategoryRepository.int.spec.ts` — RESTRICT enforcement with children, with linked Ingredients; recursive CTE tree query <200ms on seeded taxonomy
-- [ ] 4.8 INT: `IngredientRepository.int.spec.ts` — soft-delete excludes from default list; reactivation; cursor-based pagination determinism
-- [ ] 4.9 GREEN: implement TypeORM `CategoryRepository`, `IngredientRepository`
+- [x] 4.1 RED: write `Category.spec.ts` covering tree invariants (no cycles, parentId chain), name+nameEs+nameEn required, sortOrder default, isDefault flag (true for seed only), RESTRICT cascade rule
+- [x] 4.2 GREEN: implement `Category` domain class in `ingredients/domain/category.ts` with `parentId` self-FK
+- [x] 4.3 RED: write `Ingredient.spec.ts` covering baseUnitType immutability, internalCode auto-generation, densityFactor cross-family invariant, soft-delete behaviour
+- [x] 4.4 GREEN: implement `Ingredient` domain class in `ingredients/domain/ingredient.ts`
+- [x] 4.5 Migration `0005_category.ts`: schema (id, organizationId, parentId, name, nameEs, nameEn, sortOrder, isDefault, audit) + self-FK ON DELETE RESTRICT + FK organizationId CASCADE + UNIQUE (organizationId, parentId, name)
+- [x] 4.6 Migration `0006_ingredient.ts`: schema + FK categoryId RESTRICT + FK organizationId CASCADE + indexes (organizationId, categoryId, isActive, internalCode UNIQUE per org) + audit fields
+- [x] 4.7 INT: `CategoryRepository.int.spec.ts` — RESTRICT enforcement with children, with linked Ingredients; recursive CTE tree query <200ms on seeded taxonomy — written, deferred run pending docker
+- [x] 4.8 INT: `IngredientRepository.int.spec.ts` — soft-delete excludes from default list; reactivation; cursor-based pagination determinism — written, deferred run pending docker
+- [x] 4.9 GREEN: implement TypeORM `CategoryRepository`, `IngredientRepository`
 
 ## 5. Suppliers domain (Supplier, SupplierItem)
 
