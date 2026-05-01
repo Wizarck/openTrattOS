@@ -119,11 +119,11 @@ Deferring to a separate, smaller slice keeps M1's PR focused on the foundation
 
 ## 12. Verification
 
-- [ ] 12.1 Run `openspec validate module-1-ingredients-implementation` — must pass
-- [ ] 12.2 Run `apps/api/test/e2e` full suite end-to-end — all green
-- [ ] 12.3 Manual smoke via Swagger UI: create Org → seed categories visible → create Ingredient → create Supplier → create SupplierItem → query InventoryCostResolver
-- [ ] 12.4 CSV import smoke with the sample 1000-row fixture in `apps/api/test/fixtures/ingredients-sample.csv`
-- [ ] 12.5 Open PR `slice/module-1-ingredients-implementation` → master per release-management.md §3.2
-- [ ] 12.6 CodeRabbit review pass; address each actionable comment per release-management.md §4.5
-- [ ] 12.7 Master Gate F approval; squash-merge; archive change with `/opsx:archive module-1-ingredients-implementation`
-- [ ] 12.8 Retro at `retros/module-1-ingredients-implementation.md` per runbook §4
+- [x] 12.1 Run `openspec validate module-1-ingredients-implementation` — passes (`Change 'module-1-ingredients-implementation' is valid`)
+- [ ] 12.2 Run `apps/api/test/e2e` full suite end-to-end — DEFERRED to post-merge (needs docker; 5 .int.spec.ts files + 250 unit tests already cover repo-level happy paths and DB-level CHECK / UNIQUE / RESTRICT enforcement)
+- [ ] 12.3 Manual smoke via Swagger UI — DEFERRED to post-merge (same reason)
+- [ ] 12.4 CSV import smoke — DEFERRED with §9 to slice M1.1
+- [x] 12.5 Open PR `slice/module-1-ingredients-implementation` → master per release-management.md §3.2
+- [ ] 12.6 CodeRabbit review pass; address each actionable comment per release-management.md §4.5 — pending
+- [ ] 12.7 Master Gate F approval; squash-merge; archive change with `/opsx:archive module-1-ingredients-implementation` — pending
+- [ ] 12.8 Retro at `retros/module-1-ingredients-implementation.md` per runbook §4 — pending
