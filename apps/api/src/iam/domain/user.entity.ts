@@ -46,6 +46,11 @@ export class User {
   @Column({ type: 'varchar', length: 16 })
   role!: UserRole;
 
+  // M2 extension (additive). Nullable now; future M2.x WhatsApp routing populates it.
+  /** E.164-shaped phone number (e.g. '+34600111222'). Nullable until WhatsApp opt-in. */
+  @Column({ name: 'phone_number', type: 'varchar', length: 32, nullable: true })
+  phoneNumber: string | null = null;
+
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean = true;
 

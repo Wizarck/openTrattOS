@@ -55,6 +55,34 @@ export class Ingredient {
   @Column({ type: 'text', nullable: true })
   notes: string | null = null;
 
+  // M2 extensions (additive — see openspec/specs/m2-data-model/)
+
+  /**
+   * Nutrition macros per 100 g/ml of the ingredient. Schema is intentionally
+   * loose (jsonb) so OFF (Open Food Facts) field additions don't trigger
+   * migrations — kcal + macros today, sugar / fiber / sodium / micronutrients
+   * later. Render-time UI is "the whole macro panel"; M2 has no requirement
+   * to filter recipes by individual macro.
+   */
+  @Column({ type: 'jsonb', nullable: true })
+  nutrition: Record<string, unknown> | null = null;
+
+  /** Allergen codes per EU 1169/2011 (e.g. ['gluten', 'milk']). Empty array when none. */
+  @Column({ type: 'text', array: true, default: () => "'{}'" })
+  allergens: string[] = [];
+
+  /** Diet flags (e.g. ['vegan', 'gluten-free']). Free-form per org. Empty array when none. */
+  @Column({ name: 'diet_flags', type: 'text', array: true, default: () => "'{}'" })
+  dietFlags: string[] = [];
+
+  /** Brand the supplier ships (e.g. 'Heinz Tomato Ketchup'). Nullable when generic. */
+  @Column({ name: 'brand_name', type: 'varchar', length: 200, nullable: true })
+  brandName: string | null = null;
+
+  /** External provenance reference (e.g. OFF product code). Nullable when authored locally. */
+  @Column({ name: 'external_source_ref', type: 'varchar', length: 200, nullable: true })
+  externalSourceRef: string | null = null;
+
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean = true;
 
