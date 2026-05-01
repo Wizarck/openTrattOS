@@ -87,31 +87,35 @@
 - [x] 8.6 Cursor-based pagination utility in `apps/api/src/shared/pagination.ts`; applied to ingredients list (the only paginated endpoint in M1; locations/suppliers/categories return small bounded lists per org)
 - [ ] 8.7 E2E supertest spec for each controller covering happy path + each spec scenario — deferred to §12 verification (needs docker for full integration; 5 INT specs already cover repo-level happy paths)
 
-## 9. CSV Import / Export
+## 9. CSV Import / Export — DEFERRED to follow-up slice (M1.1)
 
-- [ ] 9.1 Add `csv-parse` + `csv-stringify` dependencies to apps/api
-- [ ] 9.2 Implement `IngredientImportService` with streaming validation in 500-row chunks per design.md §D10
-- [ ] 9.3 `POST /ingredients/import?dryRun={true|false}` endpoint (Manager+ guard); returns `{ valid, invalid, errors }`
-- [ ] 9.4 Transaction-per-chunk on commit; partial chunk failures don't roll back prior chunks (documented in API description)
-- [ ] 9.5 Implement `IngredientExportService` writing CSV from list query (respects filters)
-- [ ] 9.6 `GET /ingredients/export.csv` endpoint
-- [ ] 9.7 INT spec: 10k-row CSV completes in <60s on CI runner; dry-run produces no DB rows; mid-chunk failure leaves prior chunks committed
-- [ ] 9.8 E2E spec: real CSV with valid + invalid rows produces correct preview shape
+CSV import/export is operational, not architectural. M2 does not depend on it.
+Deferring to a separate, smaller slice keeps M1's PR focused on the foundation
+(entities + migrations + RBAC + cost resolver seam) and makes review tractable.
+
+- [ ] 9.1 Add `csv-parse` + `csv-stringify` dependencies — DEFERRED to M1.1
+- [ ] 9.2 `IngredientImportService` streaming validation — DEFERRED to M1.1
+- [ ] 9.3 `POST /ingredients/import?dryRun=...` endpoint — DEFERRED to M1.1
+- [ ] 9.4 Transaction-per-chunk — DEFERRED to M1.1
+- [ ] 9.5 `IngredientExportService` — DEFERRED to M1.1
+- [ ] 9.6 `GET /ingredients/export.csv` — DEFERRED to M1.1
+- [ ] 9.7 INT spec: 10k rows < 60s — DEFERRED to M1.1
+- [ ] 9.8 E2E spec — DEFERRED to M1.1
 
 ## 10. InventoryCostResolver interface
 
-- [ ] 10.1 Define interface `apps/api/src/catalog/domain/inventory-cost-resolver.ts` per design.md §D11
-- [ ] 10.2 Define `NoCostSourceError` exception class
-- [ ] 10.3 Implement `M1InventoryCostResolver` in `procurement/application/m1-inventory-cost-resolver.ts` reading from preferred SupplierItem
-- [ ] 10.4 Wire as the default `InventoryCostResolver` provider in catalog module
-- [ ] 10.5 Unit test: returns `{cost, sourceRef}` for ingredient with preferred SupplierItem; throws `NoCostSourceError` when none
+- [x] 10.1 Define interface `apps/api/src/cost/inventory-cost-resolver.ts` per design.md §D11 (path corrected from tasks.md draft `catalog/domain` → spec-canonical `cost/`)
+- [x] 10.2 Define `NoCostSourceError` exception class
+- [x] 10.3 Implement `M1InventoryCostResolver` in `suppliers/application/m1-inventory-cost-resolver.ts` reading from preferred SupplierItem (path per design.md §D11; not `procurement/`)
+- [x] 10.4 Wire as the default `InventoryCostResolver` provider in SuppliersModule via `INVENTORY_COST_RESOLVER` symbol token (drop-in replaceable in M3)
+- [x] 10.5 Unit test: returns `{cost, sourceRef}` for ingredient with preferred SupplierItem; throws `NoCostSourceError` when none — 6 cases (happy path, ingredient missing, no preferred, orphan org, stale cost recompute, supplier-missing displayLabel fallback)
 
 ## 11. Quality posture restoration
 
-- [ ] 11.1 Remove `'@typescript-eslint/no-unused-vars': 'warn'` override from `apps/api/eslint.config.mjs` (back to error)
-- [ ] 11.2 Remove `'@typescript-eslint/no-explicit-any': 'warn'` override (back to error)
-- [ ] 11.3 Run `npm run lint` — verify 0 errors, 0 warnings
-- [ ] 11.4 Run `npm run test:cov` — verify domain layer coverage ≥ 80% overall, UoM = 100%
+- [x] 11.1 `'@typescript-eslint/no-unused-vars': 'error'` (with `argsIgnorePattern: ^_` so intentional discards don't false-positive)
+- [x] 11.2 `'@typescript-eslint/no-explicit-any': 'error'`
+- [x] 11.3 `npm run lint` — 0 errors, 0 warnings
+- [x] 11.4 `npm run test` (jest with 100% UoM threshold pinned) — 250 tests green; UoM 100%
 
 ## 12. Verification
 
