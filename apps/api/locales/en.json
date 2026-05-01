@@ -42,7 +42,12 @@
     "UOM_CONVERSION_REQUIRES_DENSITY": "This conversion requires a density factor (g/ml)",
     "UOM_CONVERSION_FORBIDDEN": "This conversion is forbidden (UNIT family cannot convert to/from continuous units)",
     "CSV_IMPORT_INVALID_FORMAT": "CSV file format is invalid",
-    "CSV_IMPORT_TOO_LARGE": "CSV file exceeds the maximum row limit"
+    "CSV_IMPORT_TOO_LARGE": "CSV file exceeds the maximum row limit",
+    "CSV_IMPORT_CHUNK_ROLLED_BACK": "A batch of rows was rejected at the database level; prior batches were committed",
+    "CATEGORY_AMBIGUOUS_NAME": "Multiple categories share this name. Use the slug path (e.g. dry-pantry/oils-vinegars)",
+    "INGREDIENT_NAME_REQUIRED": "Ingredient name is required",
+    "INGREDIENT_INVALID_BASE_UNIT_TYPE": "Base unit type must be WEIGHT, VOLUME, or UNIT",
+    "INGREDIENT_FACTORY_REJECTED": "Ingredient validation failed during import"
   },
   "ui": {
     "swagger_title": "openTrattOS API",

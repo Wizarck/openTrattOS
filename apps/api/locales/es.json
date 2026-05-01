@@ -42,7 +42,12 @@
     "UOM_CONVERSION_REQUIRES_DENSITY": "Esta conversión requiere un factor de densidad (g/ml)",
     "UOM_CONVERSION_FORBIDDEN": "Esta conversión está prohibida (la familia UNIT no se puede convertir a unidades continuas)",
     "CSV_IMPORT_INVALID_FORMAT": "El formato del archivo CSV no es válido",
-    "CSV_IMPORT_TOO_LARGE": "El archivo CSV supera el límite máximo de filas"
+    "CSV_IMPORT_TOO_LARGE": "El archivo CSV supera el límite máximo de filas",
+    "CSV_IMPORT_CHUNK_ROLLED_BACK": "Un lote de filas fue rechazado a nivel de base de datos; los lotes anteriores se confirmaron",
+    "CATEGORY_AMBIGUOUS_NAME": "Varias categorías comparten este nombre. Usa la ruta de slug (p.ej. dry-pantry/oils-vinegars)",
+    "INGREDIENT_NAME_REQUIRED": "El nombre del ingrediente es obligatorio",
+    "INGREDIENT_INVALID_BASE_UNIT_TYPE": "El tipo de unidad base debe ser WEIGHT, VOLUME o UNIT",
+    "INGREDIENT_FACTORY_REJECTED": "La validación del ingrediente falló durante la importación"
   },
   "ui": {
     "swagger_title": "API de openTrattOS",
