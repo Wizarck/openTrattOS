@@ -62,11 +62,11 @@
 
 ## 6. Category seed + i18n
 
-- [ ] 6.1 Create `apps/api/src/ingredients/infrastructure/category-seed.ts` with the 30+ node seed taxonomy from PRD-M1 §Appendix A (name + nameEs + nameEn columns; isDefault=true on every seeded row)
-- [ ] 6.2 Wire seed trigger into `CreateOrganization` use-case (§2.16) — runs in same transaction
-- [ ] 6.3 INT: `CategorySeed.int.spec.ts` — creating an Org with `defaultLocale="es"` materialises 30+ rows correctly nested with isDefault=true
-- [ ] 6.4 Create `apps/api/locales/es.json` + `apps/api/locales/en.json` with all error codes from spec.md and UI labels for Swagger
-- [ ] 6.5 Add CI step `npm run i18n:check` validating both locale files have parity (no missing keys)
+- [x] 6.1 Create `apps/api/src/ingredients/infrastructure/category-seed.ts` with the 30+ node seed taxonomy from PRD-M1 §Appendix A (name + nameEs + nameEn columns; isDefault=true on every seeded row)
+- [x] 6.2 Wire seed trigger into `CreateOrganization` use-case (§2.16) — runs in same transaction
+- [x] 6.3 INT: `CategorySeed.int.spec.ts` — creating an Org with `defaultLocale="es"` materialises 30+ rows correctly nested with isDefault=true — written, deferred run pending docker
+- [x] 6.4 Create `apps/api/locales/es.json` + `apps/api/locales/en.json` with all error codes from spec.md and UI labels for Swagger
+- [x] 6.5 Add CI step `npm run i18n:check` validating both locale files have parity (no missing keys)
 
 ## 7. RBAC + Audit middleware
 

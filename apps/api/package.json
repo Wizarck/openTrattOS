@@ -12,6 +12,7 @@
     "test:watch": "jest --watch --passWithNoTests",
     "test:cov": "jest --coverage --passWithNoTests",
     "test:int": "jest --config jest-integration.config.ts --passWithNoTests --runInBand",
+    "i18n:check": "ts-node scripts/i18n-check.ts",
     "db:migrate": "typeorm-ts-node-commonjs migration:run -d src/data-source.ts",
     "db:migrate:revert": "typeorm-ts-node-commonjs migration:revert -d src/data-source.ts",
     "db:migrate:create": "typeorm-ts-node-commonjs migration:create"
