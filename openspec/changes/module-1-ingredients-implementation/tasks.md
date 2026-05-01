@@ -1,11 +1,11 @@
 ## 1. Infrastructure foundation
 
 - [ ] 1.1 Create directory skeleton: `apps/api/src/{iam,ingredients,suppliers}/{domain,application,infrastructure,interface}/` + `apps/api/src/cost/` (shared cross-context module for InventoryCostResolver per design.md §D1) + `apps/api/src/shared/` (generic infra: pagination, RBAC guard, audit interceptor, error filter)
-- [ ] 1.2 Add `apps/api/src/migrations/` directory + TypeORM datasource config (`apps/api/src/data-source.ts`) reading `DATABASE_URL` from env
-- [ ] 1.3 Add `db:migrate` + `db:migrate:revert` scripts to `apps/api/package.json`
-- [ ] 1.4 Add Postgres-in-Docker `docker-compose.test.yml` for integration tests (service: `postgres-test` on port 5433, fresh schema per CI run)
-- [ ] 1.5 Add `jest-integration.config.ts` in `apps/api` pointing at `**/*.int.spec.ts` with `--forceExit`
-- [ ] 1.6 Update root CI workflow `.github/workflows/ci.yml` to spin up Postgres-in-Docker for the Test job
+- [x] 1.2 Add `apps/api/src/migrations/` directory + TypeORM datasource config (`apps/api/src/data-source.ts`) reading `DATABASE_URL` from env
+- [x] 1.3 Add `db:migrate` + `db:migrate:revert` scripts to `apps/api/package.json` (also added `db:migrate:create` and `test:int`)
+- [x] 1.4 Add Postgres-in-Docker `docker-compose.test.yml` for integration tests (service: `postgres-test` on port 5433, fresh schema per CI run, tmpfs-backed)
+- [x] 1.5 Add `jest-integration.config.ts` in `apps/api` pointing at `**/*.int.spec.ts` with `--forceExit`; main jest config gains `testPathIgnorePatterns` to exclude `.int.spec.ts` from unit runs
+- [ ] 1.6 Update root CI workflow `.github/workflows/ci.yml` to spin up Postgres-in-Docker for the Test job (deferred — no integration tests yet; lands with §4 first migration)
 
 ## 2. IAM domain (Organization, Location, User, UserLocation)
 

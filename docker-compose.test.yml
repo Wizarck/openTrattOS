@@ -1,0 +1,16 @@
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: opentrattos_test
+      POSTGRES_PASSWORD: opentrattos_test
+      POSTGRES_DB: opentrattos_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opentrattos_test -d opentrattos_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+    tmpfs:
+      - /var/lib/postgresql/data
