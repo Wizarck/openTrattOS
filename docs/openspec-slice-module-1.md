@@ -25,7 +25,7 @@ Pre-condition: master CI must be green (`fix/apps-api-lint-and-test` chore PR me
 
 | # | Change ID | Bounded context | PRD sections | Journeys | Components | Depends on |
 |---|---|---|---|---|---|---|
-| 1 | `module-1-ingredients-implementation` | shared kernel | §4.1–4.10 (4.11 Allergens deferred to M2 #7) | (admin only — CRUD) | — | — (chore: fix/apps-api-lint-and-test merged) |
+| 1 | `module-1-ingredients-implementation` | shared kernel | §4.1–4.10 (4.11 Allergens deferred to M2 #7) | (admin only — CRUD) | — | — |
 
 ## Scope notes
 
