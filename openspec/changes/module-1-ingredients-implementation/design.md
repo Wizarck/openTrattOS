@@ -20,9 +20,11 @@ PRD-M1 v2.0 + ADRs 1-9 lock all major architectural bets for the foundation kern
 
 ### D1 — Bounded contexts under `apps/api/src/`
 
-Three M1 bounded contexts: **`shared/`** (Organization, Location, User — cross-context), **`catalog/`** (Category, UoM, Ingredient — the "what we cook with"), **`procurement/`** (Supplier, SupplierItem — the "where we buy"). Each context owns its own `domain/`, `application/`, `infrastructure/`, `interface/` subtrees per ADR-001 (DDD modular monolith). Cross-context communication via published interfaces only — `procurement.application` may import `catalog.domain.Ingredient` (read-side), but `catalog` never imports `procurement`. Lint rule blocks reverse-direction imports.
+Three M1 bounded contexts that align with the existing scaffold (`apps/api/src/ingredients/{categories,ingredients,suppliers}.controller.ts`) and the M2 ADR-010 layout: **`iam/`** (Identity & Access Management — Organization, Location, User, UserLocation), **`ingredients/`** (Category, Ingredient, plus the UoM canonical-units module), **`suppliers/`** (Supplier, SupplierItem). Two cross-cutting modules outside the bounded contexts: **`cost/`** (the `InventoryCostResolver` interface per ADR-011 — M2→M3 seam) and **`shared/`** (generic infra utilities: pagination helpers, RBAC guard, audit interceptor, error filter). The `cost/` and `shared/` modules export interfaces + utilities only — no domain entities, no business invariants — so they don't constitute bounded contexts under ADR-001.
 
-Rationale: aligns with ADR-001's "no direct entity imports across modules"; sets the structure M2's bounded contexts (Recipes / Menus / Labels) extend without restructuring.
+Each context owns its own `domain/`, `application/`, `infrastructure/`, `interface/` subtrees per ADR-001 (DDD modular monolith). Cross-context communication via published interfaces only — `suppliers.application` may import `ingredients.domain.Ingredient` (read-side), but `ingredients` never imports `suppliers`. Lint rule blocks reverse-direction imports.
+
+Rationale: aligns with ADR-001's "no direct entity imports across modules" + the existing controller stub layout; M2's bounded contexts (Recipes / Menus / Labels / Nutritional Catalog per ADR-010) extend the same `apps/api/src/<ctx>/` pattern without restructuring.
 
 ### D2 — TypeORM data-mapper, not active-record
 
@@ -32,14 +34,15 @@ Use the data-mapper pattern (separate Repository class per entity) instead of ac
 
 `apps/api/src/migrations/000N_<entity>.ts`, monotonic across all migrations in the slice (not per-context). Rationale per release-management.md §6.4: anti-collision contract for parallel waves. While M1 is a single slice (no parallelism), establishing the convention here means M2's parallel `m2-data-model` slice continues at `0009`, `0010`, ... without renumbering. One entity per migration keeps rollback granular.
 
-### D4 — Cascade rules per ADR-010
+### D4 — Cascade rules per data-model.md §2.3
 
 - `organizationId` foreign key: `ON DELETE CASCADE` everywhere — deleting an Org wipes all child rows.
-- `categoryId` on Ingredient: `RESTRICT` — cannot delete a Category that has Ingredients (PRD §4.8).
+- `categoryId` on Ingredient: `RESTRICT` — cannot delete a Category that has Ingredients (PRD §4.8 + ADR-009).
 - `parentId` on Category (self-FK): `RESTRICT` — cannot delete a Category with children.
 - `ingredientId` on SupplierItem: `CASCADE` — deleting an Ingredient cleans up its supplier records.
 - `supplierId` on SupplierItem: `CASCADE`.
 - `userId` on `createdBy`/`updatedBy`: `SET NULL` — user offboarding doesn't break audit data; the historical fact "someone created this" survives.
+- `userId` and `locationId` on `UserLocation`: `CASCADE` both sides — assignments are derivative.
 
 ### D5 — UoM engine: pure function module, not an injectable service
 
@@ -74,15 +77,27 @@ For CSVs up to 10k rows (PRD §5 NFR), parse via `csv-parse` streaming API in ch
 
 ### D11 — `InventoryCostResolver` interface
 
-The interface lives at `apps/api/src/catalog/domain/inventory-cost-resolver.ts` (per ADR-014):
+The interface lives at `apps/api/src/cost/inventory-cost-resolver.ts` (per ADR-011, M2→M3 architectural seam) — a small shared module so both M1's implementation and M2's `m2-cost-rollup-and-audit` consumer reference the same path:
 
 ```typescript
 export interface InventoryCostResolver {
-  resolveCostPerBaseUnit(ingredientId: string): Promise<{ cost: number; sourceRef: string }>;
+  resolveBaseCost(ingredientId: string, asOf?: Date): Promise<{
+    costPerBaseUnit: number;
+    currency: string;
+    source: { kind: 'supplier-item' | 'batch'; refId: string; displayLabel: string };
+  }>;
 }
 ```
 
-M1 implementation: walks `SupplierItem` for the given ingredient, picks `isPreferred=true`, returns `costPerBaseUnit` + sourceRef = `supplier-item:<id>`. M2's `m2-cost-rollup-and-audit` consumes this interface; M3's batch-aware implementation replaces it without changing call sites.
+M1 implementation (`M1InventoryCostResolver` in `suppliers/application/`): walks `SupplierItem` for the given ingredient, picks `isPreferred=true`, returns `costPerBaseUnit` + currency + `source: { kind: 'supplier-item', refId, displayLabel }`. Throws `NoCostSourceError` when no preferred SupplierItem exists. M2's `m2-cost-rollup-and-audit` consumes this interface; M3's batch-aware implementation replaces the binding via NestJS DI without touching call sites.
+
+### D12 — Audit fields on every primary entity (reconciling PRD §4.9 vs current ERD)
+
+PRD-M1 §4.9 declares "every primary entity stores `createdBy`, `updatedBy`". The current `data-model.md` §1 ERD only depicts `createdBy`/`updatedBy` on `Ingredient`. This change treats the PRD as source of truth: Organization, Location, User, Category, Supplier, SupplierItem, and UserLocation all carry the four audit fields (`createdBy`, `updatedBy`, `createdAt`, `updatedAt`). The migration set updates `data-model.md` §1 in lockstep so the ERD reflects the implementation. Rationale: BMAD discipline — PRD is signed (Gate A), ERD diagrams are derivative; aligning code to PRD is the right direction of correction.
+
+### D13 — UoM is canonical data + pure-function module, not an entity
+
+UoM does not get a database table. The 5 WEIGHT units (kg/g/mg/lb/oz), 5 VOLUME units (L/ml/cl/fl oz/gallon), and 3 UNIT family items (pcs/dozen/box) are constants in `apps/api/src/ingredients/domain/uom/units.ts` (with conversion factors) — not rows. The `convert(value, fromUnit, toUnit, densityFactor?)` function is pure, side-effect-free, and DI-free per D5. A `GET /uom` endpoint surfaces the canonical list for UI consumption (read-only). Custom UNIT-family items (e.g. "box of 12 cans") attach to the SupplierItem that uses them, not to a generic UoM table.
 
 ## Risks / Trade-offs
 

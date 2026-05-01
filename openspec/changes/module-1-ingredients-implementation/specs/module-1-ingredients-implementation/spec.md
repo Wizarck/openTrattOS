@@ -2,7 +2,7 @@
 
 ### Requirement: Multi-tenant organization with immutable currency
 
-The system SHALL provide an `Organization` entity carrying `name`, `currencyCode` (ISO 4217), `defaultLocale` (`es` | `en`), and audit fields. `currencyCode` is immutable after creation per ADR-007.
+The system SHALL provide an `Organization` entity carrying `name`, `currencyCode` (ISO 4217), `defaultLocale` (`es` | `en`), `timezone`, and audit fields. `currencyCode` is immutable after creation per ADR-007.
 
 #### Scenario: Owner creates organization with EUR
 - **WHEN** an Owner POSTs to `/organizations` with `{ name: "Palafito", currencyCode: "EUR", defaultLocale: "es" }`
@@ -20,9 +20,49 @@ The system SHALL provide an `Organization` entity carrying `name`, `currencyCode
 - **WHEN** a User belonging to Organization A queries `/ingredients`
 - **THEN** the response includes only Ingredients with `organizationId = A`; no rows from any other Organization leak
 
+### Requirement: Locations with type enum
+
+The system SHALL provide a `Location` entity belonging to an Organization, with `name`, `address`, `type` enum (`RESTAURANT | BAR | DARK_KITCHEN | CATERING | CENTRAL_PRODUCTION`), `isActive`, and audit fields. Users can be assigned to one or more Locations via the `UserLocation` join entity.
+
+#### Scenario: Owner creates location with valid type
+- **WHEN** an Owner POSTs to `/locations` with `{ name: "Sede Centro", address: "Calle Mayor 1", type: "RESTAURANT" }`
+- **THEN** the response is 201; the location is scoped to the Owner's Organization
+
+#### Scenario: Invalid location type rejected
+- **WHEN** the request supplies `type: "FOODTRUCK"` (not in the enum)
+- **THEN** the system returns 400 with `{ code: "LOCATION_TYPE_INVALID", allowed: ["RESTAURANT","BAR","DARK_KITCHEN","CATERING","CENTRAL_PRODUCTION"] }`
+
+#### Scenario: User assigned to multiple locations
+- **WHEN** an Owner POSTs to `/users/:userId/locations` with `{ locationIds: ["<L1>","<L2>"] }`
+- **THEN** two `UserLocation` rows persist; querying `GET /users/:userId` includes both location refs
+
+#### Scenario: Location soft-delete preserves history
+- **WHEN** a Location is soft-deleted via PATCH `isActive=false`
+- **THEN** existing `UserLocation` rows remain; default `GET /locations` excludes the row but `?includeInactive=true` shows it
+
+### Requirement: Users with email unique-per-organization
+
+The system SHALL provide a `User` entity with `email`, `passwordHash`, `name`, `role` (OWNER/MANAGER/STAFF), `organizationId`, `isActive`, and audit fields. Email SHALL be unique within an Organization (the same email may exist across different Organizations).
+
+#### Scenario: Owner creates user
+- **WHEN** an Owner POSTs to `/users` with `{ name: "Lourdes", email: "lourdes@example.com", role: "MANAGER" }`
+- **THEN** the response is 201 with the user under the Owner's Organization; password issuance is handled out-of-band (dev test-token endpoint)
+
+#### Scenario: Duplicate email within org rejected
+- **WHEN** an Owner attempts to POST a second user with the same email already registered in the same Organization
+- **THEN** the system returns 409 with `{ code: "USER_EMAIL_DUPLICATE_IN_ORG" }`
+
+#### Scenario: Same email allowed across organizations
+- **WHEN** two different Organizations each create a user with `email: "shared@example.com"`
+- **THEN** both creations succeed; the email is unique-per-org, not globally unique
+
+#### Scenario: Role enum validated
+- **WHEN** a request supplies `role: "ADMIN"` (not in the enum)
+- **THEN** the system returns 400 with `{ code: "USER_ROLE_INVALID", allowed: ["OWNER","MANAGER","STAFF"] }`
+
 ### Requirement: Hierarchical category tree with seed and RESTRICT cascade
 
-The system SHALL provide a `Category` entity with self-referencing `parentId`, `nameEs`, `nameEn`, `organizationId`, and audit fields. On `Organization.create`, the system SHALL seed the default taxonomy from PRD-M1 §Appendix A based on `defaultLocale`. Category deletion SHALL be `RESTRICT` if children or linked Ingredients exist.
+The system SHALL provide a `Category` entity with self-referencing `parentId`, `name` (untranslated canonical), `nameEs` + `nameEn` (translated), `sortOrder`, `isDefault` (true if from seed taxonomy), `organizationId`, and audit fields. On `Organization.create`, the system SHALL seed the default taxonomy from PRD-M1 §Appendix A based on `defaultLocale`, marking each seeded row with `isDefault=true`. Category deletion SHALL be `RESTRICT` if children or linked Ingredients exist.
 
 #### Scenario: Seed taxonomy on org creation
 - **WHEN** an Organization is created with `defaultLocale: "es"`
@@ -41,8 +81,12 @@ The system SHALL provide a `Category` entity with self-referencing `parentId`, `
 - **THEN** the response returns the full tree in a single response (no N+1); load time is <200ms for the seeded taxonomy
 
 #### Scenario: Custom category creation at any depth
-- **WHEN** a Manager POSTs to `/categories` with `{ nameEs: "Setas Especiales", parentId: <fresh-vegetables-id> }`
-- **THEN** the row persists under the parent; subsequent tree queries reflect it
+- **WHEN** a Manager POSTs to `/categories` with `{ name: "Setas Especiales", nameEs: "Setas Especiales", nameEn: "Specialty Mushrooms", parentId: <fresh-vegetables-id> }`
+- **THEN** the row persists under the parent with `isDefault=false`; subsequent tree queries reflect it sorted by `sortOrder`
+
+#### Scenario: Seed rows tagged isDefault
+- **WHEN** the seed runs on Organization create
+- **THEN** every seeded Category row has `isDefault=true`; user-created categories default to `isDefault=false`
 
 ### Requirement: UoM conversion engine — within-family allowed, cross-family rules
 
@@ -214,16 +258,16 @@ The system SHALL accept CSV uploads up to 10,000 rows for Ingredient bulk-create
 
 ### Requirement: InventoryCostResolver interface seam
 
-The system SHALL expose an `InventoryCostResolver` interface (per ADR-014) at `apps/api/src/catalog/domain/inventory-cost-resolver.ts`. M1 ships the v1 implementation that resolves cost from the `isPreferred=true` SupplierItem. M2's `m2-cost-rollup-and-audit` and M3's batch-aware version replace this implementation without changing call sites.
+The system SHALL expose an `InventoryCostResolver` interface (per ADR-011 — M2→M3 architectural seam) at `apps/api/src/cost/inventory-cost-resolver.ts`. M1 ships the v1 implementation that resolves cost from the `isPreferred=true` SupplierItem. M2's `m2-cost-rollup-and-audit` and M3's batch-aware version replace this implementation without changing call sites.
 
 #### Scenario: Resolver returns preferred supplier cost
-- **WHEN** `InventoryCostResolver.resolveCostPerBaseUnit(ingredientId)` is called for an Ingredient with one preferred SupplierItem
-- **THEN** the response is `{ cost: <costPerBaseUnit>, sourceRef: "supplier-item:<id>" }`
+- **WHEN** `InventoryCostResolver.resolveBaseCost(ingredientId)` is called for an Ingredient with one preferred SupplierItem
+- **THEN** the response is `{ costPerBaseUnit, currency, source: { kind: "supplier-item", refId, displayLabel } }`
 
 #### Scenario: Resolver throws when no preferred supplier exists
 - **WHEN** the same call is made on an Ingredient with no `isPreferred` SupplierItem
 - **THEN** the resolver throws `NoCostSourceError` with `{ ingredientId }`; M2 catches this for the "missing cost data" UX path
 
 #### Scenario: Resolver implements stable interface
-- **WHEN** M2 imports `InventoryCostResolver` from `@opentrattos/api/catalog/domain`
-- **THEN** the import succeeds; M2 can swap the M1 implementation for an M3 batch-aware one via DI without code changes elsewhere
+- **WHEN** M2 imports `InventoryCostResolver` from `apps/api/src/cost/inventory-cost-resolver`
+- **THEN** the import succeeds; M2 can swap the M1 implementation for an M3 batch-aware one via NestJS DI without code changes elsewhere

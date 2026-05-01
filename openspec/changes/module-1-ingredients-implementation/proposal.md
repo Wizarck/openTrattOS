@@ -4,13 +4,14 @@ Module 1 (PRD v2.0, approved 2026-04-19) is the foundation kernel — Ingredient
 
 ## What Changes
 
-- **8 TypeORM entity classes** under `apps/api/src/<bounded-context>/domain/`:
-  Organization, Location, User, Category (hierarchical), UoM, Ingredient, Supplier, SupplierItem — fields per [data-model.md](../../../docs/data-model.md), multi-tenant via `organizationId` (ADR-004), soft-delete via `isActive` (PRD §4.8), audit via `createdBy`/`updatedBy`/`createdAt`/`updatedAt` (PRD §4.9).
-- **8 migration files** under `apps/api/src/migrations/000N_<entity>.ts` (monotonic numbering per release-management.md §6.4) — schema + indexes + cascade rules per ADR-010.
+- **7 TypeORM entity classes** under `apps/api/src/<module>/domain/`:
+  Organization, Location, User, Category (hierarchical), Ingredient, Supplier, SupplierItem — fields per [data-model.md §1](../../../docs/data-model.md), multi-tenant via `organizationId` (ADR-004), soft-delete via `isActive` (PRD §4.8 + ADR-009), audit via `createdBy`/`updatedBy`/`createdAt`/`updatedAt` (PRD §4.9 — applied to all primary entities; data-model.md ERD currently only depicts on Ingredient and is updated as part of this change).
+- **1 join entity** `UserLocation` (M:N) per data-model.md §1 ERD ("User assigned to Location via UserLocation").
+- **9 migration files** under `apps/api/src/migrations/000N_<entity>.ts` (monotonic numbering per release-management.md §6.4) — schema + indexes + cascade rules per data-model.md §2.3.
 - **8 repositories** (TypeORM data-mapper pattern) + **8 application services / use-cases** orchestrating CRUD + invariants.
 - **REST controllers + DTOs** for every CRUD operation, all typed against `@opentrattos/types` (no `any`), with cursor-based pagination on list endpoints (ADR-002). `@ApiOperation` summary + description on every endpoint per the agent-readable rule.
-- **UoM conversion engine** with 100% unit-test coverage (PRD NFR §5): WEIGHT family (kg/g/mg/lb/oz), VOLUME family (L/ml/cl/fl oz/gallon), UNIT family (pcs/dozen/box). Cross-family WEIGHT↔VOLUME blocked unless `densityFactor` set on the Ingredient; any↔UNIT cross-family always blocked.
-- **`InventoryCostResolver` interface** (ADR-014, M2 architectural seam) with M1 implementation that resolves cost-per-base-unit from the `isPreferred=true` SupplierItem. The interface is what M2 `m2-cost-rollup-and-audit` will consume; M1 ships the v1 implementation only.
+- **UoM conversion module** (canonical units + pure-function conversion, NOT an entity) with 100% unit-test coverage (PRD NFR §5): WEIGHT family (kg/g/mg/lb/oz), VOLUME family (L/ml/cl/fl oz/gallon), UNIT family (pcs/dozen/box). Cross-family WEIGHT↔VOLUME blocked unless `densityFactor` set on the Ingredient; any↔UNIT cross-family always blocked.
+- **`InventoryCostResolver` interface** (ADR-011, M2→M3 architectural seam) with M1 implementation that resolves cost-per-base-unit from the `isPreferred=true` SupplierItem. The interface is what M2 `m2-cost-rollup-and-audit` will consume; M1 ships the v1 implementation only.
 - **Hierarchical Category tree** with `parentId` self-reference + recursive CTE query helper, `RESTRICT` cascade on delete (blocks deletion when children or linked Ingredients exist).
 - **Pre-seeded default category taxonomy** (PRD §Appendix A) — 30+ nodes across Fresh / Dry / Beverages / Other branches, with `nameEs` + `nameEn` translation columns; seeded on `Organization.create` based on `defaultLocale`.
 - **RBAC guards** OWNER / MANAGER / STAFF (ADR-006) — Owner+Manager full CRUD, Staff read-only on Ingredients (no prices, no supplier data).
@@ -29,12 +30,12 @@ Module 1 (PRD v2.0, approved 2026-04-19) is the foundation kernel — Ingredient
 - Docker Compose / production deployment scripts — operational infra concern, not part of this slice.
 - Multi-currency support (e.g. supplier invoicing in USD to a EUR org) — explicit V1 deferral per PRD §4.5.
 - Field-level audit log (before/after diffs) — reserved for M3 HACCP per PRD §4.9.
-- Real OpenID/OAuth flow — auth middleware extracts from JWT; the actual JWT issuance is a later slice (likely under `m1-auth` or M3).
+- Real OpenID/OAuth flow — auth middleware in this slice consumes a JWT but does not issue one. A dev-only test-token endpoint is provided for development/testing; production JWT issuance (Auth0 / Clerk / self-hosted) is a separate post-M1 slice with its own Gate B decision.
 
 ## Prerequisites
 
 - ✅ PRD-M1 v2.0 approved 2026-04-19 (Gate A).
-- ✅ ADRs 1-9 approved 2026-04-19 (Gate B): stack lock, DDD, multi-tenant, RBAC, currency, i18n, soft-delete, audit, hindsight bank.
+- ✅ ADRs 1-9 approved 2026-04-19 (Gate B): DDD modular monolith (ADR-001), API-first (ADR-002), AI optional (ADR-003), multi-tenant (ADR-004), Enterprise reservation (ADR-005), RBAC (ADR-006), single-currency (ADR-007), i18n (ADR-008), soft-delete (ADR-009).
 - ✅ `data-model.md` frozen for M1 entities — 8 base entities + cascade rules.
 - ✅ Master CI green — PR #48 landed 2026-05-01 (eslint flat config + jest `--passWithNoTests` on `apps/api`).
 - ✅ Branch protection upgraded to Profile A — 1 review + 4 required checks (Lint / Build / Test / Secrets scan).

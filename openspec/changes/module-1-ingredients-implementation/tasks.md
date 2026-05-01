@@ -1,83 +1,90 @@
 ## 1. Infrastructure foundation
 
-- [ ] 1.1 Create directory skeleton: `apps/api/src/{shared,catalog,procurement}/{domain,application,infrastructure,interface}/`
+- [ ] 1.1 Create directory skeleton: `apps/api/src/{iam,ingredients,suppliers}/{domain,application,infrastructure,interface}/` + `apps/api/src/cost/` (shared cross-context module for InventoryCostResolver per design.md §D1) + `apps/api/src/shared/` (generic infra: pagination, RBAC guard, audit interceptor, error filter)
 - [ ] 1.2 Add `apps/api/src/migrations/` directory + TypeORM datasource config (`apps/api/src/data-source.ts`) reading `DATABASE_URL` from env
 - [ ] 1.3 Add `db:migrate` + `db:migrate:revert` scripts to `apps/api/package.json`
 - [ ] 1.4 Add Postgres-in-Docker `docker-compose.test.yml` for integration tests (service: `postgres-test` on port 5433, fresh schema per CI run)
 - [ ] 1.5 Add `jest-integration.config.ts` in `apps/api` pointing at `**/*.int.spec.ts` with `--forceExit`
 - [ ] 1.6 Update root CI workflow `.github/workflows/ci.yml` to spin up Postgres-in-Docker for the Test job
 
-## 2. Shared domain (Organization, Location, User)
+## 2. IAM domain (Organization, Location, User, UserLocation)
 
-- [ ] 2.1 RED: write `Organization.spec.ts` covering creation, ISO 4217 validation, currency immutability, defaultLocale validation
-- [ ] 2.2 GREEN: implement `Organization` domain class + factory in `shared/domain/organization.ts`; ISO 4217 regex + locale enum
-- [ ] 2.3 RED: write `User.spec.ts` covering role enum (OWNER/MANAGER/STAFF), password-hashing contract (mock bcrypt), email validation
-- [ ] 2.4 GREEN: implement `User` domain class
-- [ ] 2.5 RED: write `Location.spec.ts` covering org-scoping invariant
-- [ ] 2.6 GREEN: implement `Location` domain class
-- [ ] 2.7 Migration `0001_organization.ts`: schema + indexes (PK, currencyCode CHECK)
-- [ ] 2.8 Migration `0002_user.ts`: schema + index on email + FK organizationId CASCADE
-- [ ] 2.9 Migration `0003_location.ts`: schema + FK organizationId CASCADE
-- [ ] 2.10 INT: `OrganizationRepository.int.spec.ts` — verify currencyCode immutability via repository update path (ignored if present in DTO)
-- [ ] 2.11 GREEN: implement TypeORM `OrganizationRepository`, `UserRepository`, `LocationRepository`
-- [ ] 2.12 Application service: `CreateOrganization` use-case (orchestrates Organization + seed Categories trigger from §6 below)
+- [ ] 2.1 RED: write `Organization.spec.ts` covering creation, ISO 4217 validation, currency immutability, defaultLocale validation, timezone field
+- [ ] 2.2 GREEN: implement `Organization` domain class + factory in `iam/domain/organization.ts`; ISO 4217 regex + locale enum
+- [ ] 2.3 RED: write `User.spec.ts` covering role enum (OWNER/MANAGER/STAFF), password-hashing contract (mock bcrypt), email format validation, email-unique-per-org constraint
+- [ ] 2.4 GREEN: implement `User` domain class in `iam/domain/user.ts`
+- [ ] 2.5 RED: write `Location.spec.ts` covering org-scoping invariant + type enum (RESTAURANT|BAR|DARK_KITCHEN|CATERING|CENTRAL_PRODUCTION) + isActive default
+- [ ] 2.6 GREEN: implement `Location` domain class in `iam/domain/location.ts`
+- [ ] 2.7 RED: write `UserLocation.spec.ts` covering M:N assignment + cascade-on-both-sides invariants
+- [ ] 2.8 GREEN: implement `UserLocation` join entity in `iam/domain/user-location.ts`
+- [ ] 2.9 Migration `0001_organization.ts`: schema + indexes (PK, currencyCode CHECK ISO 4217) + audit fields
+- [ ] 2.10 Migration `0002_user.ts`: schema + UNIQUE (organizationId, email) + FK organizationId CASCADE + audit fields
+- [ ] 2.11 Migration `0003_location.ts`: schema + FK organizationId CASCADE + type CHECK enum + audit fields
+- [ ] 2.12 Migration `0004_user_location.ts`: join table + CASCADE both FKs + UNIQUE (userId, locationId)
+- [ ] 2.13 INT: `OrganizationRepository.int.spec.ts` — verify currencyCode immutability via repository update path (ignored if present in DTO)
+- [ ] 2.14 INT: `UserRepository.int.spec.ts` — email-unique-per-org enforcement; same-email-cross-org allowed
+- [ ] 2.15 GREEN: implement TypeORM `OrganizationRepository`, `UserRepository`, `LocationRepository`, `UserLocationRepository`
+- [ ] 2.16 Application service: `CreateOrganization` use-case (orchestrates Organization + seed Categories trigger from §6 below)
+- [ ] 2.17 Application service: `AssignUserToLocations` use-case
 
-## 3. UoM engine (100% coverage mandate)
+## 3. UoM module (canonical units + 100% coverage mandate)
 
-- [ ] 3.1 RED: write `uom-conversion.spec.ts` — within-WEIGHT (kg ↔ g, lb ↔ oz, kg ↔ lb), within-VOLUME, within-UNIT (with box quantity), cross-family WEIGHT↔VOLUME with density, cross-family forbidden any↔UNIT
-- [ ] 3.2 GREEN: implement `convert(value, fromUnit, toUnit, densityFactor?)` pure function in `catalog/domain/uom/`
-- [ ] 3.3 GREEN: implement `UoMError` hierarchy (`UoMConversionRequiresDensityError`, `UoMConversionForbiddenError`, `UoMUnknownUnitError`)
-- [ ] 3.4 Add `coverageThreshold: { 'catalog/domain/uom/**': 100 }` to `apps/api` Jest config
-- [ ] 3.5 CI gate: `npm run test:cov` fails the slice PR if UoM coverage drops below 100%
+- [ ] 3.1 Create `apps/api/src/ingredients/domain/uom/units.ts` — canonical units constants per design.md §D13 (5 WEIGHT + 5 VOLUME + 3 UNIT-family items with conversion factors)
+- [ ] 3.2 RED: write `uom-conversion.spec.ts` — within-WEIGHT (kg ↔ g, lb ↔ oz, kg ↔ lb), within-VOLUME, within-UNIT (with box quantity), cross-family WEIGHT↔VOLUME with density, cross-family forbidden any↔UNIT
+- [ ] 3.3 GREEN: implement `convert(value, fromUnit, toUnit, densityFactor?)` pure function in `ingredients/domain/uom/convert.ts`
+- [ ] 3.4 GREEN: implement `UoMError` hierarchy (`UoMConversionRequiresDensityError`, `UoMConversionForbiddenError`, `UoMUnknownUnitError`)
+- [ ] 3.5 Read-only endpoint `GET /uom` exposing canonical list to UI consumers
+- [ ] 3.6 Add `coverageThreshold: { 'ingredients/domain/uom/**': 100 }` to `apps/api` Jest config
+- [ ] 3.7 CI gate: `npm run test:cov` fails the slice PR if UoM coverage drops below 100%
 
-## 4. Catalog domain (Category, Ingredient)
+## 4. Ingredients domain (Category, Ingredient)
 
-- [ ] 4.1 RED: write `Category.spec.ts` covering tree invariants (no cycles, parentId chain), nameEs+nameEn required, RESTRICT cascade rule
-- [ ] 4.2 GREEN: implement `Category` domain class with `parentId` self-FK
+- [ ] 4.1 RED: write `Category.spec.ts` covering tree invariants (no cycles, parentId chain), name+nameEs+nameEn required, sortOrder default, isDefault flag (true for seed only), RESTRICT cascade rule
+- [ ] 4.2 GREEN: implement `Category` domain class in `ingredients/domain/category.ts` with `parentId` self-FK
 - [ ] 4.3 RED: write `Ingredient.spec.ts` covering baseUnitType immutability, internalCode auto-generation, densityFactor cross-family invariant, soft-delete behaviour
-- [ ] 4.4 GREEN: implement `Ingredient` domain class
-- [ ] 4.5 Migration `0004_category.ts`: schema + self-FK ON DELETE RESTRICT + FK organizationId CASCADE + UNIQUE (organizationId, parentId, nameEs)
-- [ ] 4.6 Migration `0005_ingredient.ts`: schema + FK categoryId RESTRICT + FK organizationId CASCADE + indexes (organizationId, categoryId, isActive, internalCode UNIQUE per org)
+- [ ] 4.4 GREEN: implement `Ingredient` domain class in `ingredients/domain/ingredient.ts`
+- [ ] 4.5 Migration `0005_category.ts`: schema (id, organizationId, parentId, name, nameEs, nameEn, sortOrder, isDefault, audit) + self-FK ON DELETE RESTRICT + FK organizationId CASCADE + UNIQUE (organizationId, parentId, name)
+- [ ] 4.6 Migration `0006_ingredient.ts`: schema + FK categoryId RESTRICT + FK organizationId CASCADE + indexes (organizationId, categoryId, isActive, internalCode UNIQUE per org) + audit fields
 - [ ] 4.7 INT: `CategoryRepository.int.spec.ts` — RESTRICT enforcement with children, with linked Ingredients; recursive CTE tree query <200ms on seeded taxonomy
 - [ ] 4.8 INT: `IngredientRepository.int.spec.ts` — soft-delete excludes from default list; reactivation; cursor-based pagination determinism
 - [ ] 4.9 GREEN: implement TypeORM `CategoryRepository`, `IngredientRepository`
 
-## 5. Procurement domain (Supplier, SupplierItem)
+## 5. Suppliers domain (Supplier, SupplierItem)
 
-- [ ] 5.1 RED: write `Supplier.spec.ts` covering org-scoping, isActive default
-- [ ] 5.2 GREEN: implement `Supplier` domain class
+- [ ] 5.1 RED: write `Supplier.spec.ts` covering org-scoping, isActive default, contact fields nullable
+- [ ] 5.2 GREEN: implement `Supplier` domain class in `suppliers/domain/supplier.ts`
 - [ ] 5.3 RED: write `SupplierItem.spec.ts` covering costPerBaseUnit auto-calc (4 decimal precision), purchaseUnitType-vs-Ingredient family validation, single-preferred invariant
-- [ ] 5.4 GREEN: implement `SupplierItem` domain class with `compute_cost_per_base_unit()` pure method (uses UoM engine for unit reduction)
-- [ ] 5.5 Migration `0006_supplier.ts`: schema + FK organizationId CASCADE
-- [ ] 5.6 Migration `0007_supplier_item.ts`: schema + FK supplierId CASCADE + FK ingredientId CASCADE + UNIQUE (ingredientId, isPreferred=true) partial index
+- [ ] 5.4 GREEN: implement `SupplierItem` domain class in `suppliers/domain/supplier-item.ts` with `computeCostPerBaseUnit()` pure method (uses UoM module for unit reduction)
+- [ ] 5.5 Migration `0007_supplier.ts`: schema + FK organizationId CASCADE + audit fields
+- [ ] 5.6 Migration `0008_supplier_item.ts`: schema + FK supplierId CASCADE + FK ingredientId CASCADE + UNIQUE (ingredientId, isPreferred=true) partial index + audit fields
 - [ ] 5.7 INT: `SupplierItemRepository.int.spec.ts` — atomic single-preferred swap; 4-decimal precision round-trip
 - [ ] 5.8 GREEN: implement TypeORM `SupplierRepository`, `SupplierItemRepository`
 
 ## 6. Category seed + i18n
 
-- [ ] 6.1 Create `apps/api/src/catalog/infrastructure/category-seed.ts` with the 30+ node seed taxonomy from PRD-M1 §Appendix A (nameEs + nameEn columns)
-- [ ] 6.2 Wire seed trigger into `CreateOrganization` use-case (§2.12) — runs in same transaction
-- [ ] 6.3 INT: `CategorySeed.int.spec.ts` — creating an Org with `defaultLocale="es"` materialises 30+ rows correctly nested
+- [ ] 6.1 Create `apps/api/src/ingredients/infrastructure/category-seed.ts` with the 30+ node seed taxonomy from PRD-M1 §Appendix A (name + nameEs + nameEn columns; isDefault=true on every seeded row)
+- [ ] 6.2 Wire seed trigger into `CreateOrganization` use-case (§2.16) — runs in same transaction
+- [ ] 6.3 INT: `CategorySeed.int.spec.ts` — creating an Org with `defaultLocale="es"` materialises 30+ rows correctly nested with isDefault=true
 - [ ] 6.4 Create `apps/api/locales/es.json` + `apps/api/locales/en.json` with all error codes from spec.md and UI labels for Swagger
 - [ ] 6.5 Add CI step `npm run i18n:check` validating both locale files have parity (no missing keys)
 
 ## 7. RBAC + Audit middleware
 
-- [ ] 7.1 Create `RolesGuard` NestJS guard reading JWT, extracting `role` claim, throwing 403 on mismatch
-- [ ] 7.2 Create `@Roles(...roles)` decorator
+- [ ] 7.1 Create `RolesGuard` NestJS guard in `apps/api/src/shared/guards/roles.guard.ts` reading JWT, extracting `role` claim, throwing 403 on mismatch
+- [ ] 7.2 Create `@Roles(...roles)` decorator in `apps/api/src/shared/decorators/roles.decorator.ts`
 - [ ] 7.3 Unit test the guard against the matrix in personas-jtbd.md (Owner/Manager/Staff combinations)
-- [ ] 7.4 Create `AuditInterceptor` populating `createdBy`/`updatedBy` from JWT; strips any DTO-supplied values
+- [ ] 7.4 Create `AuditInterceptor` in `apps/api/src/shared/interceptors/audit.interceptor.ts` populating `createdBy`/`updatedBy` from JWT; strips any DTO-supplied values
 - [ ] 7.5 Unit test the interceptor — tampered DTO is overwritten; no-auth path throws 401
 - [ ] 7.6 Wire both globally in `app.module.ts`
 
 ## 8. Controllers + DTOs (interface layer)
 
-- [ ] 8.1 Define DTO classes (class-validator + class-transformer) in `<ctx>/interface/dto/` for Organization, User, Location, Category, Ingredient, Supplier, SupplierItem, UoM
+- [ ] 8.1 Define DTO classes (class-validator + class-transformer) in `<ctx>/interface/dto/` for Organization, User, Location, UserLocation, Category, Ingredient, Supplier, SupplierItem, UoM
 - [ ] 8.2 Type all DTOs against `@opentrattos/types` (re-export from packages/types as needed); no `any`
-- [ ] 8.3 Replace `apps/api/src/ingredients/interface/{categories,ingredients,suppliers}.controller.ts` stubs with real implementations
-- [ ] 8.4 Add new controllers under proper bounded contexts: `OrganizationController`, `UserController`, `LocationController`, `UoMController` (read-only catalogue)
+- [ ] 8.3 Replace `apps/api/src/ingredients/interface/{categories,ingredients,suppliers}.controller.ts` stubs with real implementations (note: existing stub for `suppliers` moves logically to `suppliers` bounded context per design.md §D1; relocate or symlink)
+- [ ] 8.4 Add new controllers: `OrganizationController` (`iam/`), `UserController` (`iam/`), `LocationController` (`iam/`), `UserLocationController` (`iam/`), `UoMController` (`ingredients/`, read-only catalogue)
 - [ ] 8.5 `@ApiOperation` summary + description on every method; `@ApiResponse` on success + each error code per spec
-- [ ] 8.6 Cursor-based pagination utility in `apps/api/src/shared/interface/pagination.ts`; apply to every list endpoint
+- [ ] 8.6 Cursor-based pagination utility in `apps/api/src/shared/pagination.ts`; apply to every list endpoint
 - [ ] 8.7 E2E supertest spec for each controller covering happy path + each spec scenario
 
 ## 9. CSV Import / Export
