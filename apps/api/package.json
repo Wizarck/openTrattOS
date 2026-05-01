@@ -10,7 +10,12 @@
     "lint": "eslint \"src/**/*.ts\"",
     "test": "jest --passWithNoTests",
     "test:watch": "jest --watch --passWithNoTests",
-    "test:cov": "jest --coverage --passWithNoTests"
+    "test:cov": "jest --coverage --passWithNoTests",
+    "test:int": "jest --config jest-integration.config.ts --passWithNoTests --runInBand",
+    "i18n:check": "ts-node scripts/i18n-check.ts",
+    "db:migrate": "typeorm-ts-node-commonjs migration:run -d src/data-source.ts",
+    "db:migrate:revert": "typeorm-ts-node-commonjs migration:revert -d src/data-source.ts",
+    "db:migrate:create": "typeorm-ts-node-commonjs migration:create"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",
@@ -44,11 +49,26 @@
     "moduleFileExtensions": ["js", "json", "ts"],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
+    "testPathIgnorePatterns": ["\\.int\\.spec\\.ts$"],
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
-    "collectCoverageFrom": ["**/*.(t|j)s"],
+    "collectCoverageFrom": [
+      "**/*.(t|j)s",
+      "!**/*.spec.ts",
+      "!**/*.int.spec.ts",
+      "!**/main.ts",
+      "!**/migrations/**"
+    ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "coverageThreshold": {
+      "src/ingredients/domain/uom/**/*.ts": {
+        "branches": 100,
+        "functions": 100,
+        "lines": 100,
+        "statements": 100
+      }
+    }
   }
 }
