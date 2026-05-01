@@ -26,7 +26,6 @@ export class OrganizationRepository extends Repository<Organization> {
     id: string,
     patch: OrganizationUpdateProps & { currencyCode?: string },
   ): Promise<Organization> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { currencyCode: _stripped, ...allowed } = patch;
     const org = await this.findByIdOrThrow(id);
     org.applyUpdate(allowed);

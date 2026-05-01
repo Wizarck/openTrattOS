@@ -70,12 +70,12 @@
 
 ## 7. RBAC + Audit middleware
 
-- [ ] 7.1 Create `RolesGuard` NestJS guard in `apps/api/src/shared/guards/roles.guard.ts` reading JWT, extracting `role` claim, throwing 403 on mismatch
-- [ ] 7.2 Create `@Roles(...roles)` decorator in `apps/api/src/shared/decorators/roles.decorator.ts`
-- [ ] 7.3 Unit test the guard against the matrix in personas-jtbd.md (Owner/Manager/Staff combinations)
-- [ ] 7.4 Create `AuditInterceptor` in `apps/api/src/shared/interceptors/audit.interceptor.ts` populating `createdBy`/`updatedBy` from JWT; strips any DTO-supplied values
-- [ ] 7.5 Unit test the interceptor — tampered DTO is overwritten; no-auth path throws 401
-- [ ] 7.6 Wire both globally in `app.module.ts`
+- [x] 7.1 Create `RolesGuard` NestJS guard in `apps/api/src/shared/guards/roles.guard.ts` reading JWT, extracting `role` claim, throwing 403 on mismatch
+- [x] 7.2 Create `@Roles(...roles)` decorator in `apps/api/src/shared/decorators/roles.decorator.ts`
+- [x] 7.3 Unit test the guard against the matrix in personas-jtbd.md (Owner/Manager/Staff combinations)
+- [x] 7.4 Create `AuditInterceptor` in `apps/api/src/shared/interceptors/audit.interceptor.ts` populating `createdBy`/`updatedBy` from JWT; strips any DTO-supplied values
+- [x] 7.5 Unit test the interceptor — tampered DTO is overwritten; no-auth path throws 401
+- [x] 7.6 Wire both globally in `app.module.ts`
 
 ## 8. Controllers + DTOs (interface layer)
 
