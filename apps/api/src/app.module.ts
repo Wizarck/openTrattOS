@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
+import { IamModule } from './iam/iam.module';
 import { IngredientsModule } from './ingredients/ingredients.module';
 
 @Module({
   imports: [
     // Bounded Context: Module 1 — Foundation
+    IamModule,
     IngredientsModule,
 
     // Future Bounded Contexts:
