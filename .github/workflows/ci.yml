@@ -1,0 +1,101 @@
+name: CI
+
+# Minimal CI for the turbo monorepo. Profile A consumer per ai-playbook
+# v0.8.x release-management.md. Required-checks on master are currently
+# review-only (no required_status_checks); when this CI proves stable,
+# add these job names to branch protection via:
+#   gh api -X PUT repos/Wizarck/openTrattOS/branches/master/protection \
+#     --input <json with required_status_checks>
+# Or re-run `bootstrap_gh_project.py --profile auto --required-checks "Lint,Build,Test,Secrets scan"`
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # ELIGIA_GOD_MODE allows cross-repo private submodule clone of
+          # .ai-playbook (Wizarck/ai-playbook is private). Without it, any
+          # step that needs the submodule scripts will fail. The token is
+          # already provisioned as a repo secret as of 2026-05-01.
+          submodules: true
+          token: ${{ secrets.ELIGIA_GOD_MODE }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install deps
+        # `npm install` (not `npm ci`) because the repo doesn't ship a
+        # package-lock.json yet. Follow-up: commit a lockfile + switch to
+        # `npm ci` for deterministic CI installs.
+        run: npm install --no-fund --no-audit
+      - name: Lint
+        run: npm run lint
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.ELIGIA_GOD_MODE }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install deps
+        # `npm install` (not `npm ci`) because the repo doesn't ship a
+        # package-lock.json yet. Follow-up: commit a lockfile + switch to
+        # `npm ci` for deterministic CI installs.
+        run: npm install --no-fund --no-audit
+      - name: Build
+        # Build is also the de-facto typecheck for NestJS (tsc runs before
+        # nest build) and for the types/ workspace. A clean build = clean
+        # types across the monorepo.
+        run: npm run build
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.ELIGIA_GOD_MODE }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install deps
+        # `npm install` (not `npm ci`) because the repo doesn't ship a
+        # package-lock.json yet. Follow-up: commit a lockfile + switch to
+        # `npm ci` for deterministic CI installs.
+        run: npm install --no-fund --no-audit
+      - name: Test
+        # NestJS unit tests via jest in apps/api/. Add more workspaces as
+        # they ship test suites. `turbo run test` walks all workspaces.
+        run: npm run test
+
+  secrets-scan:
+    name: Secrets scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
