@@ -39,7 +39,10 @@ jobs:
         with:
           node-version: '20'
       - name: Install deps
-        run: npm ci
+        # `npm install` (not `npm ci`) because the repo doesn't ship a
+        # package-lock.json yet. Follow-up: commit a lockfile + switch to
+        # `npm ci` for deterministic CI installs.
+        run: npm install --no-fund --no-audit
       - name: Lint
         run: npm run lint
 
@@ -55,7 +58,10 @@ jobs:
         with:
           node-version: '20'
       - name: Install deps
-        run: npm ci
+        # `npm install` (not `npm ci`) because the repo doesn't ship a
+        # package-lock.json yet. Follow-up: commit a lockfile + switch to
+        # `npm ci` for deterministic CI installs.
+        run: npm install --no-fund --no-audit
       - name: Build
         # Build is also the de-facto typecheck for NestJS (tsc runs before
         # nest build) and for the types/ workspace. A clean build = clean
@@ -74,7 +80,10 @@ jobs:
         with:
           node-version: '20'
       - name: Install deps
-        run: npm ci
+        # `npm install` (not `npm ci`) because the repo doesn't ship a
+        # package-lock.json yet. Follow-up: commit a lockfile + switch to
+        # `npm ci` for deterministic CI installs.
+        run: npm install --no-fund --no-audit
       - name: Test
         # NestJS unit tests via jest in apps/api/. Add more workspaces as
         # they ship test suites. `turbo run test` walks all workspaces.
