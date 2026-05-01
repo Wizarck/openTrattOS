@@ -50,7 +50,10 @@
     "INGREDIENT_FACTORY_REJECTED": "La validación del ingrediente falló durante la importación",
     "RECIPE_NOT_FOUND": "Receta no encontrada",
     "RECIPE_IN_USE": "La receta está referenciada por MenuItems activos; desactívalos primero",
-    "CYCLE": "Ciclo de composición de receta detectado; resuélvelo antes de guardar"
+    "CYCLE": "Ciclo de composición de receta detectado; resuélvelo antes de guardar",
+    "EXTERNAL_CATALOG_OFF_OUTAGE": "El servicio Open Food Facts no está disponible; se ha reanudado el modo degradado",
+    "EXTERNAL_CATALOG_NOT_FOUND": "Producto no encontrado en el catálogo externo",
+    "EXTERNAL_CATALOG_SYNC_IN_PROGRESS": "Ya hay una sincronización con Open Food Facts en curso"
   },
   "ui": {
     "swagger_title": "API de openTrattOS",

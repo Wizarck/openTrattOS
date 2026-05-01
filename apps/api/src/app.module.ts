@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ExternalCatalogModule } from './external-catalog/external-catalog.module';
 import { IamModule } from './iam/iam.module';
 import { IngredientsModule } from './ingredients/ingredients.module';
 import { MenusModule } from './menus/menus.module';
@@ -18,6 +19,9 @@ import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
     // M2 Foundation (m2-data-model — schema only; controllers land in m2-recipes-core, m2-cost-rollup, etc.)
     RecipesModule,
     MenusModule,
+
+    // M2 OFF mirror (m2-off-mirror — local mirror + REST fallback for Open Food Facts).
+    ExternalCatalogModule,
 
     // Future Bounded Contexts:
     // HaccpModule,       // M3 — HACCP / APPCC

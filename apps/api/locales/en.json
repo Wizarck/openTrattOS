@@ -50,7 +50,10 @@
     "INGREDIENT_FACTORY_REJECTED": "Ingredient validation failed during import",
     "RECIPE_NOT_FOUND": "Recipe not found",
     "RECIPE_IN_USE": "Recipe is referenced by active MenuItems; deactivate them first",
-    "CYCLE": "Recipe composition cycle detected; resolve before saving"
+    "CYCLE": "Recipe composition cycle detected; resolve before saving",
+    "EXTERNAL_CATALOG_OFF_OUTAGE": "Open Food Facts service is unavailable; degraded mode engaged",
+    "EXTERNAL_CATALOG_NOT_FOUND": "Product not found in the external catalog",
+    "EXTERNAL_CATALOG_SYNC_IN_PROGRESS": "An Open Food Facts sync is already in progress"
   },
   "ui": {
     "swagger_title": "openTrattOS API",
