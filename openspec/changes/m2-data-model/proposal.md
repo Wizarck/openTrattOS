@@ -28,5 +28,5 @@ Module 2 introduces four new entities (Recipe, RecipeIngredient, MenuItem) and e
 
 - **Code**: TypeORM entity files + migrations under `apps/api/src/`. New repository stubs (Recipe, RecipeIngredient, MenuItem) wired but not exposed via controllers in this change — services come in #2, #5, #8.
 - **Database**: PostgreSQL migration adds 3 tables + 5 columns on existing tables. Indexes per ADR-010. Cascade on `organizationId` delete.
-- **Other M2 slices**: every other change in `docs/openspec-slice.md` lists `#1` in its `Depends on` column. Land this first.
+- **Other M2 slices**: every other change in `docs/openspec-slice-module-2.md` lists `#1` in its `Depends on` column. Land this first.
 - **No UI** in this change. No API endpoints. No service logic. Pure schema.

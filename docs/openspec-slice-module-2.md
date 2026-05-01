@@ -118,6 +118,8 @@ In scope: Agent-Ready Foundation per FR41–45. Public API parity audit — ever
 
 ## Stewardship
 
-This file is approved at Gate C. Re-slicing (a change splits, merges, or is added) is a new revision: `git mv docs/openspec-slice.md docs/_archive/openspec-slice-2026-04-27.md` and write the new one. Never edit silently mid-implementation.
+This file is approved at Gate C. Re-slicing (a change splits, merges, or is added) is a new revision: `git mv docs/openspec-slice-module-2.md docs/_archive/openspec-slice-module-2-2026-04-27.md` and write the new one. Never edit silently mid-implementation.
 
-`openspec-propose <change-id>` reads this file at start. If the requested change-id is not in the table, the propose command refuses (or run with `--no-slice` for ad-hoc changes that bypass the slice contract).
+Multi-module convention (per [bmad-openspec-bridge.md §3.4](../.ai-playbook/specs/bmad-openspec-bridge.md)): one slicing file per Module (M1/M2/M3/M4). M1 lives at `docs/openspec-slice-module-1.md`.
+
+`openspec-propose <change-id>` reads this file at start. Multi-module repos disambiguate via `--slice-file <path>` or mtime fallback (most-recent-first). If the requested change-id is not in any active slice file, the propose command refuses (or run with `--no-slice` for ad-hoc changes that bypass the slice contract).

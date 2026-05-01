@@ -1,6 +1,6 @@
 ## Context
 
-Module 1 shipped 8 base entities (Organization, Location, User, Ingredient, Category, UoM, Supplier, SupplierItem) per `docs/data-model.md`. M2 adds Recipes / Escandallo / Nutritional Intelligence and needs three new entities + extensions to two existing ones. Current state: PostgreSQL via TypeORM, multi-tenant via `organizationId`, soft-delete via `isActive` flag, audit fields on every row. Stakeholders: every M2 slice (`#2`–`#11` in `docs/openspec-slice.md`) reads from this schema.
+Module 1 shipped 8 base entities (Organization, Location, User, Ingredient, Category, UoM, Supplier, SupplierItem) per `docs/data-model.md`. M2 adds Recipes / Escandallo / Nutritional Intelligence and needs three new entities + extensions to two existing ones. Current state: PostgreSQL via TypeORM, multi-tenant via `organizationId`, soft-delete via `isActive` flag, audit fields on every row. Stakeholders: every M2 slice (`#2`–`#11` in `docs/openspec-slice-module-2.md`) reads from this schema.
 
 ## Goals / Non-Goals
 
