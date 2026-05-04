@@ -16,7 +16,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * Polymorphic component (RecipeIngredient.ingredientId XOR subRecipeId): enforced
  * via CHECK constraint per design.md §"Polymorphic RecipeIngredient.componentId" decision.
  */
-export class M2DataModel0009 implements MigrationInterface {
+export class M2DataModel1700000009000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // ---------------- recipes ----------------
     await queryRunner.query(`
