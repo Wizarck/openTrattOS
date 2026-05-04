@@ -2,9 +2,9 @@
 schema: agents-md/v1
 version: 1.0.0
 inherits_from:
-  - github.com/Wizarck/ai-playbook@v0.9.2
+  - github.com/Wizarck/ai-playbook@v0.9.3
 skills_sources:
-  - Wizarck/ai-playbook@v0.9.2
+  - Wizarck/ai-playbook@v0.9.3
   - Wizarck/eligia-skills@v0.3.0
 updated: 2026-05-04
 project: openTrattOS
@@ -46,6 +46,7 @@ Module roadmap:
 
 | Topic | Pointer |
 |---|---|
+| **How to make a change in this project (canonical entry point)** | [.ai-playbook/docs/development-flow.md](.ai-playbook/docs/development-flow.md) |
 | PRD (M1 Ingredients) | [docs/prd-module-1-ingredients.md](docs/prd-module-1-ingredients.md) |
 | Architecture decisions (9 ADRs) | [docs/architecture-decisions.md](docs/architecture-decisions.md) |
 | Data model (ERD + cascade rules) | [docs/data-model.md](docs/data-model.md) |
