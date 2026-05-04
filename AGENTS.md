@@ -46,6 +46,7 @@ Module roadmap:
 
 | Topic | Pointer |
 |---|---|
+| **How to make a change in this project (canonical entry point)** | [.ai-playbook/docs/development-flow.md](.ai-playbook/docs/development-flow.md) |
 | PRD (M1 Ingredients) | [docs/prd-module-1-ingredients.md](docs/prd-module-1-ingredients.md) |
 | Architecture decisions (9 ADRs) | [docs/architecture-decisions.md](docs/architecture-decisions.md) |
 | Data model (ERD + cascade rules) | [docs/data-model.md](docs/data-model.md) |
