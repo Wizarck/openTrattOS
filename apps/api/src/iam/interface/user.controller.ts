@@ -14,6 +14,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import * as bcrypt from 'bcrypt';
 import { Roles } from '../../shared/decorators/roles.decorator';
 import { AssignUserToLocations, TenantBoundaryError } from '../application/assign-user-to-locations.use-case';
 import { User } from '../domain/user.entity';
@@ -23,7 +24,7 @@ import { AssignLocationsDto, ChangePasswordDto, CreateUserDto, UpdateUserDto, Us
 import { LocationResponseDto } from './dto/location.dto';
 import { LocationRepository } from '../infrastructure/location.repository';
 
-const FAKE_BCRYPT = '$2b$12$KIXMHnFdTsHHBMmEJYRzKePQGyDOuxF7vSj.O5kmaYxLHJyxeBoAi';
+const BCRYPT_COST = 12;
 
 @ApiTags('Users')
 @Controller('users')
@@ -38,20 +39,21 @@ export class UserController {
   @Post()
   @Roles('OWNER', 'MANAGER')
   @ApiOperation({
-    summary: 'Create a new user (M1 stub: passwordHash placeholder)',
+    summary: 'Create a new user',
     description:
-      'M1 hash policy: password is bcrypt-hashed by an auth service that lands in M1.x. For M1 entity tests, a deterministic placeholder hash is stored. Replace before exposing this endpoint outside dev.',
+      'Plaintext password is bcrypt-hashed at cost 12 before persisting. The plaintext never touches the database.',
   })
   async create(@Body() dto: CreateUserDto): Promise<UserResponseDto> {
     const existing = await this.users.findByEmailAndOrg(dto.email, dto.organizationId);
     if (existing) {
       throw new ConflictException({ code: 'USER_EMAIL_DUPLICATE' });
     }
+    const passwordHash = await bcrypt.hash(dto.password, BCRYPT_COST);
     const user = User.create({
       organizationId: dto.organizationId,
       name: dto.name,
       email: dto.email,
-      passwordHash: FAKE_BCRYPT,
+      passwordHash,
       role: dto.role,
     });
     const saved = await this.users.save(user);
@@ -97,13 +99,12 @@ export class UserController {
   @ApiOperation({ summary: 'Change a user password (plaintext input → bcrypt hash)' })
   async changePassword(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
-    @Body() _dto: ChangePasswordDto,
+    @Body() dto: ChangePasswordDto,
   ): Promise<void> {
     const u = await this.users.findOneBy({ id });
     if (!u) throw new NotFoundException({ code: 'USER_NOT_FOUND' });
-    // M1 stub — real bcrypt.hash() lands with the auth service. Validate
-    // the hash shape via the domain method (placeholder hash for now).
-    u.changePassword(FAKE_BCRYPT);
+    const newHash = await bcrypt.hash(dto.newPassword, BCRYPT_COST);
+    u.changePassword(newHash);
     await this.users.save(u);
   }
 

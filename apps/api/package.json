@@ -20,11 +20,13 @@
   "dependencies": {
     "@nestjs/common": "^10.4.0",
     "@nestjs/core": "^10.4.0",
+    "@nestjs/event-emitter": "^3.1.0",
     "@nestjs/platform-express": "^10.4.0",
     "@nestjs/schedule": "^4.1.2",
     "@nestjs/swagger": "^8.1.0",
     "@nestjs/typeorm": "^10.0.0",
     "@opentrattos/types": "*",
+    "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "csv-parse": "^5.5.0",
@@ -38,6 +40,7 @@
   "devDependencies": {
     "@nestjs/cli": "^10.4.0",
     "@nestjs/testing": "^10.4.0",
+    "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.0",
     "@types/jest": "^29.5.0",
     "@types/multer": "^1.4.12",
@@ -51,10 +54,16 @@
     "typescript": "^5.7.0"
   },
   "jest": {
-    "moduleFileExtensions": ["js", "json", "ts"],
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
-    "testPathIgnorePatterns": ["\\.int\\.spec\\.ts$"],
+    "testPathIgnorePatterns": [
+      "\\.int\\.spec\\.ts$"
+    ],
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
