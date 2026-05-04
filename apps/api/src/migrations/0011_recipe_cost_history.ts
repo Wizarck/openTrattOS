@@ -15,7 +15,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * loose UUID with no FK constraint — matches how `source_ref_id` will work
  * when M3 batches replace SupplierItem.
  */
-export class RecipeCostHistory0011 implements MigrationInterface {
+export class RecipeCostHistory1700000011000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE TABLE "recipe_cost_history" (

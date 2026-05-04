@@ -28,6 +28,9 @@ export class CategoryRepository extends Repository<Category> {
    * (parents before children). Single recursive CTE — no N+1.
    */
   async findTreeByOrganization(organizationId: string): Promise<Category[]> {
+    // Raw SQL returns snake_case columns by default; aliasing them to the
+    // entity's camelCase property names lets callers consume the result with
+    // the same shape as `find()` (parentId, organizationId, …).
     return this.query(
       `
       WITH RECURSIVE tree AS (
@@ -40,7 +43,20 @@ export class CategoryRepository extends Repository<Category> {
         JOIN tree t ON c.parent_id = t.id
         WHERE c.organization_id = $1
       )
-      SELECT * FROM tree
+      SELECT
+        id,
+        organization_id AS "organizationId",
+        parent_id       AS "parentId",
+        name,
+        name_es         AS "nameEs",
+        name_en         AS "nameEn",
+        sort_order      AS "sortOrder",
+        is_default      AS "isDefault",
+        created_by      AS "createdBy",
+        updated_by      AS "updatedBy",
+        created_at      AS "createdAt",
+        updated_at      AS "updatedAt"
+      FROM tree
       ORDER BY depth ASC, sort_order ASC, name ASC
       `,
       [organizationId],

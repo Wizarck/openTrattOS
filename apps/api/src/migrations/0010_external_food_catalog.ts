@@ -13,7 +13,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *   - `pg_trgm` extension is created before the GIN index used for fuzzy name search.
  *   - `license_attribution` is non-null and persisted on every row for ODbL compliance.
  */
-export class M2OffMirror0010 implements MigrationInterface {
+export class M2OffMirror1700000010000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Required for fuzzy `name` trigram search (`gin_trgm_ops`). No-op if already enabled.
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm`);

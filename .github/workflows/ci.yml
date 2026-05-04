@@ -89,6 +89,45 @@ jobs:
         # they ship test suites. `turbo run test` walks all workspaces.
         run: npm run test
 
+  integration:
+    # Runs DB-backed INT specs (jest-integration.config.ts) against a real
+    # Postgres 16 service container. Required-checks intentionally still
+    # excludes this job until it proves stable; once green for ~10 PRs,
+    # promote to required and drop --passWithNoTests from the script.
+    name: Integration (Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: opentrattos_test
+          POSTGRES_PASSWORD: opentrattos_test
+          POSTGRES_DB: opentrattos_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U opentrattos_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://opentrattos_test:opentrattos_test@localhost:5433/opentrattos_test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.ELIGIA_GOD_MODE }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install deps
+        run: npm install --no-fund --no-audit
+      - name: Run integration tests
+        # INT specs run their own dataSource.runMigrations(); no separate
+        # `db:migrate` step needed here. The pg_trgm extension is created by
+        # migration 0010 (m2-off-mirror).
+        run: npm run test:int --workspace=apps/api
+
   secrets-scan:
     name: Secrets scan (gitleaks)
     runs-on: ubuntu-latest

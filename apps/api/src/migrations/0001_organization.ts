@@ -1,6 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class Organization0001 implements MigrationInterface {
+// TypeORM 0.3 parses the last 13 chars of the class name as a Unix-ms
+// timestamp; the file-prefix `0001_…` is for human ordering only.
+export class Organization1700000001000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE TABLE "organizations" (
