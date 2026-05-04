@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { Organization } from '../../iam/domain/organization.entity';
@@ -47,6 +48,7 @@ describe('RecipesService (integration)', () => {
   beforeAll(async () => {
     app = await Test.createTestingModule({
       imports: [
+        EventEmitterModule.forRoot(),
         TypeOrmModule.forRoot({
           type: 'postgres',
           url:

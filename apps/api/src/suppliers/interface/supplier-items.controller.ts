@@ -13,8 +13,13 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { QueryFailedError } from 'typeorm';
 import { Roles } from '../../shared/decorators/roles.decorator';
+import {
+  SUPPLIER_PRICE_UPDATED,
+  SupplierPriceUpdatedEvent,
+} from '../../cost/application/cost.events';
 import { IngredientRepository } from '../../ingredients/infrastructure/ingredient.repository';
 import { SupplierItem } from '../domain/supplier-item.entity';
 import { SupplierItemRepository } from '../infrastructure/supplier-item.repository';
@@ -30,6 +35,7 @@ export class SupplierItemsController {
   constructor(
     private readonly supplierItems: SupplierItemRepository,
     private readonly ingredients: IngredientRepository,
+    private readonly events: EventEmitter2,
   ) {}
 
   @Get()
@@ -66,6 +72,11 @@ export class SupplierItemsController {
 
     try {
       const saved = await this.supplierItems.save(si);
+      this.events.emit(SUPPLIER_PRICE_UPDATED, {
+        supplierItemId: saved.id,
+        ingredientId: saved.ingredientId,
+        organizationId: ingredient.organizationId,
+      } satisfies SupplierPriceUpdatedEvent);
       return SupplierItemResponseDto.fromEntity(saved);
     } catch (err) {
       if (
@@ -93,6 +104,13 @@ export class SupplierItemsController {
       si.costPerBaseUnit = si.computeCostPerBaseUnit(ingredient);
     }
     const saved = await this.supplierItems.save(si);
+    if (ingredient) {
+      this.events.emit(SUPPLIER_PRICE_UPDATED, {
+        supplierItemId: saved.id,
+        ingredientId: saved.ingredientId,
+        organizationId: ingredient.organizationId,
+      } satisfies SupplierPriceUpdatedEvent);
+    }
     return SupplierItemResponseDto.fromEntity(saved);
   }
 
@@ -105,6 +123,14 @@ export class SupplierItemsController {
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
   ): Promise<SupplierItemResponseDto> {
     const si = await this.supplierItems.promoteToPreferred(id);
+    const ingredient = await this.ingredients.findOneBy({ id: si.ingredientId });
+    if (ingredient) {
+      this.events.emit(SUPPLIER_PRICE_UPDATED, {
+        supplierItemId: si.id,
+        ingredientId: si.ingredientId,
+        organizationId: ingredient.organizationId,
+      } satisfies SupplierPriceUpdatedEvent);
+    }
     return SupplierItemResponseDto.fromEntity(si);
   }
 

@@ -19,13 +19,15 @@ import {
   CycleDetectedError,
   CycleHit,
 } from '../application/cycle-detector';
+import { UpdateLineSourceDto } from '../../cost/interface/dto/cost.dto';
 import {
   RecipeInUseError,
+  RecipeIngredientNotFoundError,
   RecipeNotFoundError,
   RecipesService,
 } from '../application/recipes.service';
 import { RecipeRepository } from '../infrastructure/recipe.repository';
-import { CreateRecipeDto, RecipeResponseDto, UpdateRecipeDto } from './dto/recipe.dto';
+import { CreateRecipeDto, RecipeLineResponseDto, RecipeResponseDto, UpdateRecipeDto } from './dto/recipe.dto';
 
 @ApiTags('Recipes')
 @Controller('recipes')
@@ -114,6 +116,32 @@ export class RecipesController {
     }
   }
 
+  @Put(':id/lines/:lineId/source')
+  @Roles('OWNER', 'MANAGER')
+  @ApiOperation({
+    summary: 'Override the cost source for a single RecipeIngredient line',
+    description:
+      'Persists `sourceOverrideRef` on the line; the resolver will consult it before the preferred SupplierItem on next cost rollup. Pass `sourceOverrideRef: null` to clear.',
+  })
+  async updateLineSource(
+    @Query('organizationId', new ParseUUIDPipe({ version: '4' })) organizationId: string,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Param('lineId', new ParseUUIDPipe({ version: '4' })) lineId: string,
+    @Body() dto: UpdateLineSourceDto,
+  ): Promise<RecipeLineResponseDto> {
+    try {
+      const line = await this.service.updateLineSource(
+        organizationId,
+        id,
+        lineId,
+        dto.sourceOverrideRef ?? null,
+      );
+      return RecipeLineResponseDto.fromEntity(line);
+    } catch (err) {
+      throw this.translate(err);
+    }
+  }
+
   @Delete(':id')
   @Roles('OWNER', 'MANAGER')
   @HttpCode(204)
@@ -137,6 +165,12 @@ export class RecipesController {
   private translate(err: unknown): Error {
     if (err instanceof RecipeNotFoundError) {
       return new NotFoundException({ code: 'RECIPE_NOT_FOUND', recipeId: err.recipeId });
+    }
+    if (err instanceof RecipeIngredientNotFoundError) {
+      return new NotFoundException({
+        code: 'RECIPE_INGREDIENT_NOT_FOUND',
+        recipeIngredientId: err.recipeIngredientId,
+      });
     }
     if (err instanceof RecipeInUseError) {
       return new ConflictException({
