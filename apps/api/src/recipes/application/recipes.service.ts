@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In, IsNull, Not } from 'typeorm';
+import {
+  RECIPE_INGREDIENT_UPDATED,
+  RECIPE_SOURCE_OVERRIDE_CHANGED,
+  RecipeIngredientUpdatedEvent,
+  RecipeSourceOverrideChangedEvent,
+} from '../../cost/application/cost.events';
 import { MenuItem } from '../../menus/domain/menu-item.entity';
 import { Recipe } from '../domain/recipe.entity';
 import { RecipeIngredient } from '../domain/recipe-ingredient.entity';
@@ -62,6 +69,15 @@ export class RecipeInUseError extends Error {
   }
 }
 
+export class RecipeIngredientNotFoundError extends Error {
+  readonly recipeIngredientId: string;
+  constructor(recipeIngredientId: string) {
+    super(`RecipeIngredient not found: ${recipeIngredientId}`);
+    this.name = 'RecipeIngredientNotFoundError';
+    this.recipeIngredientId = recipeIngredientId;
+  }
+}
+
 export interface RecipeWithLines {
   recipe: Recipe;
   lines: RecipeIngredient[];
@@ -71,7 +87,10 @@ export interface RecipeWithLines {
 
 @Injectable()
 export class RecipesService {
-  constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
+  constructor(
+    @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly events: EventEmitter2,
+  ) {}
 
   async create(input: CreateRecipeInput, actorUserId?: string): Promise<RecipeWithLines> {
     return this.dataSource.transaction(async (em) => {
@@ -105,6 +124,7 @@ export class RecipesService {
 
       const savedRecipe = await em.getRepository(Recipe).save(recipe);
       const lines = await this.persistLines(em, savedRecipe.id, input.lines, actorUserId);
+      this.emitIngredientUpdated(savedRecipe.id, savedRecipe.organizationId);
       return { recipe: savedRecipe, lines, displayLabel: this.label(savedRecipe) };
     });
   }
@@ -173,7 +193,40 @@ export class RecipesService {
       }
 
       const saved = await repo.save(recipe);
+      if (input.lines !== undefined) {
+        this.emitIngredientUpdated(saved.id, saved.organizationId);
+      }
       return { recipe: saved, lines, displayLabel: this.label(saved) };
+    });
+  }
+
+  async updateLineSource(
+    organizationId: string,
+    recipeId: string,
+    lineId: string,
+    sourceOverrideRef: string | null,
+    actorUserId?: string,
+  ): Promise<RecipeIngredient> {
+    return this.dataSource.transaction(async (em) => {
+      const recipe = await em.getRepository(Recipe).findOneBy({ id: recipeId, organizationId });
+      if (!recipe) throw new RecipeNotFoundError(recipeId);
+
+      const lineRepo = em.getRepository(RecipeIngredient);
+      const line = await lineRepo.findOneBy({ id: lineId, recipeId });
+      if (!line) throw new RecipeIngredientNotFoundError(lineId);
+
+      line.applyUpdate({ sourceOverrideRef });
+      if (actorUserId) line.updatedBy = actorUserId;
+      const saved = await lineRepo.save(line);
+
+      this.events.emit(RECIPE_SOURCE_OVERRIDE_CHANGED, {
+        recipeId,
+        organizationId,
+        recipeIngredientId: saved.id,
+        sourceOverrideRef: saved.sourceOverrideRef,
+      } satisfies RecipeSourceOverrideChangedEvent);
+
+      return saved;
     });
   }
 
@@ -199,6 +252,14 @@ export class RecipesService {
   }
 
   // ------------------------------ helpers ------------------------------
+
+  private emitIngredientUpdated(recipeId: string, organizationId: string): void {
+    this.events.emit(RECIPE_INGREDIENT_UPDATED, {
+      recipeId,
+      organizationId,
+      recipeIngredientId: recipeId, // line-level granularity is not needed for full-recipe recompute
+    } satisfies RecipeIngredientUpdatedEvent);
+  }
 
   private label(recipe: Recipe): string {
     return recipe.isActive ? recipe.name : `${recipe.name} (Discontinued)`;

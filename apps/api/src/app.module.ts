@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { CostModule } from './cost/cost.module';
 import { ExternalCatalogModule } from './external-catalog/external-catalog.module';
 import { IamModule } from './iam/iam.module';
 import { IngredientsModule } from './ingredients/ingredients.module';
@@ -11,6 +13,8 @@ import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
 
 @Module({
   imports: [
+    EventEmitterModule.forRoot(),
+
     // M1 Foundation
     IamModule,
     IngredientsModule,
@@ -19,6 +23,9 @@ import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
     // M2 Foundation (m2-data-model — schema only; controllers land in m2-recipes-core, m2-cost-rollup, etc.)
     RecipesModule,
     MenusModule,
+
+    // M2 cost rollup + audit (m2-cost-rollup-and-audit — owns the InventoryCostResolver binding).
+    CostModule,
 
     // M2 OFF mirror (m2-off-mirror — local mirror + REST fallback for Open Food Facts).
     ExternalCatalogModule,
