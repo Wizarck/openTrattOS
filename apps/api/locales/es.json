@@ -53,7 +53,10 @@
     "CYCLE": "Ciclo de composición de receta detectado; resuélvelo antes de guardar",
     "EXTERNAL_CATALOG_OFF_OUTAGE": "El servicio Open Food Facts no está disponible; se ha reanudado el modo degradado",
     "EXTERNAL_CATALOG_NOT_FOUND": "Producto no encontrado en el catálogo externo",
-    "EXTERNAL_CATALOG_SYNC_IN_PROGRESS": "Ya hay una sincronización con Open Food Facts en curso"
+    "EXTERNAL_CATALOG_SYNC_IN_PROGRESS": "Ya hay una sincronización con Open Food Facts en curso",
+    "ALLERGEN_RECIPE_NOT_FOUND": "Receta no encontrada para el cálculo de alérgenos",
+    "ALLERGEN_OVERRIDE_REASON_REQUIRED": "La sobreescritura de alérgenos o flags dietéticos requiere un motivo no vacío",
+    "ALLERGEN_CROSS_CONTAMINATION_TAGS_REQUIRED": "La contaminación cruzada requiere tanto una nota libre como una lista estructurada de alérgenos no vacía"
   },
   "ui": {
     "swagger_title": "API de openTrattOS",

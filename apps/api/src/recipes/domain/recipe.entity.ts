@@ -19,6 +19,32 @@ export interface RecipeUpdateProps {
   wasteFactor?: number;
 }
 
+/** Manager+ override on Recipe-level aggregated allergens. Persisted as jsonb. */
+export interface AllergensOverride {
+  /** Allergens to add to the conservatively-aggregated set. */
+  add: string[];
+  /** Allergens to remove from the conservatively-aggregated set. */
+  remove: string[];
+  /** Audit reason for the override (required, non-empty). */
+  reason: string;
+  /** UUID of the actor (Manager+) who applied the override. */
+  appliedBy: string;
+  /** ISO-8601 UTC timestamp when the override was applied. */
+  appliedAt: string;
+}
+
+/** Manager+ override on Recipe-level inferred diet flags. Persisted as jsonb. */
+export interface DietFlagsOverride {
+  /** The diet-flag set the Manager declares true for the Recipe (replaces inferred). */
+  flags: string[];
+  /** Audit reason for the override (required, non-empty). */
+  reason: string;
+  /** UUID of the actor (Manager+) who applied the override. */
+  appliedBy: string;
+  /** ISO-8601 UTC timestamp when the override was applied. */
+  appliedAt: string;
+}
+
 @Entity({ name: 'recipes' })
 @Index('ix_recipes_organization_id', ['organizationId'])
 @Index('ix_recipes_organization_active', ['organizationId', 'isActive'])
@@ -43,6 +69,47 @@ export class Recipe {
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean = true;
+
+  // M2 allergens-article-21 extensions (additive — see openspec/changes/m2-allergens-article-21/).
+  // Aggregation itself is read-time per design.md (never stored on Recipe). The
+  // four columns below carry: (a) Manager+ override on the aggregated allergen
+  // list, (b) Manager+ override on the inferred diet flags, and (c) the
+  // cross-contamination note + structured tag list ("may contain traces of X").
+
+  /**
+   * Manager+ override applied on top of the read-time aggregation. Shape:
+   * `{ add: string[], remove: string[], reason: string, appliedBy: uuid, appliedAt: ISOstring }`.
+   * Final list = (aggregated ∪ add) − remove. Null when no override is in effect.
+   */
+  @Column({ name: 'aggregated_allergens_override', type: 'jsonb', nullable: true })
+  aggregatedAllergensOverride: AllergensOverride | null = null;
+
+  /**
+   * Manager+ override on the conservatively inferred diet flags. Shape:
+   * `{ flags: string[], reason: string, appliedBy: uuid, appliedAt: ISOstring }`.
+   * Replaces the inferred set wholesale. Null when no override is in effect.
+   */
+  @Column({ name: 'diet_flags_override', type: 'jsonb', nullable: true })
+  dietFlagsOverride: DietFlagsOverride | null = null;
+
+  /**
+   * Free-text note describing production-line risk ("Made on shared line with
+   * peanuts"). Stored alongside the structured `crossContaminationAllergens`
+   * array so audit can distinguish "X is in the recipe" from "X may have
+   * touched the recipe in production". Null when no cross-contamination has
+   * been recorded.
+   */
+  @Column({ name: 'cross_contamination_note', type: 'text', nullable: true })
+  crossContaminationNote: string | null = null;
+
+  /** Structured allergen tags backing the free-text note. Empty array when none. */
+  @Column({
+    name: 'cross_contamination_allergens',
+    type: 'text',
+    array: true,
+    default: () => "'{}'",
+  })
+  crossContaminationAllergens: string[] = [];
 
   @Column({ name: 'created_by', type: 'uuid', nullable: true })
   createdBy: string | null = null;
