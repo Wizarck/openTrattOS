@@ -101,6 +101,19 @@ describe('RecipesAllergensService (integration)', () => {
         timezone: 'Europe/Madrid',
       }),
     );
+    // Seed an actor User so apply* methods can bump recipe.updatedBy without
+    // tripping the fk_recipes_updated_by constraint. The id is fixed because
+    // the test asserts override.appliedBy === ACTOR_ID.
+    const actor = User.create({
+      organizationId: org.id,
+      name: 'Test Actor',
+      email: 'actor@test.local',
+      passwordHash: '$2b$12$KIXMHnFdTsHHBMmEJYRzKePQGyDOuxF7vSj.O5kmaYxLHJyxeBoAi',
+      role: 'OWNER',
+    });
+    actor.id = ACTOR_ID;
+    await dataSource.getRepository(User).save(actor);
+
     category = await categories.save(
       Category.create({
         organizationId: org.id,
