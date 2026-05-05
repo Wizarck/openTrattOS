@@ -10,6 +10,8 @@ export interface RecipeCreateProps {
   description: string;
   wasteFactor: number;
   notes?: string | null;
+  /** Number of portions the Recipe yields. Defaults to 1 if omitted. Must be >= 1. */
+  portions?: number;
 }
 
 export interface RecipeUpdateProps {
@@ -17,6 +19,7 @@ export interface RecipeUpdateProps {
   description?: string;
   notes?: string | null;
   wasteFactor?: number;
+  portions?: number;
 }
 
 /** Manager+ override on Recipe-level aggregated allergens. Persisted as jsonb. */
@@ -69,6 +72,13 @@ export class Recipe {
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean = true;
+
+  /**
+   * Number of portions the Recipe yields. Used by the label renderer to derive
+   * "net quantity per portion" from the total walked tree mass. Must be >= 1.
+   */
+  @Column({ type: 'integer', default: 1 })
+  portions: number = 1;
 
   // M2 allergens-article-21 extensions (additive — see openspec/changes/m2-allergens-article-21/).
   // Aggregation itself is read-time per design.md (never stored on Recipe). The
@@ -127,6 +137,7 @@ export class Recipe {
     Recipe.validateUuid('organizationId', props.organizationId);
     Recipe.validateName(props.name);
     Recipe.validateWasteFactor(props.wasteFactor);
+    if (props.portions !== undefined) Recipe.validatePortions(props.portions);
 
     const r = new Recipe();
     r.id = randomUUID();
@@ -136,6 +147,7 @@ export class Recipe {
     r.notes = props.notes ?? null;
     r.wasteFactor = props.wasteFactor;
     r.isActive = true;
+    r.portions = props.portions ?? 1;
     return r;
   }
 
@@ -156,6 +168,10 @@ export class Recipe {
     if (patch.wasteFactor !== undefined) {
       Recipe.validateWasteFactor(patch.wasteFactor);
       this.wasteFactor = patch.wasteFactor;
+    }
+    if (patch.portions !== undefined) {
+      Recipe.validatePortions(patch.portions);
+      this.portions = patch.portions;
     }
   }
 
@@ -182,6 +198,12 @@ export class Recipe {
   private static validateWasteFactor(w: number): void {
     if (!Number.isFinite(w) || w < 0 || w >= 1) {
       throw new Error(`Recipe.wasteFactor must be a finite number in [0, 1); got ${w}`);
+    }
+  }
+
+  private static validatePortions(p: number): void {
+    if (!Number.isInteger(p) || p < 1) {
+      throw new Error(`Recipe.portions must be a positive integer; got ${p}`);
     }
   }
 }
