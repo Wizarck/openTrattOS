@@ -53,7 +53,10 @@
     "CYCLE": "Recipe composition cycle detected; resolve before saving",
     "EXTERNAL_CATALOG_OFF_OUTAGE": "Open Food Facts service is unavailable; degraded mode engaged",
     "EXTERNAL_CATALOG_NOT_FOUND": "Product not found in the external catalog",
-    "EXTERNAL_CATALOG_SYNC_IN_PROGRESS": "An Open Food Facts sync is already in progress"
+    "EXTERNAL_CATALOG_SYNC_IN_PROGRESS": "An Open Food Facts sync is already in progress",
+    "ALLERGEN_RECIPE_NOT_FOUND": "Recipe not found for allergen rollup",
+    "ALLERGEN_OVERRIDE_REASON_REQUIRED": "Override on allergens or diet flags requires a non-empty reason",
+    "ALLERGEN_CROSS_CONTAMINATION_TAGS_REQUIRED": "Cross-contamination requires both a free-text note and a non-empty structured allergens array"
   },
   "ui": {
     "swagger_title": "openTrattOS API",
