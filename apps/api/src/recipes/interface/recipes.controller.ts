@@ -27,7 +27,14 @@ import {
   RecipesService,
 } from '../application/recipes.service';
 import { RecipeRepository } from '../infrastructure/recipe.repository';
-import { CreateRecipeDto, RecipeLineResponseDto, RecipeResponseDto, UpdateRecipeDto } from './dto/recipe.dto';
+import {
+  CreateRecipeDto,
+  RecipeLineResponseDto,
+  RecipeResponseDto,
+  RecipeStaffViewDto,
+  UpdateRecipeDto,
+} from './dto/recipe.dto';
+import { RecipesAllergensService } from '../application/recipes-allergens.service';
 
 @ApiTags('Recipes')
 @Controller('recipes')
@@ -35,6 +42,7 @@ export class RecipesController {
   constructor(
     private readonly service: RecipesService,
     private readonly recipes: RecipeRepository,
+    private readonly allergens: RecipesAllergensService,
   ) {}
 
   @Post()
@@ -89,6 +97,27 @@ export class RecipesController {
         result.lines,
         result.displayLabel ?? result.recipe.name,
       );
+    } catch (err) {
+      throw this.translate(err);
+    }
+  }
+
+  @Get(':id/staff-view')
+  @Roles('OWNER', 'MANAGER', 'STAFF')
+  @ApiOperation({
+    summary: 'Read-only Recipe payload for Staff (no cost / margin / audit)',
+    description:
+      'Returns ingredient list + allergen rollup + diet flags + finished-portion macros only. Available to all roles; Manager+ may continue to use GET /recipes/:id for the full payload.',
+  })
+  async getStaffView(
+    @Query('organizationId', new ParseUUIDPipe({ version: '4' })) organizationId: string,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ): Promise<RecipeStaffViewDto> {
+    try {
+      const result = await this.service.findOne(organizationId, id);
+      const allergens = await this.allergens.getAllergensRollup(organizationId, id);
+      const dietFlags = await this.allergens.getDietFlagsRollup(organizationId, id);
+      return RecipeStaffViewDto.from(result.recipe, result.lines, allergens, dietFlags);
     } catch (err) {
       throw this.translate(err);
     }

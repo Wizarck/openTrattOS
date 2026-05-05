@@ -28,3 +28,5 @@ export type {
   DietFlagsPanelProps,
   DietFlagsState,
 } from './components/DietFlagsPanel';
+export { MenuItemRanker } from './components/MenuItemRanker';
+export type { MenuItemRankerProps, DashboardMenuItem } from './components/MenuItemRanker';

@@ -8,6 +8,7 @@ import {
   HttpCode,
   NotFoundException,
   Param,
+  ParseIntPipe,
   ParseUUIDPipe,
   Post,
   Put,
@@ -15,6 +16,8 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../../shared/decorators/roles.decorator';
+import { CostRecipeNotFoundError, CostService } from '../../cost/application/cost.service';
+import { CostHistoryRowDto } from '../../cost/interface/dto/cost.dto';
 import { MenuItemChannel } from '../domain/menu-item.entity';
 import {
   MenuItemDuplicateError,
@@ -27,6 +30,7 @@ import {
   CreateMenuItemDto,
   ListMenuItemsQueryDto,
   MarginReportDto,
+  MenuItemCostHistoryDto,
   MenuItemResponseDto,
   UpdateMenuItemDto,
 } from './dto/menu-item.dto';
@@ -34,7 +38,10 @@ import {
 @ApiTags('Menu Items')
 @Controller('menu-items')
 export class MenuItemsController {
-  constructor(private readonly service: MenuItemsService) {}
+  constructor(
+    private readonly service: MenuItemsService,
+    private readonly cost: CostService,
+  ) {}
 
   @Post()
   @Roles('OWNER', 'MANAGER')
@@ -120,6 +127,40 @@ export class MenuItemsController {
     try {
       await this.service.softDelete(organizationId, id);
     } catch (err) {
+      throw this.translate(err);
+    }
+  }
+
+  @Get(':id/cost-history')
+  @Roles('OWNER', 'MANAGER', 'STAFF')
+  @ApiOperation({
+    summary: 'Cost history for a MenuItem (drill-down from the Owner dashboard)',
+    description:
+      'Wraps the underlying Recipe cost-history with the MenuItem context (sellingPrice + targetMargin). Default windowDays=14.',
+  })
+  async getCostHistory(
+    @Query('organizationId', new ParseUUIDPipe({ version: '4' })) organizationId: string,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Query('windowDays', new ParseIntPipe({ optional: true })) windowDays?: number,
+  ): Promise<MenuItemCostHistoryDto> {
+    try {
+      const view = await this.service.findOne(organizationId, id);
+      const history = await this.cost.getHistory(
+        organizationId,
+        view.menuItem.recipeId,
+        windowDays ?? 14,
+      );
+      return MenuItemCostHistoryDto.from(
+        view.menuItem.id,
+        view.menuItem.recipeId,
+        Number(view.menuItem.sellingPrice),
+        Number(view.menuItem.targetMargin),
+        history.map(CostHistoryRowDto.fromEntity),
+      );
+    } catch (err) {
+      if (err instanceof CostRecipeNotFoundError) {
+        throw new NotFoundException({ code: 'RECIPE_NOT_FOUND', recipeId: err.recipeId });
+      }
       throw this.translate(err);
     }
   }

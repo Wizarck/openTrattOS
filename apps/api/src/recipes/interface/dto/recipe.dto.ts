@@ -124,6 +124,36 @@ export class RecipeLineResponseDto {
   }
 }
 
+export class RecipeStaffViewDto {
+  @ApiProperty() id!: string;
+  @ApiProperty() name!: string;
+  @ApiProperty() displayLabel!: string;
+  @ApiProperty({ description: 'Recipe wasteFactor [0..1]; useful for prep planning.' })
+  wasteFactor!: number;
+  @ApiProperty({ type: [RecipeLineResponseDto] }) lines!: RecipeLineResponseDto[];
+  @ApiProperty({ type: [String], description: 'Conservatively-aggregated allergens.' })
+  allergens!: string[];
+  @ApiProperty({ type: [String], description: 'Conservatively-inferred diet flags.' })
+  dietFlags!: string[];
+
+  static from(
+    recipe: Recipe,
+    lines: RecipeIngredient[],
+    allergens: { aggregated: string[] },
+    dietFlags: { inferred: string[] },
+  ): RecipeStaffViewDto {
+    return {
+      id: recipe.id,
+      name: recipe.name,
+      displayLabel: recipe.isActive ? recipe.name : `${recipe.name} (Discontinued)`,
+      wasteFactor: Number(recipe.wasteFactor),
+      lines: lines.map(RecipeLineResponseDto.fromEntity),
+      allergens: allergens.aggregated,
+      dietFlags: dietFlags.inferred,
+    };
+  }
+}
+
 export class RecipeResponseDto {
   @ApiProperty() id!: string;
   @ApiProperty() organizationId!: string;
