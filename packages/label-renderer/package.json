@@ -1,0 +1,45 @@
+{
+  "name": "@opentrattos/label-renderer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "EU 1169/2011 compliant label renderer (multi-format: A4 + thermal) + PrintAdapter abstraction. Per ADR-019 / m2-labels-rendering: separable npm package isolating @react-pdf/renderer dependency. Consumed by apps/api for server-side render + dispatch.",
+  "license": "AGPL-3.0",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/**",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "lint": "echo 'no lint configured for label-renderer yet'",
+    "test": "jest --passWithNoTests"
+  },
+  "dependencies": {
+    "@react-pdf/renderer": "^4.1.0",
+    "ipp": "^2.0.1",
+    "react": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "jest": {
+    "moduleFileExtensions": ["js", "json", "ts", "tsx"],
+    "rootDir": ".",
+    "roots": ["<rootDir>/src", "<rootDir>/test"],
+    "testRegex": ".*\\.spec\\.tsx?$",
+    "transform": {
+      "^.+\\.(t|j)sx?$": ["ts-jest", { "tsconfig": "tsconfig.test.json", "useESM": false }]
+    },
+    "testEnvironment": "node"
+  }
+}
