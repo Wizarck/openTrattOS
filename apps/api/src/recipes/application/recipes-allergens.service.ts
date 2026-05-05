@@ -204,18 +204,27 @@ export class RecipesAllergensService {
     // contradicting allergen is present. Empty recipes (zero leaves) cannot
     // claim any flag — universal-quantifier-over-empty-set would yield true,
     // but this is a regulatory contract: refuse to claim what we cannot prove.
+    //
+    // Warnings have a wider trigger than inference: any candidate flag with a
+    // contradicting allergen surfaces a warning, even when not all leaves
+    // carry the flag. UX rationale: a chef who tagged tomato as vegan and
+    // then dropped butter into the recipe should be told "vegan is
+    // contradicted by milk" — not silently ignored just because flour wasn't
+    // also vegan-tagged.
     if (leaves.length > 0) {
       for (const flag of candidateFlags) {
-        const everyCarries = leaves.every((ing) => (ing.dietFlags ?? []).includes(flag));
-        if (!everyCarries) continue;
         const contradictions = DIET_FLAG_CONTRADICTIONS[flag] ?? [];
         const conflicting = contradictions.filter((c) => allergenSet.has(c));
+        const everyCarries = leaves.every((ing) => (ing.dietFlags ?? []).includes(flag));
         if (conflicting.length > 0) {
           warnings.push(
-            `Diet flag "${flag}" inferred from ingredients but contradicted by allergen(s): ${conflicting.join(', ')}; flag dropped.`,
+            `Diet flag "${flag}" candidate (carried by ${
+              everyCarries ? 'all' : 'some'
+            } ingredients) is contradicted by allergen(s): ${conflicting.join(', ')}; flag not asserted.`,
           );
           continue;
         }
+        if (!everyCarries) continue;
         inferred.push(flag);
       }
     }
