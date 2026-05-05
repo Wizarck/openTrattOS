@@ -99,3 +99,55 @@ The UI SHALL allow the chef to print a recipe label in 3 clicks or fewer from th
 #### Scenario: Direct-to-PDF without print step
 - **WHEN** a chef clicks "Download Label" instead of print
 - **THEN** the PDF downloads in 1 click after the preview is open
+
+### Requirement: Multi-format renderer (A4 + thermal)
+
+The label renderer SHALL support multiple page sizes selected by the org's `labelFields.pageSize`: `'a4' | 'thermal-4x6' | 'thermal-50x80'`. The same `LabelDocument` component SHALL render correctly across all three.
+
+#### Scenario: Thermal label format
+- **WHEN** an org has `labelFields.pageSize='thermal-4x6'` and requests a label
+- **THEN** the PDF page is sized 4×6 inches with the same five sections (header / ingredients / allergens / macros / footer) typographically scaled
+
+#### Scenario: A4 default
+- **WHEN** an org has no `pageSize` configured
+- **THEN** the label renders in A4 by default
+
+### Requirement: Print dispatch via PrintAdapter abstraction
+
+The system SHALL expose `POST /recipes/:id/print` body `{ locale, copies?, printerId? }` that resolves the org's configured `printAdapter` and dispatches the rendered payload. The endpoint SHALL be stable across future printer-family adapter additions.
+
+#### Scenario: Print succeeds via configured adapter
+- **WHEN** an org has `labelFields.printAdapter={id:'ipp', config:{url, queue}}` and a chef calls `POST /recipes/:id/print`
+- **THEN** the system renders the PDF, invokes the IPP adapter, and returns `{ ok: true, jobId }`
+
+#### Scenario: No print adapter configured
+- **WHEN** an org has no `printAdapter` configured and a chef calls `POST /recipes/:id/print`
+- **THEN** the system returns 422 with `{code: "PRINT_ADAPTER_NOT_CONFIGURED"}`
+
+#### Scenario: Adapter failure surfaced
+- **WHEN** the configured adapter fails (printer unreachable, auth rejected)
+- **THEN** the response returns 502 with `{ ok: false, error: { code, message } }`
+
+### Requirement: Server-side cache for label rendering
+
+The label generation SHALL cache PDFs in-memory for 5 minutes keyed by `(recipeId, locale, recipeUpdatedAt, orgUpdatedAt)`. The cache SHALL invalidate on `SUPPLIER_PRICE_UPDATED`, `RECIPE_ALLERGENS_OVERRIDE_CHANGED`, and `INGREDIENT_OVERRIDE_CHANGED` events.
+
+#### Scenario: Cache hit
+- **WHEN** the same `(recipeId, locale)` is requested twice within 5 minutes with no upstream changes
+- **THEN** the second request serves from cache without re-rendering
+
+#### Scenario: Cache invalidation on upstream change
+- **WHEN** a `SUPPLIER_PRICE_UPDATED` event fires for a recipe whose label is cached
+- **THEN** the next request for that label re-renders fresh
+
+### Requirement: Walker module unification
+
+The system SHALL expose a single `recipe-tree-walker.ts` module with two named operations: `walkRecipeTreeLeaves` (visitor over leaf RecipeIngredient lines) and `foldRecipeTree<T>` (post-order accumulator with built-in memoization). All recipe-tree traversal in the codebase SHALL use one of these two operations.
+
+#### Scenario: foldRecipeTree memoizes sub-recipe results
+- **WHEN** a parent recipe references the same sub-recipe twice
+- **THEN** `foldRecipeTree` invokes the fold callback for that sub-recipe exactly once; the cached result is reused
+
+#### Scenario: All callers consume the shared module
+- **WHEN** `cost.service`, `recipes-allergens.service`, ingredients macros service, and the labels resolver are inspected
+- **THEN** none defines its own private recipe-tree walker; each consumes either `walkRecipeTreeLeaves` or `foldRecipeTree<T>`
