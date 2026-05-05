@@ -1,0 +1,54 @@
+name: Storybook
+
+# Per ai-playbook ux-track.md §13: "Storybook is published in CI for static
+# review on every PR." Pull requests upload a static build artifact (advisory,
+# not gating). master pushes deploy to GitHub Pages at the canonical URL.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: storybook-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Storybook
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.ELIGIA_GOD_MODE }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install deps
+        run: npm install --no-fund --no-audit
+      - name: Build Storybook
+        run: npm run build-storybook --workspace=packages/ui-kit
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: packages/ui-kit/storybook-static
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

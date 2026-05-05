@@ -1,0 +1,95 @@
+/*
+ * openTrattOS — design tokens (OKLCH-canonical per ai-playbook §10).
+ * Generated from docs/ux/DESIGN.md "Pulcinella palette". Hex values are
+ * derivation comments only; runtime CSS uses the OKLCH form.
+ *
+ * Both apps/web/ and packages/ui-kit/.storybook/ import this file as the
+ * single source of truth. Updating DESIGN.md tokens regenerates this file.
+ */
+
+@import "tailwindcss";
+
+:root {
+  /* ----- Pulcinella palette (DESIGN.md §2 Colors) ----- */
+  --color-bg: oklch(94.5% 0.012 70);              /* #F4EFE6 warm cream */
+  --color-surface: oklch(91.5% 0.014 70);          /* #ECE4D6 oat */
+  --color-surface-2: oklch(88.5% 0.014 70);        /* deeper sticky strips */
+  --color-border: oklch(83% 0.018 70);             /* #D9CFBF parchment edge */
+  --color-border-strong: oklch(73% 0.020 70);      /* table head rule */
+  --color-ink: oklch(20% 0.010 60);                /* #1B1916 warm charcoal — never #000 */
+  --color-mute: oklch(48% 0.012 70);               /* #6B6557 secondary copy */
+  --color-accent: oklch(54% 0.072 190);            /* #2E8B85 aged turquoise */
+  --color-accent-press: oklch(46% 0.072 190);      /* darker press state */
+  --color-accent-fg: oklch(99% 0.003 190);         /* #FAFCFB on-accent — never #fff */
+  --color-accent-soft: oklch(91% 0.025 190);       /* citation badge hover */
+  --color-success: oklch(53% 0.080 130);           /* #5F7A4A sage olive */
+  --color-destructive: oklch(48% 0.150 32);        /* #A8392F paprika */
+  --color-warn-bg: oklch(91% 0.045 80);            /* #F2E3C8 soft sand */
+
+  /* ----- Status semantic tokens (ADR-016 — paired with text label) ----- */
+  --color-status-on-target: var(--color-success);
+  --color-status-below-target: var(--color-warn-bg);
+  --color-status-below-target-fg: oklch(36% 0.060 70);
+  --color-status-at-risk: var(--color-destructive);
+  --color-status-at-risk-fg: var(--color-accent-fg);
+  --color-status-unknown: var(--color-border);
+  --color-status-unknown-fg: var(--color-mute);
+
+  /* ----- Allergen tokens (ADR-017 — Article 21 emphasis pattern) ----- */
+  --color-allergen-bg: var(--color-warn-bg);
+  --color-allergen-border: var(--color-destructive);
+  --color-allergen-fg: var(--color-destructive);
+  --color-allergen-emphasis-bg: oklch(48% 0.150 32);
+  --color-allergen-emphasis-fg: oklch(99% 0.003 32);
+
+  /* ----- Typography (DESIGN.md §3) ----- */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", monospace;
+
+  /* ----- Spacing scale (DESIGN.md §4) ----- */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-12: 48px;
+
+  /* ----- Radii (DESIGN.md §6) ----- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+
+  /* ----- Touch targets (NFR Accessibility — kitchen tablet ≥48px) ----- */
+  --touch-target-min: 48px;
+}
+
+@theme {
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-surface-2: var(--color-surface-2);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-ink: var(--color-ink);
+  --color-mute: var(--color-mute);
+  --color-accent: var(--color-accent);
+  --color-accent-press: var(--color-accent-press);
+  --color-accent-fg: var(--color-accent-fg);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-success: var(--color-success);
+  --color-destructive: var(--color-destructive);
+  --color-warn-bg: var(--color-warn-bg);
+  --color-status-on-target: var(--color-success);
+  --color-status-below-target: var(--color-warn-bg);
+  --color-status-at-risk: var(--color-destructive);
+  --color-status-unknown: var(--color-border);
+  --color-allergen-bg: var(--color-warn-bg);
+  --color-allergen-border: var(--color-destructive);
+  --color-allergen-fg: var(--color-destructive);
+
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono);
+}

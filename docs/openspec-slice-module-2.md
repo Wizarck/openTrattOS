@@ -35,8 +35,10 @@ PRD-M2 (831 lines, 48 FRs across 8 capability families, 5 user journeys) is slic
 | 9 | `m2-owner-dashboard` | Menus | FR33, FR38–40 | J3 | MenuItemRanker | #8 |
 | 10 | `m2-labels-rendering` | Labels | FR34–37 | J1 | LabelPreview | #5, #7 |
 | 11 | `m2-mcp-server` | MCP | FR41–45 | (Agent-Ready) | AgentChatWidget | #2 |
+| 12 | `m2-ui-foundation` | UI infrastructure | (NFR Performance, Accessibility) | J3 (proof-of-concept) | AllergenBadge, MarginPanel | #3, #7, #8 |
+| 13 | `m2-ui-backfill-wave1` | UI components (retroactive) | (NFR Accessibility) | J1, J2 | RecipePicker, IngredientPicker, SourceOverridePicker, CostDeltaTable, DietFlagsPanel | #12 |
 
-Heuristic check per row: each change targets exactly one bounded context, FR coverage is contiguous within a capability family (or explicitly cross-family for the AI-suggestions row, which intentionally cuts across Recipe-Authoring + Nutrition), and component touchpoints stay ≤3 except the foundation row (which touches none) and the ingredients-extension row (which touches the three pickers shared by FR1 + FR21 + FR16).
+Heuristic check per row: each change targets exactly one bounded context, FR coverage is contiguous within a capability family (or explicitly cross-family for the AI-suggestions row, which intentionally cuts across Recipe-Authoring + Nutrition), and component touchpoints stay ≤3 except the foundation row (which touches none), the ingredients-extension row (which touches the three pickers shared by FR1 + FR21 + FR16), and the UI-backfill row #13 (which retroactively picks up 5 components from already-shipped backend slices that erroneously deferred their §UI-components work — see "Track structure" note below).
 
 ## Track structure (parallelism opportunities)
 
@@ -51,9 +53,21 @@ Track B:  #4 → #5 → ┬→ #7
 
 `#1 m2-data-model` is the absolute blocker. `#4 m2-off-mirror` is independent infra and can start in parallel from day one. After `#2` and `#5` both land, six changes can run in parallel (#3, #6, #7, #8, #10, #11). `#9` waits on `#8`. `#10` waits on both `#5` and `#7`.
 
+### Contract correction (added 2026-05-05): UI work belongs to the slice that owns the component
+
+The first 4 backend slices (`#2 m2-recipes-core`, `#3 m2-cost-rollup-and-audit`, `#7 m2-allergens-article-21`, `#8 m2-menus-margins`) shipped backend-only and deferred their §UI-components in every retro under the heading "DEFERRED to UX track". That defer was a misread of ai-playbook's UX track, which terminates at Gate B (DESIGN.md + journey docs + components catalogue, all done) — component **implementation** belongs in each slice per `.ai-playbook/specs/ux-track.md` §13: *"Components are developed in Storybook with stories before they appear on a screen… Storybook is published in CI for static review on every PR."* See retros: [m2-recipes-core.md](../retros/m2-recipes-core.md), [m2-cost-rollup-and-audit.md](../retros/m2-cost-rollup-and-audit.md), [m2-menus-margins.md](../retros/m2-menus-margins.md), [m2-allergens-article-21.md](../retros/m2-allergens-article-21.md).
+
+The corrective contract:
+
+- **Row #12 `m2-ui-foundation`** bootstraps `apps/web/` + `packages/ui-kit/` + Storybook (publishing in CI per ai-playbook §13) + 2 components (`AllergenBadge`, `MarginPanel`) as proof of the chain end-to-end. Lands FIRST among the UI-related work.
+- **Row #13 `m2-ui-backfill-wave1`** ships the 5 components owed by the four already-merged backend slices: `RecipePicker`, `IngredientPicker`, `SourceOverridePicker`, `CostDeltaTable`, `DietFlagsPanel`. (`IngredientPicker` + `SourceOverridePicker` straddle #2 + #5; both are in this row.) Each component lands with its own Storybook stories + test suite per the file-layout convention defined in `m2-ui-foundation`'s design.md §7.
+- **The 5 remaining unshipped slices** (`#5 m2-ingredients-extension`, `#6 m2-ai-yield-suggestions`, `#9 m2-owner-dashboard`, `#10 m2-labels-rendering`, `#11 m2-mcp-server`) ship backend + UI components + Storybook stories + journey screens **within their own slice**, per the original spec.
+
+Going forward: a slice's `tasks.md` §UI-components items are **canonical**, not optional. A retro that says "DEFERRED to UX track" without a follow-up slice ID is a goal-drift failure per `.ai-playbook/specs/agentic-failures.md`.
+
 ## Volume estimate
 
-11 changes × ~5–10 acceptance scenarios each ≈ 75–110 scenarios total in M2. Equivalent to ~6–10 sprints of implementation work depending on cadence and team size.
+13 changes × ~5–10 acceptance scenarios each ≈ 90–130 scenarios total in M2. Equivalent to ~7–11 sprints of implementation work depending on cadence and team size. (Updated 2026-05-05 to reflect the contract correction: rows #12 + #13 added.)
 
 ---
 
@@ -104,6 +118,14 @@ In scope: printable label generation per FR34–37, EU 1169/2011 compliant. Engi
 ### 11. `m2-mcp-server` — MCP server `opentrattos` + Agent-Ready surface (MCP BC)
 
 In scope: Agent-Ready Foundation per FR41–45. Public API parity audit — every Recipe / MenuItem / Ingredient capability is reachable via API, no UI-only actions (FR41). API responses include `missingFields` and `nextRequired` so a conversational caller can determine what's needed (FR42). Standalone-mode vs agent-integrated-mode toggle via configuration only — no code change required to switch (FR43, ADR-013). MCP server `opentrattos` exposing the M2 capabilities to any MCP-compatible client (Hermes / OpenCode / Claude Desktop / custom, FR44). Audit fields on agent actions: `executedBy=<human>, viaAgent=true, agentName=<…>` per the hybrid identity model (FR45). UI: optional `AgentChatWidget` behind feature flag `OPENTRATTOS_AGENT_ENABLED`. MCP layer is separable per ADR-013: zero compile-time dependency from `apps/api/` on agent vendors; lint rule blocks `import` violations.
+
+### 12. `m2-ui-foundation` — apps/web shell + ui-kit + Storybook (UI infrastructure)
+
+In scope: bootstrap `apps/web/` (Vite + React 18 + TanStack Query + React Router) + `packages/ui-kit/` (Tailwind 4 with `@theme` block, shadcn primitives, Storybook 8). Generate `packages/ui-kit/src/tokens.css` from `docs/ux/DESIGN.md` YAML frontmatter — OKLCH-canonical CSS variables. Ship 2 components as proof of contract: `AllergenBadge` (regulatory-significant, smallest data shape) and `MarginPanel` (consumes 2 endpoints, validates the data-fetching pattern). Ship 1 J3 proof-of-concept screen at `/poc/owner-dashboard` (NOT the canonical M2 owner dashboard — `#9` ships that). New CI workflow `.github/workflows/storybook.yml` builds on every PR + deploys to GitHub Pages on `master`. Out of scope: the other 11 components from `docs/ux/components.md` (split between `#13 m2-ui-backfill-wave1` and the 5 unshipped backend slices). Out of scope: authentication, i18n runtime, E2E tests on canonical journey screens, server-side rendering. Tech-stack rationale: ADR-019 already locks React + Storybook + shadcn-ish; this slice locks Vite + TanStack Query + Tailwind 4 (a new ADR-020 ships in §10 of the slice's tasks).
+
+### 13. `m2-ui-backfill-wave1` — retroactive UI for already-merged backend slices (UI components)
+
+In scope: ship the 5 components owed by the four already-merged backend slices that incorrectly deferred their §UI-components work (`#2 m2-recipes-core`, `#3 m2-cost-rollup-and-audit`, `#7 m2-allergens-article-21`, `#8 m2-menus-margins`). Components: `RecipePicker` (#2, J1, J4), `IngredientPicker` (#5 partly, J1 — covered here because #5 hasn't shipped yet and the picker is a foundational pattern), `SourceOverridePicker` (#5 partly, J1, J2), `CostDeltaTable` (#3, J2), `DietFlagsPanel` (#7, J1). Each ships with ≥3 Storybook stories + ≥10 unit tests + journey-screen integration in the relevant `apps/web/src/screens/<journey>.tsx`. Out of scope: components owned by unshipped backend slices (`MacroPanel` ships with #5; `YieldEditor`+`WasteFactorEditor` with #6; `MenuItemRanker` with #9 — replacing the J3 proof-of-concept screen from #12; `LabelPreview` with #10; `AgentChatWidget` with #11). Filed as a sibling to #12; scope is mostly defined here, full proposal lands after #12 merges.
 
 ---
 
