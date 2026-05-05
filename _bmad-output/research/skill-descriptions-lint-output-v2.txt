@@ -1,0 +1,478 @@
+⚠️  Found 77 suspicious description(s) under C:\Projects\openTrattOS\.claude\skills:
+
+  bc-to-pptx\SKILL.md
+    description: 'Generates a branded PPTX deck from LEAN_BUSINESS_CASE.md using the Marlink template. Pipeline: Extract BC data -> validate -> inject into template -> QA swarm. Use after LEAN_BUSINESS_CASE.md is approved and ready for presentation. Also use when user says "generate deck", "create slides", "make pptx", "presentation".'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-agent-builder\SKILL.md
+    description: 'Builds, edits or analyzes Agent Skills through conversational discovery. Use when the user requests to "Create an Agent", "Analyze an Agent" or "Edit an Agent".'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    • contains workflow-mechanics phrasing (pattern: \bthrough\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-checkpoint-preview\SKILL.md
+    description: 'LLM-assisted human-in-the-loop review. Make sense of a change, focus attention where it matters, test. Use when the user says "checkpoint", "human review", or "walk me through this change".'
+    • contains workflow-mechanics phrasing (pattern: \bthrough\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-cis-problem-solving\SKILL.md
+    description: 'Apply systematic problem-solving methodologies to complex challenges. Use when the user says "guide me through structured problem solving" or "I want to crack this challenge with guided problem solving techniques"'
+    • contains workflow-mechanics phrasing (pattern: \bthrough\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-cis-storytelling\SKILL.md
+    description: 'Craft compelling narratives using story frameworks. Use when the user says "help me with storytelling" or "I want to create a narrative through storytelling"'
+    • contains workflow-mechanics phrasing (pattern: \bthrough\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-create-architecture\SKILL.md
+    description: 'Create architecture solution design decisions for AI agent consistency. Use when the user says "lets create architecture" or "create technical architecture" or "create a solution design"'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-create-prd\SKILL.md
+    description: 'Create a PRD from scratch. Use when the user says "lets create a product requirements document" or "I want to create a new PRD"'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-create-story\SKILL.md
+    description: 'Creates a dedicated story file with all the context the agent will need to implement it later. Use when the user says "create the next story" or "create story [story identifier]"'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-dev-story\SKILL.md
+    description: 'Execute story implementation following a context filled story spec file. Use when the user says "dev this story [story file]" or "implement the next story in the sprint plan"'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-generate-project-context\SKILL.md
+    description: 'Create project-context.md with AI rules. Use when the user says "generate project context" or "create project context"'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-index-docs\SKILL.md
+    description: 'Generates or updates an index.md to reference all docs in the folder. Use if user requests to create or update an index of all files in a specific folder'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-product-brief\SKILL.md
+    description: 'Create or update product briefs through guided or autonomous discovery. Use when the user requests to create or update a Product Brief.'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    • contains workflow-mechanics phrasing (pattern: \bthrough\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-qa-generate-e2e-tests\SKILL.md
+    description: 'Generate end to end automated tests for existing features. Use when the user says "create qa automated tests for [feature]"'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-shard-doc\SKILL.md
+    description: 'Splits large markdown documents into smaller, organized files based on level 2 (default) sections. Use if the user says perform shard document'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-sprint-planning\SKILL.md
+    description: 'Generate sprint status tracking from epics. Use when the user says "run sprint planning" or "generate sprint plan"'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-teach-me-testing\SKILL.md
+    description: 'Teach testing progressively through structured sessions. Use when user says "lets learn testing" or "I want to study test practices"'
+    • contains workflow-mechanics phrasing (pattern: \bthrough\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-testarch-atdd\SKILL.md
+    description: 'Generate red-phase acceptance test scaffolds using the TDD cycle. Use when the user says "lets write acceptance tests" or "I want to do ATDD"'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    • contains workflow-mechanics phrasing (pattern: \bscaffold\w*\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-testarch-ci\SKILL.md
+    description: 'Scaffold CI/CD quality pipeline with test execution. Use when the user says "lets setup CI pipeline" or "I want to create quality gates"'
+    • contains workflow-mechanics phrasing (pattern: \bscaffold\w*\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-testarch-test-design\SKILL.md
+    description: 'Create system-level or epic-level test plans. Use when the user says "lets design test plan" or "I want to create test strategy"'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-testarch-trace\SKILL.md
+    description: 'Generate traceability matrix and quality gate decision. Use when the user says "lets create traceability matrix" or "I want to analyze test coverage"'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  bmad-workflow-builder\SKILL.md
+    description: 'Builds, converts, and analyzes workflows and skills. Use when the user requests to "build a workflow", "modify a workflow", "quality check workflow", "analyze skill", or "convert a skill".'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  check-updates\SKILL.md
+    description: 'Checks all ELIGIA stack components for available updates (Docker images, Python packages, git repos, skills-manager.exe, Hermes, npm). Applies safe Docker updates with healthcheck and automatic rollback. Sends formatted report via WhatsApp.'
+    • contains workflow-mechanics phrasing (pattern: \bvia\b)
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  code-refactorer\SKILL.md
+    description: 'Improves code quality by cleaning up messy code, enhancing readability, optimizing performance, and increasing maintainability through systematic refactoring'
+    • contains workflow-mechanics phrasing (pattern: \bthrough\b)
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  code-reviewer\SKILL.md
+    description: 'Senior-level code review agent that evaluates code quality across bug detection, security, performance, maintainability, testing coverage, and architectural design'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  context7\SKILL.md
+    description: 'Fetch up-to-date library documentation via Context7 MCP. Given a library name and optional topic, resolves the library ID and retrieves current docs to ground coding tasks in accurate, versioned APIs. Use when implementing features with libraries that change frequently (frameworks, AI SDKs, ORMs, cloud SDKs, etc.).'
+    • contains workflow-mechanics phrasing (pattern: \bvia\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  cpq\SKILL.md
+    description: 'Produces CPQ_CALCULATOR.xlsx spec: pricing calculator tool derived from COMMERCIAL_PLAYBOOK.md rate card + BC §4.5. Use when creating CPQ pricing calculators, quote tools, or pricing spreadsheets for offerings.'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  datasheet\SKILL.md
+    description: 'Produces DATASHEET.md: customer-facing technical sheet derived from OD + SolD. Use when creating or updating datasheets for offerings. Also use when the user needs a customer-facing technical summary or product sheet.'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  defuddle\SKILL.md
+    description: 'Extract clean markdown from web pages using the Defuddle CLI — removes navigation, ads, and clutter to save tokens. Use instead of WebFetch when the user provides a URL to read or analyze (articles, docs, blog posts). Do NOT use for URLs ending in .md (already markdown — use WebFetch directly). Requires: npm install -g defuddle'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  develop\SKILL.md
+    description: 'Orchestrates step-by-step offering development following the modular analysis framework. Coordinates other agents for complete offering development from research through business case.'
+    • contains workflow-mechanics phrasing (pattern: \bthrough\b)
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  doc-coauthoring\SKILL.md
+    description: 'Guides users through structured workflow for co-authoring documentation, proposals, technical specs.'
+    • contains workflow-mechanics phrasing (pattern: \bthrough\b)
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  enablement\SKILL.md
+    description: 'Develops Pre-Sale, Sales, and Ops Enablement Plans for offerings (replaces old CE+TE). Reads BU intelligence, delivery center model, and offering context to produce PRE_SALE_ENABLEMENT.md, SALES_ENABLEMENT_PLAYBOOK.md, and OPS_ENABLEMENT.md. Also produces BATTLECARD.md and ONE_PAGER.md as independent JIRA-trackable deliverables. Includes capability-to-enablement mapping for certifications and profiles.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  fresh\SKILL.md
+    description: 'Project initialization and deployment automation'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  git-commit-helper\SKILL.md
+    description: 'Creates clear, conventional commit messages following best practices with semantic versioning awareness and detailed change descriptions'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  ideation-deck\SKILL.md
+    description: 'Creates the Ideation Deck — a draft Sales Enablement Deck used to pitch the offering idea to an internal board before PoT/PoC validation. Produced at Step 10 (end of Exploration, before RFE milestone). Complementary to BS .pptx.'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  json-canvas\SKILL.md
+    description: 'Create and edit Obsidian JSON Canvas (.canvas) files — visual node/edge graphs for spatial note organization. Use when working with .canvas files or when the user asks to create a visual map, diagram, or canvas in Obsidian.'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  kickoff\SKILL.md
+    description: 'Web research agent that populates 00_Research/ files (market.md, financial.md, competitive.md, customer.md, technical.md) for offerings. Run FIRST when starting a new offering, after /develop creates the folder structure. Calls /qa-research for validation.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  market-intel\SKILL.md
+    description: 'Processes global market research inputs and updates master indices (segments, personas, competitive, industries). Run when new reports are added to 10_MARLINK/40_Market/input/.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  mcp-builder\SKILL.md
+    description: 'Guide for creating MCP (Model Context Protocol) servers in Python (FastMCP) or Node/TypeScript.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  monetization\SKILL.md
+    description: 'Develops the Monetization Model for offerings: pricing architecture, rate cards, CPQ configuration, billing operations, channel & partner economics, sales incentives, and contract framework. Source of truth for commercial operations — BC §5.7-5.8 are summaries referencing this document.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  nuevo-lote\SKILL.md
+    description: 'Registra un nuevo lote de producción de pastelitos maracuchos. Asigna número de lote automáticamente, recoge datos reales de ingredientes, masa, rendimiento y QA, calcula costes y genera un fichero de registro en 01_produccion/data/lotes/.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  obsidian-bases\SKILL.md
+    description: 'Create and edit Obsidian Bases (.base files) — database-like views of notes with filters, formulas, and summaries. Use when working with .base files, creating table/card/list/map views of vault notes, or when the user mentions Bases, database views, filters, or formulas in Obsidian.'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  obsidian-markdown\SKILL.md
+    description: 'Create and edit Obsidian Flavored Markdown — wikilinks, embeds, callouts, frontmatter properties, and tags. Use when working with .md files in an Obsidian vault, or when the user mentions wikilinks, callouts, frontmatter, tags, embeds, or Obsidian notes.'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  openspec-apply-change\SKILL.md
+    description: 'Implement tasks from an OpenSpec change. Use when the user wants to start implementing, continue implementation, or work through tasks.'
+    • contains workflow-mechanics phrasing (pattern: \bthrough\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  openspec-explore\SKILL.md
+    description: 'Enter explore mode - a thinking partner for exploring ideas, investigating problems, and clarifying requirements. Use when the user wants to think through something before or during a change.'
+    • contains workflow-mechanics phrasing (pattern: \bthrough\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  pdf\SKILL.md
+    description: 'Use this skill whenever the user wants to do anything with PDF files. This includes reading or extracting text/tables from PDFs, combining or merging multiple PDFs into one, splitting PDFs apart, rotating pages, adding watermarks, creating new PDFs, filling PDF forms, encrypting/decrypting PDFs, extracting images, and OCR on scanned PDFs to make them searchable. If the user mentions a .pdf file or asks to produce one, use this skill.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  plan\SKILL.md
+    description: 'Structured workflow planning for complex tasks'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  pptx\SKILL.md
+    description: 'Use this skill any time a .pptx file is involved in any way — as input, output, or both. This includes: creating slide decks, pitch decks, or presentations; reading, parsing, or extracting text from any .pptx file; editing, modifying, or updating existing presentations; combining or splitting slide files; working with templates, layouts, speaker notes, or comments. Trigger whenever the user mentions "deck", "slides", "presentation", or references a .pptx filename.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  pptx-template\SKILL.md
+    description: 'Interactive PPTX template builder and maintainer. Two modes: CREATE: converts any base .pptx into a semantic placeholder template through a gated process. UPDATE: maintains an existing template after user changes (add/remove/modify slides). Use when preparing a new PPTX template, converting a presentation to a template, or updating an existing template after changes. Also use when user says "template pptx", "prepare template", "build pptx template", "convert pptx to template", "update template", "sync template".'
+    • contains workflow-mechanics phrasing (pattern: \bthrough\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  premium-ux-designer\SKILL.md
+    description: 'Creates exceptional user experiences with user-centered design, accessibility compliance, and modern UI patterns for web and mobile applications'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  product-strategy-advisor\SKILL.md
+    description: 'Provides strategic product guidance with market analysis, feature prioritization, roadmap planning, and user-centric decision making'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  prompt\SKILL.md
+    description: 'Analyze and optimize prompts using modern AI techniques'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  push\SKILL.md
+    description: 'Stage all changes, generate commit message, commit, and push to remote.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  qa-catalogue\SKILL.md
+    description: 'Validates Unified Catalogue compliance including 3-Table Model, Delivery Types, SKU taxonomy, and TABLE 2-to-TABLE 3 mapping. Use after creating or updating catalogue entries, SKUs, or service bundles.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  qa-consistency\SKILL.md
+    description: 'Validates cross-document consistency between Lean Business Case, Business Strategy, and Offering Strategy documents (numbers, terminology, use cases, segments). Use after completing multiple documents for the same offering.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  qa-enablement\SKILL.md
+    description: 'Validates enablement plans (SALES, PRE_SALE, OPS): BU data alignment, delivery center consistency, TCO completeness, capacity model soundness, capability mapping coverage.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  qa-financial\SKILL.md
+    description: 'Validates financial calculations including pricing formulas, ARPU, RGU, revenue forecasts, margin targets, and cross-file consistency. Use after creating or updating LEAN_BUSINESS_CASE.md financial sections.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  qa-improve\SKILL.md
+    description: 'Analyzes the GTM-Helper AI architecture with 3 operating modes: Error Recovery, Change Amplification, and Architecture Review. Proposes targeted improvements to prevent recurrence and maintain system consistency. Use after correcting errors, making manual changes to skills/templates, or when reviewing architecture for gaps.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  qa-od\SKILL.md
+    description: 'Validates Offer Description completeness, heading hierarchy, TMF catalogue alignment, delivery type applicability, and SD/OP-derived consistency. Use after creating or updating OFFER_DESCRIPTION.md.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  qa-poc\SKILL.md
+    description: 'Validates Proof of Concept completeness: success criteria coverage, evidence quality, TTV measurement, commercial validation, and Go/No-Go justification. Use after creating or updating a POC.md document.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  qa-pot\SKILL.md
+    description: 'Validates Proof of Technology (POT) documents for completeness, consistency, and adherence to POT framework rules. Checks rating justification coverage, economic separation, source traceability, and decision format. Use after creating or updating a POT.md document.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  qa-pptx\SKILL.md
+    description: 'Validates PPTX slide content and visual quality. Renders slides to images, checks for overlapping elements, empty areas, data mismatches, style issues. Called by /bc-to-pptx during generation. Can also be invoked standalone for any PPTX visual inspection. Inspects 3 slides per invocation.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  qa-research\SKILL.md
+    description: 'Validates research data integrity, citation accuracy, source classification, and external URL verification for offering research files. Use after processing new research inputs or updating 00_Research/ files.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  qa-sd\SKILL.md
+    description: 'Validates Service Design (TMF decomposition only, not architectural design) completeness, TMF decomposition, CMDB structure, fulfillment workflows, Operational Playbook procedures, and SD-OD alignment. Use after creating or updating SERVICE_DESIGN.md or OPERATIONAL_PLAYBOOK.md.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  qa-strategy\SKILL.md
+    description: 'Validates strategy alignment with ABC Goals, CIT OKRs, CIT Strategy Pillars, and value proposition consistency for offering business strategy files. Use after creating or updating 01_BS/ business strategy documents.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  qa-use-cases\SKILL.md
+    description: 'Validates Use Cases CSV format compliance, JTBD quality, content completeness, remote-site agnostic language, capability/segment coverage, and cross-document consistency. Use after creating or updating a Use Cases CSV.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  service\SKILL.md
+    description: 'Develops Solution Design (SoD), Service Design (SD), Operational Playbook (OP), and Offer Description (OD) documents step-by-step. SoD covers architectural design (HLD/LLD); SD covers TMF decomposition (CFS/RFS/Resources). Two-phase: Draft in Formulation, Final in Execution.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  shadcn-component-researcher\SKILL.md
+    description: 'Specialized shadcn/ui helper for React component development with TypeScript, Tailwind CSS, and modern UI patterns'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  shadcn-implementation-builder\SKILL.md
+    description: 'Specialized shadcn/ui helper for React component development with TypeScript, Tailwind CSS, and modern UI patterns'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  shadcn-quick-helper\SKILL.md
+    description: 'Specialized shadcn/ui helper for React component development with TypeScript, Tailwind CSS, and modern UI patterns'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  shadcn-requirements-analyzer\SKILL.md
+    description: 'Specialized shadcn/ui helper for React component development with TypeScript, Tailwind CSS, and modern UI patterns'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  skill-creator\SKILL.md
+    description: "Creates new skills, modifies existing skills, and optimizes skill descriptions for better triggering accuracy. Adapted from Anthropic's official skill-creator. Use when creating a skill from scratch, editing or improving an existing skill, or optimizing a skill's description. Also use when /qa-improve identifies that a skill needs structural changes, new skills are needed, or descriptions need optimization."
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  staff-engineer\SKILL.md
+    description: 'Enterprise-grade software development with strategic system design, full-stack implementation, scalability planning, and production-ready solutions across the entire development lifecycle'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  start\SKILL.md
+    description: 'Starts the full MCP stack: LiteLLM proxy + Docker services (Hindsight, Atlassian, Google Workspace) + skills-manager + notebooklm. All services connect directly — no proxy. Use /start at the beginning of any session where MCP tools are needed, or when any service is stopped. LiteLLM must start before Docker — Hindsight depends on it at startup.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  start-palafito\SKILL.md
+    description: 'Arranca Docker Desktop si no está corriendo y despliega el stack de Paperclip palafito-prod.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  system-architect\SKILL.md
+    description: 'Specializes in designing scalable system architectures, refactoring problematic codebases, and transforming legacy systems into maintainable solutions with future-proof designs'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  use-case-research\SKILL.md
+    description: 'Creates JTBD-aligned Use Cases CSVs through structured user interviews, parallel vendor/industry research, and Jobs-to-be-Done synthesis. Generates 17-column CSV (OFFER-001 format) and validates with /qa-use-cases. Use when creating or updating use case research for an offering.'
+    • starts with summary verb (pattern: ^(generates?|creates?|produces?|outputs?|runs?|executes?|computes?|builds?|writes?|drafts?|emits?)\b)
+    • contains workflow-mechanics phrasing (pattern: \bthrough\b)
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+  xlsx\SKILL.md
+    description: 'Use this skill any time a spreadsheet file is the primary input or output. This means any task where the user wants to: open, read, edit, or fix an existing .xlsx, .xlsm, .csv, or .tsv file; create a new spreadsheet from scratch or from other data sources; or convert between tabular file formats. Trigger especially when the user references a spreadsheet file by name or path and wants something done to it or produced from it. Also trigger for cleaning or restructuring messy tabular data files into proper spreadsheets.'
+    • missing when-to-use indicator (e.g. 'Use when', 'When the user wants')
+    suggested rewrite skeleton:
+      "Use when the user <trigger condition> and needs to <intent>"
+
+Reference: specs/skills-distribution.md §1 (Required SKILL.md sections, v0.7.0+)
+Pattern source: obra/superpowers (MIT)
