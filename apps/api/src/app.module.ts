@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CostModule } from './cost/cost.module';
@@ -11,6 +11,7 @@ import { RecipesModule } from './recipes/recipes.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
+import { AgentAuditMiddleware } from './shared/middleware/agent-audit.middleware';
 
 @Module({
   imports: [
@@ -43,4 +44,12 @@ import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  // m2-mcp-server: AgentAuditMiddleware reads `X-Via-Agent` + `X-Agent-Name`
+  // headers, populates `req.agentContext`, and emits `AGENT_ACTION_EXECUTED`.
+  // Wired against `forRoutes('*')` so it runs ahead of every controller; it
+  // is a no-op for non-agent traffic.
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(AgentAuditMiddleware).forRoutes('*');
+  }
+}
