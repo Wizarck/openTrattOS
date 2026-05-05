@@ -7,6 +7,9 @@ import {
   MacroPanel,
   RecipePicker,
   SourceOverridePicker,
+  WasteFactorEditor,
+  YieldEditor,
+  type AiSuggestionShape,
   type IngredientListItem,
   type LabelApiError,
   type LabelPreviewLocale,
@@ -20,6 +23,12 @@ import { useDietFlags, useDietFlagsOverride } from '../hooks/useDietFlags';
 import { useRecipeMacros } from '../hooks/useRecipeMacros';
 import { useLabelPreviewUrl } from '../hooks/useLabelPreview';
 import { useLabelPrint } from '../hooks/useLabelPrint';
+import {
+  useAcceptAiSuggestion,
+  useRejectAiSuggestion,
+  useWasteSuggestion,
+  useYieldSuggestion,
+} from '../hooks/useAiSuggestions';
 
 /**
  * J1 stub — exercises the 4 J1 components against the real backend.
@@ -52,6 +61,23 @@ export function RecipeBuilderJ1Screen() {
     () => extractLabelError(printMutation.error),
     [printMutation.error],
   );
+
+  // AI yield + waste suggestions state machine. The UI is presentational;
+  // mutations live here. `aiEnabled` is hard-wired true for the J1 stub —
+  // production reads from a /healthz-style env-derived feature flag.
+  const aiEnabled = true;
+  const [yieldValue, setYieldValue] = useState(0.85);
+  const [wasteValue, setWasteValue] = useState(0.05);
+  const [yieldSuggestion, setYieldSuggestion] =
+    useState<AiSuggestionShape | null>(null);
+  const [wasteSuggestion, setWasteSuggestion] =
+    useState<AiSuggestionShape | null>(null);
+  const [yieldNoCitation, setYieldNoCitation] = useState(false);
+  const [wasteNoCitation, setWasteNoCitation] = useState(false);
+  const yieldMutation = useYieldSuggestion();
+  const wasteMutation = useWasteSuggestion();
+  const acceptMutation = useAcceptAiSuggestion();
+  const rejectMutation = useRejectAiSuggestion();
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 space-y-6">
@@ -140,6 +166,100 @@ export function RecipeBuilderJ1Screen() {
             loading={macrosQuery.isLoading}
             mode="expanded"
             locale="es-ES"
+          />
+        </section>
+      )}
+
+      {orgId && pickedIngredient && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-mute">
+            Yield (AI)
+          </h2>
+          <YieldEditor
+            value={yieldValue}
+            onChange={setYieldValue}
+            aiEnabled={aiEnabled}
+            suggestion={yieldSuggestion}
+            noCitationAvailable={yieldNoCitation}
+            loading={yieldMutation.isPending}
+            errorMessage={yieldMutation.error?.message}
+            onRequestSuggestion={async () => {
+              setYieldNoCitation(false);
+              const env = await yieldMutation.mutateAsync({
+                organizationId: orgId,
+                ingredientId: pickedIngredient.id,
+                contextHash: `yield:${pickedIngredient.id}`,
+              });
+              setYieldSuggestion(env.suggestion ?? null);
+              setYieldNoCitation(env.suggestion === null);
+              if (env.suggestion) setYieldValue(env.suggestion.value);
+            }}
+            onAccept={async (tweak) => {
+              if (!yieldSuggestion) return;
+              const updated = await acceptMutation.mutateAsync({
+                organizationId: orgId,
+                suggestionId: yieldSuggestion.id,
+                value: tweak,
+              });
+              setYieldSuggestion(updated);
+              if (tweak !== undefined) setYieldValue(tweak);
+            }}
+            onReject={async (reason) => {
+              if (!yieldSuggestion) return;
+              const updated = await rejectMutation.mutateAsync({
+                organizationId: orgId,
+                suggestionId: yieldSuggestion.id,
+                reason,
+              });
+              setYieldSuggestion(updated);
+            }}
+          />
+        </section>
+      )}
+
+      {recipeId && orgId && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-mute">
+            Waste factor (AI)
+          </h2>
+          <WasteFactorEditor
+            value={wasteValue}
+            onChange={setWasteValue}
+            aiEnabled={aiEnabled}
+            suggestion={wasteSuggestion}
+            noCitationAvailable={wasteNoCitation}
+            loading={wasteMutation.isPending}
+            errorMessage={wasteMutation.error?.message}
+            onRequestSuggestion={async () => {
+              setWasteNoCitation(false);
+              const env = await wasteMutation.mutateAsync({
+                organizationId: orgId,
+                recipeId,
+                contextHash: `waste:${recipeId}`,
+              });
+              setWasteSuggestion(env.suggestion ?? null);
+              setWasteNoCitation(env.suggestion === null);
+              if (env.suggestion) setWasteValue(env.suggestion.value);
+            }}
+            onAccept={async (tweak) => {
+              if (!wasteSuggestion) return;
+              const updated = await acceptMutation.mutateAsync({
+                organizationId: orgId,
+                suggestionId: wasteSuggestion.id,
+                value: tweak,
+              });
+              setWasteSuggestion(updated);
+              if (tweak !== undefined) setWasteValue(tweak);
+            }}
+            onReject={async (reason) => {
+              if (!wasteSuggestion) return;
+              const updated = await rejectMutation.mutateAsync({
+                organizationId: orgId,
+                suggestionId: wasteSuggestion.id,
+                reason,
+              });
+              setWasteSuggestion(updated);
+            }}
           />
         </section>
       )}

@@ -42,3 +42,11 @@ export type {
   LabelPrintAdapterNotConfiguredError,
   LabelGenericApiError,
 } from './components/LabelPreview';
+export { YieldEditor, AiSuggestionEditor, MIN_REJECT_REASON_LENGTH } from './components/YieldEditor';
+export type {
+  YieldEditorProps,
+  AiSuggestionShape,
+  AiSuggestionStatus,
+} from './components/YieldEditor';
+export { WasteFactorEditor } from './components/WasteFactorEditor';
+export type { WasteFactorEditorProps } from './components/WasteFactorEditor';

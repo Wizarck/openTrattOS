@@ -223,7 +223,7 @@ describe('AiSuggestionsService', () => {
         modelVersion: '0.1',
       });
       expired.expiresAt = new Date(Date.now() - 60_000);
-      const { service, state, stub } = build({ seedRows: [expired] });
+      const { service, stub } = build({ seedRows: [expired] });
       const row = await service.suggestYield({
         organizationId: ORG,
         ingredientId: ING,
