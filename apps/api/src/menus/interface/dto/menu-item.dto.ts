@@ -143,3 +143,26 @@ export class MarginReportDto {
     return { ...r };
   }
 }
+
+export class MenuItemCostHistoryDto {
+  @ApiProperty() menuItemId!: string;
+  @ApiProperty() recipeId!: string;
+  @ApiProperty() sellingPrice!: number;
+  @ApiProperty() targetMargin!: number;
+  @ApiProperty({
+    type: [Object],
+    description:
+      'Cost history rows (timestamp + total cost) for the underlying Recipe in the requested window.',
+  })
+  history!: unknown[];
+
+  static from(
+    menuItemId: string,
+    recipeId: string,
+    sellingPrice: number,
+    targetMargin: number,
+    history: unknown[],
+  ): MenuItemCostHistoryDto {
+    return { menuItemId, recipeId, sellingPrice, targetMargin, history };
+  }
+}

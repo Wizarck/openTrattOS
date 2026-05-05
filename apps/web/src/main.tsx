@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import '@opentrattos/ui-kit/globals.css';
 import { App } from './App';
-import { OwnerDashboardPocScreen } from './screens/OwnerDashboardPocScreen';
+import { OwnerDashboardScreen } from './screens/OwnerDashboardScreen';
 import { RecipeBuilderJ1Screen } from './screens/RecipeBuilderJ1Screen';
 import { CostInvestigationJ2Screen } from './screens/CostInvestigationJ2Screen';
 
@@ -24,8 +24,8 @@ const router = createBrowserRouter([
     element: <App />,
     children: [
       {
-        path: 'poc/owner-dashboard',
-        element: <OwnerDashboardPocScreen />,
+        path: 'owner-dashboard',
+        element: <OwnerDashboardScreen />,
       },
       {
         path: 'poc/recipe-builder-j1',

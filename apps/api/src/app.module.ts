@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CostModule } from './cost/cost.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 import { ExternalCatalogModule } from './external-catalog/external-catalog.module';
 import { IamModule } from './iam/iam.module';
 import { IngredientsModule } from './ingredients/ingredients.module';
@@ -29,6 +30,9 @@ import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
 
     // M2 OFF mirror (m2-off-mirror — local mirror + REST fallback for Open Food Facts).
     ExternalCatalogModule,
+
+    // M2 Owner dashboard (m2-owner-dashboard — Journey 3 read-only ranking endpoint).
+    DashboardModule,
 
     // Future Bounded Contexts:
     // HaccpModule,       // M3 — HACCP / APPCC
