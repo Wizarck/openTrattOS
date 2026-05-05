@@ -27,6 +27,12 @@ import { Roles } from '../../shared/decorators/roles.decorator';
 import { CursorPaginationQueryDto, DEFAULT_PAGE_LIMIT } from '../../shared/pagination';
 import { CsvImportFormatError, IngredientImportService, ImportResult } from '../application/ingredient-import.service';
 import { IngredientExportService } from '../application/ingredient-export.service';
+import {
+  IngredientNotFoundError,
+  IngredientOverrideReasonError,
+  IngredientOverrideUnknownFieldError,
+  IngredientsService,
+} from '../application/ingredients.service';
 import { Ingredient } from '../domain/ingredient.entity';
 import { IngredientRepository } from '../infrastructure/ingredient.repository';
 
@@ -37,7 +43,13 @@ interface UploadedCsvFile {
   buffer: Buffer;
   size: number;
 }
-import { CreateIngredientDto, IngredientResponseDto, UpdateIngredientDto } from './dto/ingredient.dto';
+import {
+  ApplyIngredientOverrideDto,
+  CreateIngredientDto,
+  IngredientResponseDto,
+  IngredientSearchResultDto,
+  UpdateIngredientDto,
+} from './dto/ingredient.dto';
 
 @ApiTags('Ingredients')
 @Controller('ingredients')
@@ -46,6 +58,7 @@ export class IngredientsController {
     private readonly ingredients: IngredientRepository,
     private readonly importService: IngredientImportService,
     private readonly exportService: IngredientExportService,
+    private readonly service: IngredientsService,
   ) {}
 
   @Get()
@@ -69,6 +82,34 @@ export class IngredientsController {
     };
   }
 
+  @Get('search')
+  @Roles('OWNER', 'MANAGER', 'STAFF')
+  @ApiOperation({
+    summary: 'Search the OFF mirror by barcode (J1 prefill flow)',
+    description:
+      'Cache-first lookup against the local ExternalFoodCatalog mirror; falls through to the OFF REST API on miss; returns null on outage (per #4 graceful-degrade).',
+  })
+  async search(
+    @Query('barcode') barcode: string,
+    @Query('region') region?: string,
+  ): Promise<IngredientSearchResultDto | null> {
+    if (!barcode || barcode.trim().length === 0) {
+      throw new BadRequestException({ code: 'INGREDIENT_SEARCH_MISSING_BARCODE' });
+    }
+    const row = await this.service.searchByBarcode(barcode.trim(), region ?? 'eu');
+    if (!row) return null;
+    return {
+      source: 'off',
+      barcode: row.barcode,
+      brandName: row.brand,
+      name: row.name,
+      nutrition: row.nutrition,
+      allergens: [...row.allergens],
+      dietFlags: [...row.dietFlags],
+      licenseAttribution: row.licenseAttribution,
+    };
+  }
+
   @Get(':id')
   @Roles('OWNER', 'MANAGER', 'STAFF')
   @ApiOperation({ summary: 'Get an ingredient by id' })
@@ -76,6 +117,48 @@ export class IngredientsController {
     const i = await this.ingredients.findOneBy({ id });
     if (!i) throw new NotFoundException({ code: 'INGREDIENT_NOT_FOUND' });
     return IngredientResponseDto.fromEntity(i);
+  }
+
+  @Post(':id/overrides')
+  @Roles('OWNER', 'MANAGER')
+  @ApiOperation({
+    summary: 'Apply a Manager+ override on a single Ingredient field',
+    description:
+      'Merges into the jsonb `overrides` map. Reason ≥10 chars (matches #13 client-side). Emits INGREDIENT_OVERRIDE_CHANGED event.',
+  })
+  async applyOverride(
+    @Query('organizationId', new ParseUUIDPipe({ version: '4' })) organizationId: string,
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @Body() dto: ApplyIngredientOverrideDto,
+  ): Promise<IngredientResponseDto> {
+    try {
+      const updated = await this.service.applyOverride({
+        organizationId,
+        actorUserId: dto.actorUserId,
+        ingredientId: id,
+        field: dto.field,
+        value: dto.value,
+        reason: dto.reason,
+      });
+      return IngredientResponseDto.fromEntity(updated);
+    } catch (err) {
+      if (err instanceof IngredientNotFoundError) {
+        throw new NotFoundException({ code: 'INGREDIENT_NOT_FOUND', ingredientId: err.ingredientId });
+      }
+      if (err instanceof IngredientOverrideReasonError) {
+        throw new BadRequestException({
+          code: 'INGREDIENT_OVERRIDE_REASON_TOO_SHORT',
+          minLength: err.minLength,
+        });
+      }
+      if (err instanceof IngredientOverrideUnknownFieldError) {
+        throw new BadRequestException({
+          code: 'INGREDIENT_OVERRIDE_UNKNOWN_FIELD',
+          field: err.field,
+        });
+      }
+      throw err;
+    }
   }
 
   @Post()

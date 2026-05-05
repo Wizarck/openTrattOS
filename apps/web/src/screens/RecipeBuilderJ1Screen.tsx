@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   DietFlagsPanel,
   IngredientPicker,
+  MacroPanel,
   RecipePicker,
   SourceOverridePicker,
   type IngredientListItem,
@@ -12,6 +13,7 @@ import { useRecipes } from '../hooks/useRecipes';
 import { useIngredients } from '../hooks/useIngredients';
 import { useSupplierItems } from '../hooks/useSupplierItems';
 import { useDietFlags, useDietFlagsOverride } from '../hooks/useDietFlags';
+import { useRecipeMacros } from '../hooks/useRecipeMacros';
 
 /**
  * J1 stub — exercises the 4 J1 components against the real backend.
@@ -35,6 +37,7 @@ export function RecipeBuilderJ1Screen() {
   const supplierItemsQuery = useSupplierItems(pickedIngredient?.id);
   const dietFlagsQuery = useDietFlags(orgId, recipeId);
   const overrideMutation = useDietFlagsOverride(orgId, recipeId);
+  const macrosQuery = useRecipeMacros(orgId, recipeId);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 space-y-6">
@@ -109,6 +112,20 @@ export function RecipeBuilderJ1Screen() {
             onApplyOverride={async (payload) => {
               await overrideMutation.mutateAsync(payload);
             }}
+          />
+        </section>
+      )}
+
+      {recipeId && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-mute">
+            Macros
+          </h2>
+          <MacroPanel
+            rollup={macrosQuery.data ?? null}
+            loading={macrosQuery.isLoading}
+            mode="expanded"
+            locale="es-ES"
           />
         </section>
       )}
