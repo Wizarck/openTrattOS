@@ -1,20 +1,26 @@
-import * as React from 'react';
-import type { DocumentProps } from '@react-pdf/renderer';
-import { renderToBuffer } from '@react-pdf/renderer';
-import { LabelDocument } from './components/LabelDocument';
 import type { LabelData } from './types';
 
 /**
  * Renders a `LabelData` to a PDF Buffer using `@react-pdf/renderer`. Server-
- * side only — `@react-pdf/renderer` ships separate node and browser builds;
- * this module imports the node build via the package's main entry.
+ * side only.
+ *
+ * Implementation note: both `@react-pdf/renderer` and the `LabelDocument`
+ * component are loaded LAZILY via dynamic imports so that simply importing
+ * the package barrel does NOT pull `@react-pdf` (an ESM-only transitive
+ * dependency tree) into the consumer's module graph. This keeps Jest unit
+ * runners in `apps/api/` and `packages/ui-kit/` working without ESM
+ * configuration plumbing.
  *
  * Pre-launch external legal review per ADR-019 §Risk gates production
  * exposure of this output via `OPENTRATTOS_LABELS_PROD_ENABLED`.
  */
 export async function renderLabelToPdf(data: LabelData): Promise<Buffer> {
-  // LabelDocument always returns a <Document>; cast to satisfy renderToBuffer's
-  // ReactElement<DocumentProps> signature (TS can't see through the wrapper).
-  const element = React.createElement(LabelDocument, { data }) as unknown as React.ReactElement<DocumentProps>;
-  return renderToBuffer(element);
+  // Dynamic imports — evaluated only when this function is actually called.
+  const [React, renderer, labelComponentModule] = await Promise.all([
+    import('react'),
+    import('@react-pdf/renderer'),
+    import('./components/LabelDocument'),
+  ]);
+  const element = React.createElement(labelComponentModule.LabelDocument, { data });
+  return renderer.renderToBuffer(element as never);
 }

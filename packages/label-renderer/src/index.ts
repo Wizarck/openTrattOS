@@ -20,7 +20,15 @@ export type { LabelStrings } from './locales';
 export { PAGE_GEOMETRY } from './page-sizes';
 export type { PageGeometry } from './page-sizes';
 
-export { LabelDocument } from './components/LabelDocument';
+// `LabelDocument` is intentionally NOT re-exported from the barrel — it
+// transitively loads `@react-pdf/renderer`, an ESM-only dependency that
+// breaks Jest CommonJS test runners in consumer packages. Consumers that
+// need the React component (e.g. for a client-side preview build) can
+// import it directly from `@opentrattos/label-renderer/dist/components/LabelDocument`.
+
+// `renderLabelToPdf` defers loading the renderer + LabelDocument until call
+// time via dynamic imports — so simply importing the barrel does NOT pull
+// `@react-pdf/renderer` into the consumer's module graph.
 export { renderLabelToPdf } from './render';
 
 // Print abstraction
@@ -33,5 +41,6 @@ export type {
   PrintErrorPayload,
 } from './print/adapter';
 export { PrintAdapterRegistry } from './print/registry';
+export type { PrintAdapterFactory } from './print/registry';
 export { IppPrintAdapter } from './print/ipp-adapter';
 export type { IppAdapterConfig } from './print/ipp-adapter';

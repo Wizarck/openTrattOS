@@ -6,6 +6,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { ExternalCatalogModule } from './external-catalog/external-catalog.module';
 import { IamModule } from './iam/iam.module';
 import { IngredientsModule } from './ingredients/ingredients.module';
+import { LabelsModule } from './labels/labels.module';
 import { MenusModule } from './menus/menus.module';
 import { RecipesModule } from './recipes/recipes.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
@@ -34,6 +35,9 @@ import { AgentAuditMiddleware } from './shared/middleware/agent-audit.middleware
 
     // M2 Owner dashboard (m2-owner-dashboard — Journey 3 read-only ranking endpoint).
     DashboardModule,
+
+    // M2 labels (m2-labels-rendering — EU 1169/2011 PDF + PrintAdapter abstraction).
+    LabelsModule,
 
     // Future Bounded Contexts:
     // HaccpModule,       // M3 — HACCP / APPCC
