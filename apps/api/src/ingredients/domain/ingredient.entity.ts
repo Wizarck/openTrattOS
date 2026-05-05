@@ -25,6 +25,37 @@ export interface IngredientUpdateProps {
   notes?: string | null;
 }
 
+/**
+ * One Manager+ override entry. The `value` shape varies per overridable field
+ * (string[] for allergens/dietFlags, Record for nutrition, string for brandName).
+ */
+export interface IngredientOverrideEntry {
+  value: unknown;
+  reason: string;
+  appliedBy: string;
+  appliedAt: string;
+}
+
+/**
+ * Per-field override map. `<field>` is one of `allergens` | `dietFlags` |
+ * `nutrition` | `brandName`. Missing keys mean no override applied.
+ */
+export type IngredientOverridesMap = Partial<{
+  allergens: IngredientOverrideEntry;
+  dietFlags: IngredientOverrideEntry;
+  nutrition: IngredientOverrideEntry;
+  brandName: IngredientOverrideEntry;
+}>;
+
+export type IngredientOverridableField = 'allergens' | 'dietFlags' | 'nutrition' | 'brandName';
+
+export const OVERRIDABLE_FIELDS: readonly IngredientOverridableField[] = [
+  'allergens',
+  'dietFlags',
+  'nutrition',
+  'brandName',
+] as const;
+
 @Entity({ name: 'ingredients' })
 @Index('uq_ingredients_org_internal_code', ['organizationId', 'internalCode'], { unique: true })
 @Index('ix_ingredients_organization_id', ['organizationId'])
@@ -82,6 +113,14 @@ export class Ingredient {
   /** External provenance reference (e.g. OFF product code). Nullable when authored locally. */
   @Column({ name: 'external_source_ref', type: 'varchar', length: 200, nullable: true })
   externalSourceRef: string | null = null;
+
+  /**
+   * Manager+ field-level overrides per `m2-ingredients-extension`. Shape:
+   * `{ <field>: { value, reason, appliedBy, appliedAt } }`. Empty object when
+   * no overrides applied (default).
+   */
+  @Column({ type: 'jsonb', default: () => "'{}'::jsonb" })
+  overrides: IngredientOverridesMap = {};
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean = true;

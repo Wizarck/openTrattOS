@@ -30,3 +30,5 @@ export type {
 } from './components/DietFlagsPanel';
 export { MenuItemRanker } from './components/MenuItemRanker';
 export type { MenuItemRankerProps, DashboardMenuItem } from './components/MenuItemRanker';
+export { MacroPanel, MACRO_LABELS, PRIMARY_MACRO_KEYS } from './components/MacroPanel';
+export type { MacroPanelProps, MacroRollup } from './components/MacroPanel';

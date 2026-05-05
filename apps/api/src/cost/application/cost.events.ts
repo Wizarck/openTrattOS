@@ -56,3 +56,21 @@ export interface RecipeAllergensOverrideChangedEvent {
   /** UUID of the Manager+ actor who applied the change. */
   appliedBy: string;
 }
+
+/**
+ * Emitted by IngredientsService whenever a Manager+ override is applied to
+ * an Ingredient field (allergens / dietFlags / nutrition / brandName) per
+ * `m2-ingredients-extension`. Reserved channel; the future audit-log listener
+ * will subscribe when audit_log lands.
+ */
+export const INGREDIENT_OVERRIDE_CHANGED = 'cost.ingredient-override-changed';
+
+export interface IngredientOverrideChangedEvent {
+  ingredientId: string;
+  organizationId: string;
+  field: 'allergens' | 'dietFlags' | 'nutrition' | 'brandName';
+  /** UUID of the Manager+ actor who applied the change. */
+  appliedBy: string;
+  /** Auditable reason; mirrors the override entry's `reason`. */
+  reason: string;
+}
