@@ -1,6 +1,6 @@
 # retros/m2-ingredients-extension.md
 
-> **Slice**: `m2-ingredients-extension` · **PR**: [#84](https://github.com/Wizarck/openTrattOS/pull/84) · **Merged**: TBD · **Squash SHA**: TBD
+> **Slice**: `m2-ingredients-extension` · **PR**: [#84](https://github.com/Wizarck/openTrattOS/pull/84) · **Merged**: 2026-05-05 · **Squash SHA**: `cce620b`
 > **Cadence**: post-archive (per `runbook-bmad-openspec.md` §4)
 > **Notable**: Wave 1.5 main-thread slice (paired with subagent's m2-mcp-server, PR #85). Closes IngredientPicker's OFF dependency from #13. First slice that introduces the `recipe-tree-walker.ts` shared helper. Override storage chose jsonb (matching #7 + #13 patterns). Fourth use of the proposal-only-first pattern.
 
