@@ -5,6 +5,8 @@ import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import '@opentrattos/ui-kit/globals.css';
 import { App } from './App';
 import { OwnerDashboardPocScreen } from './screens/OwnerDashboardPocScreen';
+import { RecipeBuilderJ1Screen } from './screens/RecipeBuilderJ1Screen';
+import { CostInvestigationJ2Screen } from './screens/CostInvestigationJ2Screen';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,6 +26,14 @@ const router = createBrowserRouter([
       {
         path: 'poc/owner-dashboard',
         element: <OwnerDashboardPocScreen />,
+      },
+      {
+        path: 'poc/recipe-builder-j1',
+        element: <RecipeBuilderJ1Screen />,
+      },
+      {
+        path: 'poc/cost-investigation-j2',
+        element: <CostInvestigationJ2Screen />,
       },
     ],
   },
