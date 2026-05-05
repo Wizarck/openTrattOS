@@ -74,3 +74,42 @@ export interface IngredientOverrideChangedEvent {
   /** Auditable reason; mirrors the override entry's `reason`. */
   reason: string;
 }
+
+/**
+ * Emitted by `AgentAuditMiddleware` whenever an HTTP request carries the
+ * `X-Via-Agent` + `X-Agent-Name` headers (i.e. the action was routed via the
+ * MCP layer per ADR-013 / m2-mcp-server). The channel is reserved here so a
+ * future audit-log listener can subscribe without further fan-out — the
+ * `audit_log` table itself does NOT exist yet and is tracked as M2 tech debt.
+ *
+ * Naming note: this event lives in the cost-events file because the cost
+ * subsystem is the only existing event-bus consumer in M2. When the audit_log
+ * subsystem lands, the constant should migrate to its own module; consumers
+ * that import the constant by name will keep working.
+ */
+export const AGENT_ACTION_EXECUTED = 'agent.action-executed';
+
+/**
+ * Payload for `AGENT_ACTION_EXECUTED`. Carries everything a future audit-log
+ * listener would need to write a row without re-reading the request:
+ * - `executedBy`: the human user (JWT subject) responsible per the hybrid
+ *   identity model. May be `null` when the request is unauthenticated (e.g.
+ *   pre-auth probe with agent headers — middleware still records the
+ *   attempt for forensics).
+ * - `viaAgent`: always `true`; reserved field so the future audit row can
+ *   distinguish UI vs agent-mediated actions on a single boolean.
+ * - `agentName`: free-text identifier from `X-Agent-Name` (e.g.
+ *   `claude-desktop`, `hermes`, `opencode`).
+ * - `capabilityName`: optional MCP capability descriptor (e.g.
+ *   `recipes.read`); read from `X-Agent-Capability` when present.
+ * - `organizationId`: tenant scope; `null` when JWT did not resolve.
+ * - `timestamp`: ISO-8601 string captured at middleware entry.
+ */
+export interface AgentActionExecutedEvent {
+  executedBy: string | null;
+  viaAgent: true;
+  agentName: string;
+  capabilityName: string | null;
+  organizationId: string | null;
+  timestamp: string;
+}
