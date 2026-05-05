@@ -384,3 +384,38 @@ emphasis (bold) is trivially supported.
 - **Fallback path documented**: if `@react-pdf/renderer`'s CSS limitations bite (some
   flexbox quirks reported by users), swap to Puppeteer / headless Chrome rendering an
   HTML template. The component-based approach (AllergenBadge etc.) survives the swap.
+
+---
+
+## ADR-020: Frontend stack — Vite + React 18 + TanStack Query + Tailwind 4 + Storybook 8
+
+**Decision:** `apps/web/` is a Vite + React 18 SPA with TanStack Query 5, React Router 6, Tailwind 4, and shadcn-style primitives. `packages/ui-kit/` exports components as a workspace package with Storybook 8 (`@storybook/react-vite` framework) for static review. Storybook publishes to GitHub Pages on every push to `master` per ai-playbook ux-track.md §13.
+
+**Rationale:**
+- ADR-019 already locked React + Storybook + shadcn-ish. ADR-013 (Agent-Ready) makes the API the contract — no SSR required.
+- Vite cold-start <1 s + sub-second HMR is the right shape for the kitchen-tablet developer feedback loop.
+- TanStack Query's stale-while-revalidate semantics give the chef sub-200 ms refetch on cost / margin reads (NFR Performance).
+- Tailwind 4 `@theme` block consumes OKLCH CSS variables directly from `packages/ui-kit/src/tokens.css` — no `tailwind.config.js` to keep in sync with `docs/ux/DESIGN.md`.
+- shadcn copy-and-own (per ai-playbook §13) keeps Radix versioning in our control without a runtime dep on `@shadcn/ui`.
+- One npm-workspaces monorepo with hoisting (verified with `@nestjs/event-emitter` migration in M2-followups) keeps lockfile + CI install times sane.
+
+**Alternatives considered:**
+- **Next.js 15 App Router**: rejected — SSR not needed, App Router learning cost adds slice budget for negligible benefit on private kitchen surfaces.
+- **Remix / TanStack Start**: rejected — same SSR footprint as Next.js with worse Storybook integration as of 2026-05.
+- **Astro with React islands**: rejected — misaligned with rich-interactive-surface UX (every kitchen screen is interactive).
+- **Tailwind 3 + generated theme.json**: rejected in favour of Tailwind 4's `@theme` for tighter DESIGN.md ↔ runtime coupling. Documented fallback path in `m2-ui-foundation/design.md` Q1.
+- **Material UI / Ant Design / Vanilla extract**: rejected — clash with the OKLCH-canonical token language or duplicate work shadcn already did.
+- **SWR / RTK Query**: rejected — SWR weaker on mutations; RTK Query forces Redux.
+
+**Consequence:**
+- New `apps/web/` workspace + expanded `packages/ui-kit/` workspace.
+- New `.github/workflows/storybook.yml` builds Storybook on every PR (advisory) + deploys to GitHub Pages on `master`. URL: `https://wizarck.github.io/openTrattOS/storybook/`.
+- Per-component file layout codified in `packages/ui-kit/README.md` (one folder per component: tsx + stories + test + types + index).
+- OKLCH-canonical CSS variables in `packages/ui-kit/src/tokens.css`; hex in `docs/ux/DESIGN.md` YAML frontmatter is a derivation snapshot only.
+- Dev-time CORS handled by Vite proxy (`/api/*` → `http://localhost:3000`); production hits the real API URL via `VITE_API_URL`.
+
+**Open follow-ups (filed in retro):**
+- Tailwind 4 GA tracking (currently stable as of 2026-05, but watch for breaking changes through next minor).
+- Codegen for backend DTOs → ui-kit types (manual hand-keeping today; risks drift).
+- Per-PR Storybook previews via Chromatic / Vercel — deferred; Pages-on-master is sufficient for v0.
+
