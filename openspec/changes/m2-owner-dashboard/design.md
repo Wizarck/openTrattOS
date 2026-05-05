@@ -1,6 +1,8 @@
 ## Context
 
-Journey 3 (Owner Sunday-night dashboard) is M2's killer-app for the Owner persona — Roberto opens his phone on the sofa and sees top/bottom-5 MenuItems by margin with one-tap drill-down. The slice is read-only and **mobile-first**: smallest UI surface but highest-visibility deliverable. Foundation: `#8 m2-menus-margins` provides the margin computation; `#3 m2-cost-rollup-and-audit` provides the drill-down history.
+Journey 3 (Owner Sunday-night dashboard) is M2's killer-app for the Owner persona — Roberto opens his phone on the sofa and sees top/bottom-5 MenuItems by margin with one-tap drill-down. The slice is read-only and **mobile-first**: smallest UI surface but highest-visibility deliverable. Foundation: `#8 m2-menus-margins` provides the margin computation; `#3 m2-cost-rollup-and-audit` provides the drill-down history; `#12 m2-ui-foundation` + `#13 m2-ui-backfill-wave1` provide the apps/web shell, ui-kit, MarginPanel + AllergenBadge + 5 backfill components, and the per-component file-layout contract.
+
+This slice **replaces** the J3 proof-of-concept screen at `/poc/owner-dashboard` (shipped by `#12` to validate the API → React → component chain) with the canonical owner dashboard at `/owner-dashboard`. The `/poc/...` route is removed from the router as part of this slice's housekeeping.
 
 ## Goals / Non-Goals
 
@@ -37,12 +39,15 @@ Journey 3 (Owner Sunday-night dashboard) is M2's killer-app for the Owner person
 Steps:
 1. DashboardService aggregates: `getTopBottomMenuItems(orgId, window, n=5)` queries margins from `#8`, sorts, returns top + bottom.
 2. Endpoints: `GET /dashboard/menu-items?window=7d&direction=top|bottom`, `GET /menu-items/:id/cost-history`, `GET /recipes/:id/staff-view`.
-3. UI: `MenuItemRanker` component in `packages/ui-kit/`; mobile-first layout; drill-down navigates to `/menu-items/:id`.
-4. Cache layer: in-memory cache with 60s TTL keyed on `(orgId, window)` — single Redis or in-process Map (M2 single-tenant scale is fine with in-process).
-5. Performance test: load with 200 MenuItems, ensure p95 <1s.
+3. UI: `MenuItemRanker` ships at `packages/ui-kit/src/components/MenuItemRanker/{tsx, stories, test, types, index}` per the file-layout convention from `#12`. Mobile-first layout; drill-down navigates to `/menu-items/:id`.
+4. apps/web hook `useDashboardMenuItems(orgId, window, direction)` + canonical route `/owner-dashboard` at `apps/web/src/screens/OwnerDashboardScreen.tsx`. The PoC route `/poc/owner-dashboard` is deleted from the router.
+5. Cache layer: in-process Map with 60s TTL keyed on `(orgId, window, direction)` — invalidated on the existing `SUPPLIER_PRICE_UPDATED` event from `#3`.
+6. Performance test: in-process synthetic test with 200 MenuItems, ensure p95 < 200 ms (matches `#8 getMargin` perf-spec pattern).
 
-Rollback: revert; `#8` remains; UI dashboard page can be feature-flagged off if needed.
+Rollback: revert; `#8` and `#12` remain. The `/owner-dashboard` route can be feature-flagged off if needed.
 
 ## Open Questions
 
-(none.)
+1. **Drill-down navigation target.** Tasks §3.3 says "tap-to-drill-down navigates to `/menu-items/:id`". That route does NOT exist yet — `#13`'s J2 stub at `/poc/cost-investigation-j2` is the closest analogue. Options: (a) ship a sibling read-only `/menu-items/:id` route in this slice that mounts CostDeltaTable; (b) drill-down opens an inline expandable section on the dashboard card (no route change); (c) defer drill-down beyond the card's basic `displayLabel + status` to a follow-up slice.
+2. **Mobile swipe gesture.** Existing tasks §3.1 says "swipeable on mobile". Genuine swipe (touch-action, react-spring or Embla Carousel) adds dependency weight; "stacked + scrollable" is simpler and matches Roberto's "glanceable, not interactive" mental model. Options: (a) ship genuine swipe; (b) ship stacked-scrollable.
+3. **Staff-view scope.** The proposal includes `GET /recipes/:id/staff-view` as part of this slice. That's RBAC + a new payload shape, separable from the dashboard. Options: (a) keep it bundled (current scope); (b) ship the dashboard alone, file staff-view as its own micro-slice.
