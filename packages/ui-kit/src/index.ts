@@ -32,3 +32,13 @@ export { MenuItemRanker } from './components/MenuItemRanker';
 export type { MenuItemRankerProps, DashboardMenuItem } from './components/MenuItemRanker';
 export { MacroPanel, MACRO_LABELS, PRIMARY_MACRO_KEYS } from './components/MacroPanel';
 export type { MacroPanelProps, MacroRollup } from './components/MacroPanel';
+export { LabelPreview, LABEL_PREVIEW_LOCALES } from './components/LabelPreview';
+export type {
+  LabelPreviewProps,
+  LabelPreviewLocale,
+  LabelApiError,
+  LabelMissingFieldsError,
+  LabelUnsupportedLocaleError,
+  LabelPrintAdapterNotConfiguredError,
+  LabelGenericApiError,
+} from './components/LabelPreview';
