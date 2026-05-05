@@ -4,6 +4,42 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryColumn, UpdateDateColum
 const ISO_4217 = /^[A-Z]{3}$/;
 const LOCALE_LOWER_2 = /^[a-z]{2}$/;
 
+export type OrganizationLabelPageSize = 'a4' | 'thermal-4x6' | 'thermal-50x80';
+
+export interface OrganizationLabelPostalAddress {
+  street: string;
+  city: string;
+  postalCode: string;
+  country: string;
+}
+
+export interface OrganizationLabelContactInfo {
+  email?: string;
+  phone?: string;
+}
+
+export interface OrganizationLabelPrintAdapter {
+  /** Adapter discriminator: 'ipp', 'phomemo-labelife', 'zebra-zpl', 'printnode-saas', etc. */
+  id: string;
+  /** Adapter-specific config (URL, queue, auth credentials). Validated by the adapter. */
+  config: Record<string, unknown>;
+}
+
+/**
+ * Org-level label config persisted as a single jsonb column. Matches the
+ * override convention used in #7 / #13 / #15. All fields optional at storage;
+ * Article 9 mandatory-field validation runs at render time and surfaces a
+ * structured error naming any missing fields.
+ */
+export interface OrganizationLabelFields {
+  businessName?: string;
+  contactInfo?: OrganizationLabelContactInfo;
+  postalAddress?: OrganizationLabelPostalAddress;
+  brandMarkUrl?: string;
+  pageSize?: OrganizationLabelPageSize;
+  printAdapter?: OrganizationLabelPrintAdapter;
+}
+
 export interface OrganizationCreateProps {
   name: string;
   currencyCode: string;
@@ -34,6 +70,9 @@ export class Organization {
 
   @Column({ type: 'varchar', length: 64 })
   timezone!: string;
+
+  @Column({ name: 'label_fields', type: 'jsonb', default: () => `'{}'::jsonb` })
+  labelFields: OrganizationLabelFields = {};
 
   @Column({ name: 'created_by', type: 'uuid', nullable: true })
   createdBy: string | null = null;

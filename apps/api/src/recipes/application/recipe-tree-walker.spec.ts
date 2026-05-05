@@ -2,11 +2,14 @@ import { EntityManager } from 'typeorm';
 import { Recipe } from '../domain/recipe.entity';
 import { RecipeIngredient } from '../domain/recipe-ingredient.entity';
 import {
+  FoldContext,
+  foldRecipeTree,
   LeafContext,
   RecipeTreeCycleError,
   RecipeTreeDepthLimitError,
   RecipeTreeRecipeNotFoundError,
   walkRecipeTree,
+  walkRecipeTreeLeaves,
 } from './recipe-tree-walker';
 
 const orgId = '11111111-1111-4111-8111-111111111111';
@@ -265,5 +268,227 @@ describe('walkRecipeTree', () => {
       visits.push(ctx.line.ingredientId!);
     });
     expect(visits).toEqual([i1, i1, i2]); // i1 (parent), i1 (sub), i2 (parent)
+  });
+
+  describe('onMissingSubRecipe option', () => {
+    it('throws when sub-recipe missing and option is "throw" (default)', async () => {
+      const em = makeFakeEm({
+        [r1]: {
+          recipe: makeRecipe(r1, 'Outer'),
+          lines: [makeSubRecipeLine('l1', r1, r2, 1)],
+        },
+        // r2 deliberately missing
+      });
+      await expect(
+        walkRecipeTreeLeaves(em, orgId, r1, () => undefined),
+      ).rejects.toBeInstanceOf(RecipeTreeRecipeNotFoundError);
+    });
+
+    it('skips missing sub-recipe when option is "skip"', async () => {
+      const em = makeFakeEm({
+        [r1]: {
+          recipe: makeRecipe(r1, 'Outer'),
+          lines: [
+            makeIngredientLine('l1', r1, i1, 100),
+            makeSubRecipeLine('l2', r1, r2, 1),
+          ],
+        },
+        // r2 deliberately missing
+      });
+      const visits: string[] = [];
+      await walkRecipeTreeLeaves(
+        em,
+        orgId,
+        r1,
+        (ctx) => {
+          if (ctx.line.ingredientId) visits.push(ctx.line.ingredientId);
+        },
+        { onMissingSubRecipe: 'skip' },
+      );
+      expect(visits).toEqual([i1]);
+    });
+
+    it('always throws when ROOT recipe missing regardless of option', async () => {
+      const em = makeFakeEm({});
+      await expect(
+        walkRecipeTreeLeaves(em, orgId, r1, () => undefined, {
+          onMissingSubRecipe: 'skip',
+        }),
+      ).rejects.toBeInstanceOf(RecipeTreeRecipeNotFoundError);
+    });
+  });
+});
+
+describe('foldRecipeTree', () => {
+  const r1 = '44444444-4444-4444-8444-444444444441';
+  const r2 = '44444444-4444-4444-8444-444444444442';
+  const r3 = '44444444-4444-4444-8444-444444444443';
+  const i1 = '55555555-5555-4555-8555-555555555551';
+  const i2 = '55555555-5555-4555-8555-555555555552';
+
+  it('throws RecipeTreeRecipeNotFoundError when root is missing', async () => {
+    const em = makeFakeEm({});
+    await expect(
+      foldRecipeTree<number>(em, orgId, r1, () => 0),
+    ).rejects.toBeInstanceOf(RecipeTreeRecipeNotFoundError);
+  });
+
+  it('folds a flat recipe — sums ingredient quantities', async () => {
+    const em = makeFakeEm({
+      [r1]: {
+        recipe: makeRecipe(r1, 'Pesto'),
+        lines: [
+          makeIngredientLine('l1', r1, i1, 50),
+          makeIngredientLine('l2', r1, i2, 30),
+        ],
+      },
+    });
+    const total = await foldRecipeTree<number>(
+      em,
+      orgId,
+      r1,
+      ({ lines }) => lines.reduce((s, l) => s + Number(l.quantity), 0),
+    );
+    expect(total).toBe(80);
+  });
+
+  it('aggregates sub-recipe results post-order via subResults', async () => {
+    const em = makeFakeEm({
+      [r1]: {
+        recipe: makeRecipe(r1, 'Outer'),
+        lines: [
+          makeIngredientLine('l1', r1, i1, 10),
+          makeSubRecipeLine('l2', r1, r2, 1),
+        ],
+      },
+      [r2]: {
+        recipe: makeRecipe(r2, 'Inner'),
+        lines: [makeIngredientLine('l3', r2, i2, 20)],
+      },
+    });
+    const total = await foldRecipeTree<number>(
+      em,
+      orgId,
+      r1,
+      ({ lines, subResults }) => {
+        const own = lines
+          .filter((l) => l.ingredientId)
+          .reduce((s, l) => s + Number(l.quantity), 0);
+        const subs = lines
+          .filter((l) => l.subRecipeId !== null)
+          .reduce((s, l) => s + (subResults.get(l.subRecipeId!) ?? 0), 0);
+        return own + subs;
+      },
+    );
+    expect(total).toBe(30); // 10 (own) + 20 (sub)
+  });
+
+  it('memoizes a sub-recipe referenced multiple times — fold called once per recipe', async () => {
+    const em = makeFakeEm({
+      [r1]: {
+        recipe: makeRecipe(r1, 'Outer'),
+        lines: [
+          makeSubRecipeLine('l1', r1, r2, 1),
+          makeSubRecipeLine('l2', r1, r2, 2), // same sub-recipe again with different qty
+        ],
+      },
+      [r2]: {
+        recipe: makeRecipe(r2, 'Inner'),
+        lines: [makeIngredientLine('l3', r2, i1, 100)],
+      },
+    });
+    const foldCalls: string[] = [];
+    await foldRecipeTree<number>(
+      em,
+      orgId,
+      r1,
+      ({ recipe }: FoldContext<number>) => {
+        foldCalls.push(recipe.id);
+        return 0;
+      },
+    );
+    // Inner should be called once even though referenced twice.
+    expect(foldCalls.filter((id) => id === r2)).toHaveLength(1);
+    expect(foldCalls.filter((id) => id === r1)).toHaveLength(1);
+  });
+
+  it('throws RecipeTreeCycleError on direct self-reference', async () => {
+    const em = makeFakeEm({
+      [r1]: {
+        recipe: makeRecipe(r1, 'Cycle'),
+        lines: [makeSubRecipeLine('l1', r1, r1, 1)],
+      },
+    });
+    await expect(
+      foldRecipeTree<number>(em, orgId, r1, () => 0),
+    ).rejects.toBeInstanceOf(RecipeTreeCycleError);
+  });
+
+  it('throws RecipeTreeDepthLimitError when depth exceeds cap', async () => {
+    const em = makeFakeEm({
+      [r1]: { recipe: makeRecipe(r1, 'A'), lines: [makeSubRecipeLine('l1', r1, r2, 1)] },
+      [r2]: { recipe: makeRecipe(r2, 'B'), lines: [makeSubRecipeLine('l2', r2, r3, 1)] },
+      [r3]: { recipe: makeRecipe(r3, 'C'), lines: [makeIngredientLine('l3', r3, i1, 50)] },
+    });
+    await expect(
+      foldRecipeTree<number>(em, orgId, r1, () => 0, { depthCap: 1 }),
+    ).rejects.toBeInstanceOf(RecipeTreeDepthLimitError);
+  });
+
+  it('skips missing sub-recipe with onMissingSubRecipe="skip" — subResults excludes the missing key', async () => {
+    const em = makeFakeEm({
+      [r1]: {
+        recipe: makeRecipe(r1, 'Outer'),
+        lines: [
+          makeIngredientLine('l1', r1, i1, 100),
+          makeSubRecipeLine('l2', r1, r2, 1),
+        ],
+      },
+      // r2 deliberately missing
+    });
+    const observed: number[] = [];
+    await foldRecipeTree<number>(
+      em,
+      orgId,
+      r1,
+      ({ subResults }) => {
+        observed.push(subResults.size);
+        return 0;
+      },
+      { onMissingSubRecipe: 'skip' },
+    );
+    expect(observed[0]).toBe(0);
+  });
+
+  it('throws on missing sub-recipe with default option', async () => {
+    const em = makeFakeEm({
+      [r1]: {
+        recipe: makeRecipe(r1, 'Outer'),
+        lines: [makeSubRecipeLine('l1', r1, r2, 1)],
+      },
+    });
+    await expect(
+      foldRecipeTree<number>(em, orgId, r1, () => 0),
+    ).rejects.toBeInstanceOf(RecipeTreeRecipeNotFoundError);
+  });
+
+  it('reports correct depth in fold context', async () => {
+    const em = makeFakeEm({
+      [r1]: {
+        recipe: makeRecipe(r1, 'A'),
+        lines: [makeSubRecipeLine('l1', r1, r2, 1)],
+      },
+      [r2]: {
+        recipe: makeRecipe(r2, 'B'),
+        lines: [makeIngredientLine('l2', r2, i1, 100)],
+      },
+    });
+    const depthsByRecipe = new Map<string, number>();
+    await foldRecipeTree<number>(em, orgId, r1, ({ recipe, depth }) => {
+      depthsByRecipe.set(recipe.id, depth);
+      return 0;
+    });
+    expect(depthsByRecipe.get(r1)).toBe(0);
+    expect(depthsByRecipe.get(r2)).toBe(1);
   });
 });

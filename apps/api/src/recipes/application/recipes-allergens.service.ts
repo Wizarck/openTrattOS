@@ -8,7 +8,7 @@ import {
 } from '../../cost/application/cost.events';
 import { Ingredient } from '../../ingredients/domain/ingredient.entity';
 import { AllergensOverride, DietFlagsOverride, Recipe } from '../domain/recipe.entity';
-import { RecipeIngredient } from '../domain/recipe-ingredient.entity';
+import { walkRecipeTreeLeaves } from './recipe-tree-walker';
 
 /**
  * Standard contradictions between a diet flag and an allergen, used by
@@ -327,9 +327,10 @@ export class RecipesAllergensService {
    * Ingredient entities. Leaves are only the actual `ingredientId`-bearing
    * lines; sub-recipes contribute their leaves (transitively), not themselves.
    *
-   * Cycle defence is belt-and-braces: the org-wide cycle-detector should
-   * already have rejected any recipe graph with a cycle, but the visited-set
-   * here mirrors `CostService.computeWithEm` so we fail loud rather than spin.
+   * Uses the shared `walkRecipeTreeLeaves` with `onMissingSubRecipe: 'skip'`
+   * to preserve the historical permissive behaviour for dangling sub-recipe
+   * references at depth > 0 (the cycle-detector + FK should already block
+   * these in practice).
    */
   private async collectLeafIngredients(
     em: EntityManager,
@@ -337,42 +338,17 @@ export class RecipesAllergensService {
     recipeId: string,
   ): Promise<Ingredient[]> {
     const ingredientIds = new Set<string>();
-    const visiting = new Set<string>();
-    await this.walk(em, organizationId, recipeId, visiting, ingredientIds);
+    await walkRecipeTreeLeaves(
+      em,
+      organizationId,
+      recipeId,
+      (ctx) => {
+        if (ctx.line.ingredientId) ingredientIds.add(ctx.line.ingredientId);
+      },
+      { onMissingSubRecipe: 'skip' },
+    );
     if (ingredientIds.size === 0) return [];
     return em.getRepository(Ingredient).findBy({ id: In([...ingredientIds]) });
-  }
-
-  private async walk(
-    em: EntityManager,
-    organizationId: string,
-    recipeId: string,
-    visiting: Set<string>,
-    out: Set<string>,
-  ): Promise<void> {
-    if (visiting.has(recipeId)) {
-      // Cycle defence belt-and-braces; cycle-detector should already have prevented this.
-      throw new Error(`RecipesAllergensService: cycle detected at recipe ${recipeId}`);
-    }
-    visiting.add(recipeId);
-    const lines = await em.getRepository(RecipeIngredient).findBy({ recipeId });
-    for (const line of lines) {
-      if (line.ingredientId) {
-        out.add(line.ingredientId);
-        continue;
-      }
-      if (line.subRecipeId) {
-        // Confirm the sub-recipe is in the same org; cross-tenant references
-        // shouldn't exist (FK + cycle-detector both gate this), but read with
-        // the filter for defence in depth.
-        const sub = await em
-          .getRepository(Recipe)
-          .findOneBy({ id: line.subRecipeId, organizationId });
-        if (!sub) continue;
-        await this.walk(em, organizationId, sub.id, visiting, out);
-      }
-    }
-    visiting.delete(recipeId);
   }
 
   private emitOverrideChanged(

@@ -1,19 +1,25 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   DietFlagsPanel,
   IngredientPicker,
+  LabelPreview,
   MacroPanel,
   RecipePicker,
   SourceOverridePicker,
   type IngredientListItem,
+  type LabelApiError,
+  type LabelPreviewLocale,
   type RecipeListItem,
 } from '@opentrattos/ui-kit';
+import { ApiError } from '../api/client';
 import { useRecipes } from '../hooks/useRecipes';
 import { useIngredients } from '../hooks/useIngredients';
 import { useSupplierItems } from '../hooks/useSupplierItems';
 import { useDietFlags, useDietFlagsOverride } from '../hooks/useDietFlags';
 import { useRecipeMacros } from '../hooks/useRecipeMacros';
+import { useLabelPreviewUrl } from '../hooks/useLabelPreview';
+import { useLabelPrint } from '../hooks/useLabelPrint';
 
 /**
  * J1 stub — exercises the 4 J1 components against the real backend.
@@ -38,6 +44,14 @@ export function RecipeBuilderJ1Screen() {
   const dietFlagsQuery = useDietFlags(orgId, recipeId);
   const overrideMutation = useDietFlagsOverride(orgId, recipeId);
   const macrosQuery = useRecipeMacros(orgId, recipeId);
+
+  const [labelLocale, setLabelLocale] = useState<LabelPreviewLocale>('es');
+  const labelUrl = useLabelPreviewUrl(orgId, recipeId, labelLocale);
+  const printMutation = useLabelPrint();
+  const labelError = useMemo<LabelApiError | null>(
+    () => extractLabelError(printMutation.error),
+    [printMutation.error],
+  );
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6 space-y-6">
@@ -129,6 +143,50 @@ export function RecipeBuilderJ1Screen() {
           />
         </section>
       )}
+
+      {recipeId && orgId && (
+        <section className="space-y-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-mute">
+            Label preview
+          </h2>
+          <LabelPreview
+            recipeId={recipeId}
+            locale={labelLocale}
+            onLocaleChange={setLabelLocale}
+            previewUrl={labelUrl}
+            onPrint={() => {
+              printMutation.mutate({
+                recipeId,
+                organizationId: orgId,
+                locale: labelLocale,
+              });
+            }}
+            onDownload={() => {
+              window.open(labelUrl, '_blank', 'noopener,noreferrer');
+            }}
+            error={labelError}
+            printing={printMutation.isPending}
+            printSuccessJobId={printMutation.data?.ok ? printMutation.data.jobId ?? null : null}
+          />
+        </section>
+      )}
     </div>
   );
+}
+
+function extractLabelError(err: unknown): LabelApiError | null {
+  if (!err) return null;
+  if (err instanceof ApiError) {
+    const body = err.body;
+    if (
+      body !== null &&
+      typeof body === 'object' &&
+      'code' in body &&
+      typeof (body as { code: unknown }).code === 'string'
+    ) {
+      return body as LabelApiError;
+    }
+    return { code: `HTTP_${err.status}` };
+  }
+  return { code: 'UNKNOWN' };
 }

@@ -7,6 +7,7 @@ import { convert } from '../../ingredients/domain/uom/convert';
 import { findUnit } from '../../ingredients/domain/uom/units';
 import { Recipe } from '../../recipes/domain/recipe.entity';
 import { RecipeIngredient } from '../../recipes/domain/recipe-ingredient.entity';
+import { foldRecipeTree } from '../../recipes/application/recipe-tree-walker';
 import {
   INVENTORY_COST_RESOLVER,
   InventoryCostResolver,
@@ -132,54 +133,40 @@ export class CostService {
     organizationId: string,
     recipeId: string,
   ): Promise<CostBreakdown> {
-    const recipe = await em.getRepository(Recipe).findOneBy({ id: recipeId, organizationId });
-    if (!recipe) throw new CostRecipeNotFoundError(recipeId);
+    const rootRecipe = await em.getRepository(Recipe).findOneBy({ id: recipeId, organizationId });
+    if (!rootRecipe) throw new CostRecipeNotFoundError(recipeId);
 
-    const cache = new Map<string, CostBreakdown>();
-    return this.walk(em, recipe, cache, new Set<string>(), organizationId);
+    return foldRecipeTree<CostBreakdown>(
+      em,
+      organizationId,
+      recipeId,
+      async ({ recipe, lines, subResults }) => this.foldNode(em, recipe, lines, subResults),
+      { onMissingSubRecipe: 'skip' },
+    );
   }
 
-  private async walk(
+  private async foldNode(
     em: EntityManager,
     recipe: Recipe,
-    cache: Map<string, CostBreakdown>,
-    visiting: Set<string>,
-    organizationId: string,
+    lines: RecipeIngredient[],
+    subResults: Map<string, CostBreakdown>,
   ): Promise<CostBreakdown> {
-    const cached = cache.get(recipe.id);
-    if (cached) return cached;
-    if (visiting.has(recipe.id)) {
-      // Cycle defence belt-and-braces; cycle-detector should already have prevented this.
-      throw new Error(`CostService: cycle detected at recipe ${recipe.id}`);
-    }
-    visiting.add(recipe.id);
-
-    const lines = await em.getRepository(RecipeIngredient).findBy({ recipeId: recipe.id });
     const ingredientIds = lines
       .map((l) => l.ingredientId)
       .filter((id): id is string => id !== null);
-    const subRecipeIds = lines
-      .map((l) => l.subRecipeId)
-      .filter((id): id is string => id !== null);
-
-    const [ingredients, subRecipes] = await Promise.all([
+    const ingredients =
       ingredientIds.length === 0
-        ? Promise.resolve<Ingredient[]>([])
-        : em.getRepository(Ingredient).findBy({ id: In(ingredientIds) }),
-      subRecipeIds.length === 0
-        ? Promise.resolve<Recipe[]>([])
-        : em.getRepository(Recipe).findBy({ id: In(subRecipeIds), organizationId }),
-    ]);
+        ? []
+        : await em.getRepository(Ingredient).findBy({ id: In(ingredientIds) });
     const ingredientById = new Map(ingredients.map((i) => [i.id, i]));
-    const subRecipeById = new Map(subRecipes.map((r) => [r.id, r]));
 
+    const wasteEff = Number(recipe.wasteFactor);
     const components: CostBreakdownComponent[] = [];
     let runningTotal = 0;
     let currency: string | null = null;
 
     for (const line of lines) {
-      const yieldEff = line.yieldPercentOverride ?? 1;
-      const wasteEff = Number(recipe.wasteFactor);
+      const yieldEff = Number(line.yieldPercentOverride ?? 1);
 
       if (line.ingredientId) {
         const ingredient = ingredientById.get(line.ingredientId);
@@ -234,14 +221,14 @@ export class CostService {
       }
 
       if (line.subRecipeId) {
-        const sub = subRecipeById.get(line.subRecipeId);
-        if (!sub) {
+        const subBreakdown = subResults.get(line.subRecipeId);
+        if (!subBreakdown) {
+          // Missing or skipped sub-recipe (cycle-detector + FK should normally prevent this).
           components.push(
             this.unresolvedComponent(line, 'sub-recipe', line.subRecipeId, '<missing>', yieldEff, wasteEff),
           );
           continue;
         }
-        const subBreakdown = await this.walk(em, sub, cache, visiting, organizationId);
         if (currency === null) currency = subBreakdown.currency;
         const lineCost = round4(
           subBreakdown.totalCost * Number(line.quantity) * yieldEff * (1 - wasteEff),
@@ -249,16 +236,16 @@ export class CostService {
         components.push({
           recipeIngredientId: line.id,
           componentKind: 'sub-recipe',
-          componentId: sub.id,
-          componentName: sub.name,
+          componentId: subBreakdown.recipeId,
+          componentName: subBreakdown.recipeName,
           quantity: Number(line.quantity),
           unitId: line.unitId,
           costPerBaseUnit: 0,
           yield: yieldEff,
           wasteFactor: wasteEff,
           lineCost,
-          sourceRefId: sub.id,
-          sourceLabel: sub.name,
+          sourceRefId: subBreakdown.recipeId,
+          sourceLabel: subBreakdown.recipeName,
           unresolved: false,
         });
         runningTotal += lineCost;
@@ -273,7 +260,7 @@ export class CostService {
       );
     }
 
-    const breakdown: CostBreakdown = {
+    return {
       recipeId: recipe.id,
       recipeName: recipe.name,
       totalCost,
@@ -281,9 +268,6 @@ export class CostService {
       components,
       roundingDelta,
     };
-    cache.set(recipe.id, breakdown);
-    visiting.delete(recipe.id);
-    return breakdown;
   }
 
   private unresolvedComponent(
