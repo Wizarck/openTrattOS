@@ -494,6 +494,11 @@ export class CostService {
       // Audit-log channel: ONE envelope per rebuild carrying the full breakdown.
       // Per ADR-AUDIT-WRITER + ADR-COST-PAYLOAD, audit goes through the bus;
       // the subscriber persists the envelope to audit_log atomically.
+      //
+      // We use `emitAsync` (not `emit`) so the subscriber's audit_log write
+      // completes before recordSnapshot returns. This guarantees read-after-
+      // write consistency for downstream callers (e.g. computeCostDelta
+      // running immediately after a series of recordSnapshot calls).
       const auditEnvelope: AuditEventEnvelope = {
         organizationId,
         aggregateType: 'recipe',
@@ -511,7 +516,7 @@ export class CostService {
           })),
         },
       };
-      this.events.emit(AuditEventType.RECIPE_COST_REBUILT, auditEnvelope);
+      await this.events.emitAsync(AuditEventType.RECIPE_COST_REBUILT, auditEnvelope);
 
       return breakdown;
     });
