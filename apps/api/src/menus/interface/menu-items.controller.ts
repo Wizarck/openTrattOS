@@ -155,7 +155,7 @@ export class MenuItemsController {
         view.menuItem.recipeId,
         Number(view.menuItem.sellingPrice),
         Number(view.menuItem.targetMargin),
-        history.map(CostHistoryRowDto.fromEntity),
+        history.map(CostHistoryRowDto.fromAuditUnpack),
       );
     } catch (err) {
       if (err instanceof CostRecipeNotFoundError) {

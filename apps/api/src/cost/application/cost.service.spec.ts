@@ -3,9 +3,9 @@ import { DataSource } from 'typeorm';
 import { Ingredient } from '../../ingredients/domain/ingredient.entity';
 import { Recipe } from '../../recipes/domain/recipe.entity';
 import { RecipeIngredient } from '../../recipes/domain/recipe-ingredient.entity';
+import type { AuditLogService } from '../../audit-log/application/audit-log.service';
 import { CostRecipeNotFoundError, CostService } from './cost.service';
 import { InventoryCostResolver, ResolvedCost } from '../inventory-cost-resolver';
-import { RecipeCostHistoryRepository } from '../infrastructure/recipe-cost-history.repository';
 
 const orgId = '11111111-1111-4111-8111-111111111111';
 const categoryId = '22222222-2222-4222-8222-222222222222';
@@ -108,12 +108,12 @@ function buildService(opts: {
     getRepository: (entity: unknown) => opts.manager.getRepository(entity),
     transaction: async <T>(fn: (em: typeof opts.manager) => Promise<T>) => fn(opts.manager),
   } as unknown as DataSource;
-  const history = {
-    findInWindow: jest.fn(async () => []),
-    findLatestForRecipe: jest.fn(async () => []),
-  } as unknown as RecipeCostHistoryRepository;
+  const auditLog = {
+    record: jest.fn(async () => undefined),
+    query: jest.fn(async () => ({ rows: [], total: 0, limit: 200, offset: 0 })),
+  } as unknown as AuditLogService;
   const events = new EventEmitter2();
-  return new CostService(ds, opts.resolver, history, events);
+  return new CostService(ds, opts.resolver, auditLog, events);
 }
 
 describe('CostService.computeRecipeCost', () => {
