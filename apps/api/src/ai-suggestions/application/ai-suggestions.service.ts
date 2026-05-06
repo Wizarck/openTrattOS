@@ -1,6 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, LessThanOrEqual, MoreThan } from 'typeorm';
+import {
+  AuditEventEnvelope,
+  AuditEventType,
+} from '../../audit-log/application/types';
 import { AiSuggestion } from '../domain/ai-suggestion.entity';
 import {
   AI_SUGGESTION_PROVIDER,
@@ -53,6 +58,7 @@ export class AiSuggestionsService {
     @InjectDataSource() private readonly dataSource: DataSource,
     @Inject(AI_SUGGESTION_PROVIDER) private readonly provider: AiSuggestionProvider,
     @Inject(AI_YIELD_SUGGESTIONS_ENABLED) private readonly enabled: boolean,
+    private readonly events: EventEmitter2,
   ) {}
 
   /**
@@ -134,7 +140,7 @@ export class AiSuggestionsService {
     ) {
       throw new AiSuggestionTweakValueError();
     }
-    return this.dataSource.transaction(async (em) => {
+    const accepted = await this.dataSource.transaction(async (em) => {
       const repo = em.getRepository(AiSuggestion);
       const row = await repo.findOneBy({
         id: args.suggestionId,
@@ -150,6 +156,26 @@ export class AiSuggestionsService {
       row.actedAt = new Date();
       return repo.save(row);
     });
+
+    const envelope: AuditEventEnvelope = {
+      organizationId: accepted.organizationId,
+      aggregateType: 'ai_suggestion',
+      aggregateId: accepted.id,
+      actorUserId: args.userId,
+      actorKind: 'user',
+      payloadAfter: {
+        status: accepted.status,
+        suggestedValue: Number(accepted.suggestedValue),
+        acceptedValue:
+          accepted.acceptedValue === null ? null : Number(accepted.acceptedValue),
+        modelName: accepted.modelName,
+        modelVersion: accepted.modelVersion,
+      },
+      citationUrl: accepted.citationUrl,
+      snippet: accepted.snippet,
+    };
+    this.events.emit(AuditEventType.AI_SUGGESTION_ACCEPTED, envelope);
+    return accepted;
   }
 
   async rejectSuggestion(args: RejectArgs): Promise<AiSuggestion> {
@@ -157,7 +183,7 @@ export class AiSuggestionsService {
     if (typeof args.reason !== 'string' || args.reason.trim().length < MIN_REJECT_REASON_LENGTH) {
       throw new AiSuggestionRejectReasonError(MIN_REJECT_REASON_LENGTH);
     }
-    return this.dataSource.transaction(async (em) => {
+    const rejected = await this.dataSource.transaction(async (em) => {
       const repo = em.getRepository(AiSuggestion);
       const row = await repo.findOneBy({
         id: args.suggestionId,
@@ -173,6 +199,25 @@ export class AiSuggestionsService {
       row.actedAt = new Date();
       return repo.save(row);
     });
+
+    const envelope: AuditEventEnvelope = {
+      organizationId: rejected.organizationId,
+      aggregateType: 'ai_suggestion',
+      aggregateId: rejected.id,
+      actorUserId: args.userId,
+      actorKind: 'user',
+      payloadAfter: {
+        status: rejected.status,
+        suggestedValue: Number(rejected.suggestedValue),
+        modelName: rejected.modelName,
+        modelVersion: rejected.modelVersion,
+      },
+      reason: rejected.rejectedReason ?? undefined,
+      citationUrl: rejected.citationUrl,
+      snippet: rejected.snippet,
+    };
+    this.events.emit(AuditEventType.AI_SUGGESTION_REJECTED, envelope);
+    return rejected;
   }
 
   // ----------------------------- internal -----------------------------

@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AiSuggestionsModule } from './ai-suggestions/ai-suggestions.module';
+import { AuditLogModule } from './audit-log/audit-log.module';
 import { CostModule } from './cost/cost.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ExternalCatalogModule } from './external-catalog/external-catalog.module';
@@ -42,6 +43,9 @@ import { AgentAuditMiddleware } from './shared/middleware/agent-audit.middleware
 
     // M2 AI yield + waste suggestions (m2-ai-yield-suggestions — provider + iron-rule guard + chef override).
     AiSuggestionsModule,
+
+    // M2 canonical audit log (m2-audit-log — single audit_log table; @OnEvent subscriber across BCs).
+    AuditLogModule,
 
     // Future Bounded Contexts:
     // HaccpModule,       // M3 — HACCP / APPCC
