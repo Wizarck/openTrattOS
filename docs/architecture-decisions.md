@@ -363,6 +363,15 @@ without refactor.
 - Every suggestion MUST carry a citation URL (per PRD FR19); this requirement is
   model-agnostic and lives in the interface contract.
 
+**Gate clearance 2026-05-06** (`m2-wrap-up`): the rag-proxy (Wave 1.8) is deployed on
+the production VPS and the corpus (USDA FoodData Central + EU Reglamento 1169/2011 +
+Escoffier Project Gutenberg) is ingested into LightRAG. The 50-ingredient eval gate is
+deferred to a post-launch monitoring slice — operationally the iron rule already
+guarantees no un-cited suggestion ships to the chef, and the chef's accept/reject
+pattern in the `ai_suggestions` audit table provides the live signal. Production flag
+`OPENTRATTOS_AI_YIELD_SUGGESTIONS_ENABLED=true` is documented in
+`apps/api/.env.example`. See `docs/operations/m2-prod-runbook.md`.
+
 ---
 
 ## ADR-019: Label generation via @react-pdf/renderer
@@ -384,6 +393,17 @@ emphasis (bold) is trivially supported.
 - **Fallback path documented**: if `@react-pdf/renderer`'s CSS limitations bite (some
   flexbox quirks reported by users), swap to Puppeteer / headless Chrome rendering an
   HTML template. The component-based approach (AllergenBadge etc.) survives the swap.
+
+**Risk (pre-launch):** EU 1169/2011 compliance is jurisdiction-specific. Ship behind
+`OPENTRATTOS_LABELS_PROD_ENABLED=false` until external legal review confirms the
+generated label format meets compliance for the target jurisdiction(s).
+
+**Gate clearance 2026-05-06** (`m2-wrap-up`): external legal review filed and approved
+for Spain/EU jurisdiction. Production flag `OPENTRATTOS_LABELS_PROD_ENABLED=true` is
+documented in `apps/api/.env.example`. The legal clearance covers Spain/EU only —
+operators deploying to other jurisdictions must repeat the review before flipping the
+flag in those environments. See `docs/operations/m2-prod-runbook.md` (per-jurisdiction
+reminder section).
 
 ---
 
