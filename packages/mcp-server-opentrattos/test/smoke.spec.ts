@@ -1,14 +1,15 @@
 import { buildServer } from '../src/index.js';
 
 /**
- * End-to-end smoke for the m2-mcp-server slice (read-only first).
+ * End-to-end smoke for the m2-mcp-server slice (read-only first; extended by
+ * m2-mcp-write-capabilities Wave 1.13 with 43 write tools).
  *
  * This spec does NOT spin up a real stdio transport — that requires fork-ed
  * child processes and a flaky CI surface. Instead it exercises:
  *
  *   1. `buildServer(...)` wires every capability descriptor without throwing.
- *   2. The returned `McpServer` instance reports our 6 tools via the
- *      official `listTools` JSON-RPC handler.
+ *   2. The returned `McpServer` instance reports the 6 read tools + the 43
+ *      write tools (= 49) via the official tool registry.
  *   3. A single read-flow (`recipes.read`) routes through the
  *      `OpenTrattosRestClient` against a mocked fetch, returning the body
  *      under the MCP content envelope.
@@ -55,16 +56,24 @@ describe('m2-mcp-server smoke', () => {
     const registered = (
       server as unknown as { _registeredTools: Record<string, unknown> }
     )._registeredTools;
-    expect(Object.keys(registered).sort()).toEqual(
-      [
-        'ingredients.read',
-        'ingredients.search',
-        'menu-items.list',
-        'menu-items.read',
-        'recipes.list',
-        'recipes.read',
-      ].sort(),
-    );
+    const registeredKeys = Object.keys(registered).sort();
+    // 6 read capabilities (Wave 1.5) + 43 write capabilities (Wave 1.13) = 49.
+    expect(registeredKeys).toHaveLength(49);
+    // Spot-check that the read surface is present alongside the writes.
+    for (const expected of [
+      'ingredients.read',
+      'ingredients.search',
+      'menu-items.list',
+      'menu-items.read',
+      'recipes.list',
+      'recipes.read',
+      'recipes.create',
+      'recipes.update',
+      'iam.users.create',
+      'external-catalog.sync',
+    ]) {
+      expect(registeredKeys).toContain(expected);
+    }
 
     // Drive a read flow end-to-end via the captured handler. The SDK
     // stores a `handler(args, extra)` callable on each registered tool.
