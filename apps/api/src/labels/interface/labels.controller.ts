@@ -14,7 +14,12 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
+import { AuditAggregate } from '../../shared/decorators/audit-aggregate.decorator';
 import { Roles } from '../../shared/decorators/roles.decorator';
+import {
+  WriteResponseDto,
+  toWriteResponse,
+} from '../../shared/dto/write-response.dto';
 import { LabelsService } from '../application/labels.service';
 import {
   LabelOrganizationNotFoundError,
@@ -57,6 +62,7 @@ export class LabelsController {
   @Post(':id/print')
   @HttpCode(200)
   @Roles('OWNER', 'MANAGER', 'STAFF')
+  @AuditAggregate('recipe')
   @ApiOperation({
     summary: 'Dispatch the rendered label to the configured print adapter',
     description:
@@ -65,7 +71,7 @@ export class LabelsController {
   async printLabel(
     @Param('id', new ParseUUIDPipe({ version: '4' })) recipeId: string,
     @Body() dto: PrintLabelDto,
-  ): Promise<PrintLabelResponseDto> {
+  ): Promise<WriteResponseDto<PrintLabelResponseDto>> {
     try {
       const result = await this.labels.printLabel(dto.organizationId, recipeId, {
         locale: dto.locale,
@@ -81,7 +87,7 @@ export class LabelsController {
       const response = new PrintLabelResponseDto();
       response.ok = true;
       response.jobId = result.jobId;
-      return response;
+      return toWriteResponse(response);
     } catch (err) {
       this.translateAndThrow(err);
     }

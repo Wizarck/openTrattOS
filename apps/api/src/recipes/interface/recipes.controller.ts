@@ -5,7 +5,6 @@ import {
   Controller,
   Delete,
   Get,
-  HttpCode,
   NotFoundException,
   Param,
   ParseUUIDPipe,
@@ -14,7 +13,12 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AuditAggregate } from '../../shared/decorators/audit-aggregate.decorator';
 import { Roles } from '../../shared/decorators/roles.decorator';
+import {
+  WriteResponseDto,
+  toWriteResponse,
+} from '../../shared/dto/write-response.dto';
 import {
   CycleDetectedError,
   CycleHit,
@@ -47,13 +51,16 @@ export class RecipesController {
 
   @Post()
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('recipe', null)
   @ApiOperation({
     summary: 'Create a new Recipe with composition lines',
     description:
       'Validates lines + runs cycle detection (depth cap 10 per NFR Scalability) ' +
       'before persisting. Returns 422 with the cycle path on detection.',
   })
-  async create(@Body() dto: CreateRecipeDto): Promise<RecipeResponseDto> {
+  async create(
+    @Body() dto: CreateRecipeDto,
+  ): Promise<WriteResponseDto<RecipeResponseDto>> {
     try {
       const result = await this.service.create({
         organizationId: dto.organizationId,
@@ -63,7 +70,9 @@ export class RecipesController {
         wasteFactor: dto.wasteFactor,
         lines: dto.lines,
       });
-      return RecipeResponseDto.fromEntity(result.recipe, result.lines, result.displayLabel ?? result.recipe.name);
+      return toWriteResponse(
+        RecipeResponseDto.fromEntity(result.recipe, result.lines, result.displayLabel ?? result.recipe.name),
+      );
     } catch (err) {
       throw this.translate(err);
     }
@@ -125,6 +134,7 @@ export class RecipesController {
 
   @Put(':id')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('recipe')
   @ApiOperation({
     summary: 'Update a Recipe (renames + replaces lines + re-runs cycle detection)',
   })
@@ -132,13 +142,15 @@ export class RecipesController {
     @Query('organizationId', new ParseUUIDPipe({ version: '4' })) organizationId: string,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: UpdateRecipeDto,
-  ): Promise<RecipeResponseDto> {
+  ): Promise<WriteResponseDto<RecipeResponseDto>> {
     try {
       const result = await this.service.update(organizationId, id, dto);
-      return RecipeResponseDto.fromEntity(
-        result.recipe,
-        result.lines,
-        result.displayLabel ?? result.recipe.name,
+      return toWriteResponse(
+        RecipeResponseDto.fromEntity(
+          result.recipe,
+          result.lines,
+          result.displayLabel ?? result.recipe.name,
+        ),
       );
     } catch (err) {
       throw this.translate(err);
@@ -147,6 +159,7 @@ export class RecipesController {
 
   @Put(':id/lines/:lineId/source')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('recipe')
   @ApiOperation({
     summary: 'Override the cost source for a single RecipeIngredient line',
     description:
@@ -157,7 +170,7 @@ export class RecipesController {
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Param('lineId', new ParseUUIDPipe({ version: '4' })) lineId: string,
     @Body() dto: UpdateLineSourceDto,
-  ): Promise<RecipeLineResponseDto> {
+  ): Promise<WriteResponseDto<RecipeLineResponseDto>> {
     try {
       const line = await this.service.updateLineSource(
         organizationId,
@@ -165,7 +178,7 @@ export class RecipesController {
         lineId,
         dto.sourceOverrideRef ?? null,
       );
-      return RecipeLineResponseDto.fromEntity(line);
+      return toWriteResponse(RecipeLineResponseDto.fromEntity(line));
     } catch (err) {
       throw this.translate(err);
     }
@@ -173,19 +186,21 @@ export class RecipesController {
 
   @Delete(':id')
   @Roles('OWNER', 'MANAGER')
-  @HttpCode(204)
+  @AuditAggregate('recipe')
   @ApiOperation({
     summary: 'Soft-delete a Recipe (sets isActive=false)',
     description:
+      'Returns 200 with `{data:{id}, missingFields:[], nextRequired:null}` per the m2-mcp-server spec contract. ' +
       'Returns 409 if the Recipe is referenced by an active MenuItem; the controller surfaces ' +
       'the offending MenuItem labels so the chef can deactivate them first.',
   })
   async deactivate(
     @Query('organizationId', new ParseUUIDPipe({ version: '4' })) organizationId: string,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
-  ): Promise<void> {
+  ): Promise<WriteResponseDto<{ id: string }>> {
     try {
       await this.service.softDelete(organizationId, id);
+      return toWriteResponse({ id });
     } catch (err) {
       throw this.translate(err);
     }

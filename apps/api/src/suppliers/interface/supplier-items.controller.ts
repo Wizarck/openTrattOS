@@ -4,7 +4,6 @@ import {
   Controller,
   Delete,
   Get,
-  HttpCode,
   NotFoundException,
   Param,
   ParseUUIDPipe,
@@ -15,7 +14,12 @@ import {
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { QueryFailedError } from 'typeorm';
+import { AuditAggregate } from '../../shared/decorators/audit-aggregate.decorator';
 import { Roles } from '../../shared/decorators/roles.decorator';
+import {
+  WriteResponseDto,
+  toWriteResponse,
+} from '../../shared/dto/write-response.dto';
 import {
   SUPPLIER_PRICE_UPDATED,
   SupplierPriceUpdatedEvent,
@@ -50,12 +54,15 @@ export class SupplierItemsController {
 
   @Post()
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('supplier_item', null)
   @ApiOperation({
     summary: 'Create a supplier item (computes costPerBaseUnit on save)',
     description:
       'purchaseUnitType family must match the ingredient baseUnitType — kg only for WEIGHT, L only for VOLUME, pcs/dozen/box only for UNIT.',
   })
-  async create(@Body() dto: CreateSupplierItemDto): Promise<SupplierItemResponseDto> {
+  async create(
+    @Body() dto: CreateSupplierItemDto,
+  ): Promise<WriteResponseDto<SupplierItemResponseDto>> {
     const ingredient = await this.ingredients.findOneBy({ id: dto.ingredientId });
     if (!ingredient) throw new NotFoundException({ code: 'INGREDIENT_NOT_FOUND' });
 
@@ -77,7 +84,7 @@ export class SupplierItemsController {
         ingredientId: saved.ingredientId,
         organizationId: ingredient.organizationId,
       } satisfies SupplierPriceUpdatedEvent);
-      return SupplierItemResponseDto.fromEntity(saved);
+      return toWriteResponse(SupplierItemResponseDto.fromEntity(saved));
     } catch (err) {
       if (
         err instanceof QueryFailedError &&
@@ -91,11 +98,12 @@ export class SupplierItemsController {
 
   @Patch(':id')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('supplier_item')
   @ApiOperation({ summary: 'Update a supplier item (recomputes costPerBaseUnit)' })
   async update(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: UpdateSupplierItemDto,
-  ): Promise<SupplierItemResponseDto> {
+  ): Promise<WriteResponseDto<SupplierItemResponseDto>> {
     const si = await this.supplierItems.findOneBy({ id });
     if (!si) throw new NotFoundException({ code: 'SUPPLIER_ITEM_NOT_FOUND' });
     si.applyUpdate(dto);
@@ -111,17 +119,18 @@ export class SupplierItemsController {
         organizationId: ingredient.organizationId,
       } satisfies SupplierPriceUpdatedEvent);
     }
-    return SupplierItemResponseDto.fromEntity(saved);
+    return toWriteResponse(SupplierItemResponseDto.fromEntity(saved));
   }
 
   @Post(':id/promote-preferred')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('supplier_item')
   @ApiOperation({
     summary: 'Promote this supplier item to preferred (atomically demotes the previous preferred)',
   })
   async promotePreferred(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
-  ): Promise<SupplierItemResponseDto> {
+  ): Promise<WriteResponseDto<SupplierItemResponseDto>> {
     const si = await this.supplierItems.promoteToPreferred(id);
     const ingredient = await this.ingredients.findOneBy({ id: si.ingredientId });
     if (ingredient) {
@@ -131,17 +140,20 @@ export class SupplierItemsController {
         organizationId: ingredient.organizationId,
       } satisfies SupplierPriceUpdatedEvent);
     }
-    return SupplierItemResponseDto.fromEntity(si);
+    return toWriteResponse(SupplierItemResponseDto.fromEntity(si));
   }
 
   @Delete(':id')
   @Roles('OWNER', 'MANAGER')
-  @HttpCode(204)
+  @AuditAggregate('supplier_item')
   @ApiOperation({ summary: 'Delete a supplier item (hard delete; supplier-cost lookup loses this row)' })
-  async remove(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string): Promise<void> {
+  async remove(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ): Promise<WriteResponseDto<{ id: string }>> {
     const result = await this.supplierItems.delete({ id });
     if ((result.affected ?? 0) === 0) {
       throw new NotFoundException({ code: 'SUPPLIER_ITEM_NOT_FOUND' });
     }
+    return toWriteResponse({ id });
   }
 }

@@ -12,7 +12,12 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AuditAggregate } from '../../shared/decorators/audit-aggregate.decorator';
 import { Roles } from '../../shared/decorators/roles.decorator';
+import {
+  WriteResponseDto,
+  toWriteResponse,
+} from '../../shared/dto/write-response.dto';
 import {
   AcceptSuggestionDto,
   AiSuggestionResponseDto,
@@ -59,12 +64,15 @@ export class AiSuggestionsController {
 
   @Post('yield')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('ai_suggestion', null)
   @ApiOperation({
     summary: 'Request an AI suggestion for an Ingredient yield% (FR16)',
     description:
       'Cache lookup → provider call → iron-rule guard → persist row. When the provider cannot cite, returns `{ suggestion: null, reason: "no_citation_available" }`. 404 when feature flag disabled.',
   })
-  async suggestYield(@Body() dto: SuggestYieldDto): Promise<SuggestionEnvelopeDto> {
+  async suggestYield(
+    @Body() dto: SuggestYieldDto,
+  ): Promise<WriteResponseDto<SuggestionEnvelopeDto>> {
     this.assertFlagEnabled();
     try {
       const row = await this.service.suggestYield({
@@ -72,10 +80,10 @@ export class AiSuggestionsController {
         ingredientId: dto.ingredientId,
         contextHash: dto.contextHash,
       });
-      return {
+      return toWriteResponse({
         suggestion: row ? AiSuggestionResponseDto.fromEntity(row) : null,
         reason: row ? undefined : 'no_citation_available',
-      };
+      });
     } catch (err) {
       this.translateAndThrow(err);
     }
@@ -83,10 +91,13 @@ export class AiSuggestionsController {
 
   @Post('waste')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('ai_suggestion', null)
   @ApiOperation({
     summary: 'Request an AI suggestion for a Recipe wasteFactor (FR17)',
   })
-  async suggestWaste(@Body() dto: SuggestWasteDto): Promise<SuggestionEnvelopeDto> {
+  async suggestWaste(
+    @Body() dto: SuggestWasteDto,
+  ): Promise<WriteResponseDto<SuggestionEnvelopeDto>> {
     this.assertFlagEnabled();
     try {
       const row = await this.service.suggestWaste({
@@ -94,10 +105,10 @@ export class AiSuggestionsController {
         recipeId: dto.recipeId,
         contextHash: dto.contextHash,
       });
-      return {
+      return toWriteResponse({
         suggestion: row ? AiSuggestionResponseDto.fromEntity(row) : null,
         reason: row ? undefined : 'no_citation_available',
-      };
+      });
     } catch (err) {
       this.translateAndThrow(err);
     }
@@ -106,6 +117,7 @@ export class AiSuggestionsController {
   @Post(':id/accept')
   @HttpCode(200)
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('ai_suggestion')
   @ApiOperation({
     summary: 'Accept (or accept-then-tweak) a previously-issued suggestion (FR18)',
     description:
@@ -114,7 +126,7 @@ export class AiSuggestionsController {
   async accept(
     @Param('id', new ParseUUIDPipe({ version: '4' })) suggestionId: string,
     @Body() dto: AcceptSuggestionDto,
-  ): Promise<AiSuggestionResponseDto> {
+  ): Promise<WriteResponseDto<AiSuggestionResponseDto>> {
     this.assertFlagEnabled();
     try {
       const row = await this.service.acceptSuggestion({
@@ -123,7 +135,7 @@ export class AiSuggestionsController {
         suggestionId,
         valueOverride: dto.value,
       });
-      return AiSuggestionResponseDto.fromEntity(row);
+      return toWriteResponse(AiSuggestionResponseDto.fromEntity(row));
     } catch (err) {
       this.translateAndThrow(err);
     }
@@ -132,13 +144,14 @@ export class AiSuggestionsController {
   @Post(':id/reject')
   @HttpCode(200)
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('ai_suggestion')
   @ApiOperation({
     summary: 'Reject a previously-issued suggestion with audited reason (FR18)',
   })
   async reject(
     @Param('id', new ParseUUIDPipe({ version: '4' })) suggestionId: string,
     @Body() dto: RejectSuggestionDto,
-  ): Promise<AiSuggestionResponseDto> {
+  ): Promise<WriteResponseDto<AiSuggestionResponseDto>> {
     this.assertFlagEnabled();
     try {
       const row = await this.service.rejectSuggestion({
@@ -147,7 +160,7 @@ export class AiSuggestionsController {
         suggestionId,
         reason: dto.reason,
       });
-      return AiSuggestionResponseDto.fromEntity(row);
+      return toWriteResponse(AiSuggestionResponseDto.fromEntity(row));
     } catch (err) {
       this.translateAndThrow(err);
     }

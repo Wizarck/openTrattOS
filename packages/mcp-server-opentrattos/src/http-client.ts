@@ -1,7 +1,7 @@
 /**
  * Minimal fetch-based HTTP client used by every capability descriptor.
  *
- * Design notes (m2-mcp-server, design.md):
+ * Design notes (m2-mcp-server, design.md; extended by m2-mcp-write-capabilities):
  * - Uses the global `fetch` implementation. On Node 20+ this is undici, which
  *   keeps a per-origin keep-alive pool by default — connection pooling for
  *   the typical single-API deployment is therefore zero-config.
@@ -11,9 +11,14 @@
  * - Optional `X-Agent-Capability` header carries the MCP capability name
  *   (e.g. `recipes.read`) so the audit-log listener can attribute the
  *   exact descriptor that fired.
+ * - Optional `Idempotency-Key` header is forwarded for write capabilities
+ *   when the agent supplies one. The apps/api IdempotencyMiddleware
+ *   deduplicates `(orgId, key)` and replays a cached response on retries.
  * - Non-2xx responses surface as a typed `RestApiError` (status + body).
  *   Capability descriptors decide whether to translate to MCP error codes.
  */
+
+export type RestHttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export interface RestClientConfig {
   /** Base URL of `apps/api/` (e.g. `http://localhost:3000`). No trailing slash. */
@@ -30,13 +35,24 @@ export interface RestClientConfig {
 }
 
 export interface RestRequestOptions {
-  method?: 'GET';
+  method?: RestHttpMethod;
   /** MCP capability descriptor name (e.g. `recipes.read`). Forwarded as `X-Agent-Capability`. */
   capabilityName: string;
   /** Path under `baseUrl` — MUST start with `/`. */
   path: string;
   /** Optional query params. Values are coerced to string; undefined entries are skipped. */
   query?: Record<string, string | number | undefined>;
+  /**
+   * Optional JSON body. Serialised as `application/json` for non-GET methods.
+   * GET requests with a body are silently dropped — matches REST conventions.
+   */
+  body?: unknown;
+  /**
+   * Optional Idempotency-Key forwarded as the `Idempotency-Key` HTTP header.
+   * Apps/api's IdempotencyMiddleware deduplicates `(organizationId, key)` and
+   * replays cached responses. Only meaningful for write methods.
+   */
+  idempotencyKey?: string;
 }
 
 export class RestApiError extends Error {
@@ -86,7 +102,7 @@ export class OpenTrattosRestClient {
   }
 
   async request<T>(opts: RestRequestOptions): Promise<T> {
-    const method = opts.method ?? 'GET';
+    const method: RestHttpMethod = opts.method ?? 'GET';
     const url =
       this.baseUrl + opts.path + buildQueryString(opts.query);
 
@@ -99,8 +115,17 @@ export class OpenTrattosRestClient {
     if (this.authToken) {
       headers['Authorization'] = `Bearer ${this.authToken}`;
     }
+    if (opts.idempotencyKey) {
+      headers['Idempotency-Key'] = opts.idempotencyKey;
+    }
 
-    const response = await this.fetchImpl(url, { method, headers });
+    const init: RequestInit = { method, headers };
+    if (method !== 'GET' && opts.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+      init.body = JSON.stringify(opts.body);
+    }
+
+    const response = await this.fetchImpl(url, init);
 
     let parsedBody: unknown = undefined;
     const contentType = response.headers.get('content-type') ?? '';

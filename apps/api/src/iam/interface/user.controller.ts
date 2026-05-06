@@ -5,7 +5,6 @@ import {
   Controller,
   Delete,
   Get,
-  HttpCode,
   NotFoundException,
   Param,
   ParseUUIDPipe,
@@ -15,7 +14,12 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import * as bcrypt from 'bcrypt';
+import { AuditAggregate } from '../../shared/decorators/audit-aggregate.decorator';
 import { Roles } from '../../shared/decorators/roles.decorator';
+import {
+  WriteResponseDto,
+  toWriteResponse,
+} from '../../shared/dto/write-response.dto';
 import { AssignUserToLocations, TenantBoundaryError } from '../application/assign-user-to-locations.use-case';
 import { User } from '../domain/user.entity';
 import { UserLocationRepository } from '../infrastructure/user-location.repository';
@@ -38,12 +42,13 @@ export class UserController {
 
   @Post()
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('user', null)
   @ApiOperation({
     summary: 'Create a new user',
     description:
       'Plaintext password is bcrypt-hashed at cost 12 before persisting. The plaintext never touches the database.',
   })
-  async create(@Body() dto: CreateUserDto): Promise<UserResponseDto> {
+  async create(@Body() dto: CreateUserDto): Promise<WriteResponseDto<UserResponseDto>> {
     const existing = await this.users.findByEmailAndOrg(dto.email, dto.organizationId);
     if (existing) {
       throw new ConflictException({ code: 'USER_EMAIL_DUPLICATE' });
@@ -57,7 +62,7 @@ export class UserController {
       role: dto.role,
     });
     const saved = await this.users.save(user);
-    return UserResponseDto.fromEntity(saved);
+    return toWriteResponse(UserResponseDto.fromEntity(saved));
   }
 
   @Get(':id')
@@ -81,35 +86,38 @@ export class UserController {
 
   @Patch(':id')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('user')
   @ApiOperation({ summary: 'Update a user (mutable fields)' })
   async update(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: UpdateUserDto,
-  ): Promise<UserResponseDto> {
+  ): Promise<WriteResponseDto<UserResponseDto>> {
     const u = await this.users.findOneBy({ id });
     if (!u) throw new NotFoundException({ code: 'USER_NOT_FOUND' });
     u.applyUpdate(dto);
     const saved = await this.users.save(u);
-    return UserResponseDto.fromEntity(saved);
+    return toWriteResponse(UserResponseDto.fromEntity(saved));
   }
 
   @Post(':id/change-password')
   @Roles('OWNER', 'MANAGER')
-  @HttpCode(204)
+  @AuditAggregate('user')
   @ApiOperation({ summary: 'Change a user password (plaintext input → bcrypt hash)' })
   async changePassword(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: ChangePasswordDto,
-  ): Promise<void> {
+  ): Promise<WriteResponseDto<{ id: string }>> {
     const u = await this.users.findOneBy({ id });
     if (!u) throw new NotFoundException({ code: 'USER_NOT_FOUND' });
     const newHash = await bcrypt.hash(dto.newPassword, BCRYPT_COST);
     u.changePassword(newHash);
     await this.users.save(u);
+    return toWriteResponse({ id });
   }
 
   @Post(':id/locations')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('user')
   @ApiOperation({
     summary: 'Replace the user\'s location assignment set',
     description: 'Atomic delete-then-insert. Cross-tenant location IDs raise 400.',
@@ -117,7 +125,7 @@ export class UserController {
   async assignLocations(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: AssignLocationsDto,
-  ): Promise<LocationResponseDto[]> {
+  ): Promise<WriteResponseDto<LocationResponseDto[]>> {
     try {
       await this.assign.execute({ userId: id, locationIds: dto.locationIds });
     } catch (err) {
@@ -126,19 +134,20 @@ export class UserController {
       }
       throw err;
     }
-    if (dto.locationIds.length === 0) return [];
+    if (dto.locationIds.length === 0) return toWriteResponse([] as LocationResponseDto[]);
     const locations = await this.locations.findManyByIds(dto.locationIds);
-    return locations.map(LocationResponseDto.fromEntity);
+    return toWriteResponse(locations.map(LocationResponseDto.fromEntity));
   }
 
   @Delete(':id/locations/:locationId')
   @Roles('OWNER', 'MANAGER')
-  @HttpCode(204)
+  @AuditAggregate('user')
   @ApiOperation({ summary: 'Remove a single location assignment' })
   async removeAssignment(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Param('locationId', new ParseUUIDPipe({ version: '4' })) locationId: string,
-  ): Promise<void> {
+  ): Promise<WriteResponseDto<{ id: string; locationId: string }>> {
     await this.userLocations.deleteByUserAndLocations(id, [locationId]);
+    return toWriteResponse({ id, locationId });
   }
 }

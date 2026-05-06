@@ -10,7 +10,12 @@ import {
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { InjectDataSource } from '@nestjs/typeorm';
 import type { DataSource } from 'typeorm';
+import { AuditAggregate } from '../../shared/decorators/audit-aggregate.decorator';
 import { Roles } from '../../shared/decorators/roles.decorator';
+import {
+  WriteResponseDto,
+  toWriteResponse,
+} from '../../shared/dto/write-response.dto';
 import {
   Organization,
   type OrganizationLabelFields,
@@ -41,6 +46,7 @@ export class OrgLabelFieldsController {
 
   @Put(':id/label-fields')
   @Roles('OWNER')
+  @AuditAggregate('organization')
   @ApiOperation({
     summary: 'Replace the org\'s label-rendering field config (Owner only)',
     description:
@@ -49,7 +55,7 @@ export class OrgLabelFieldsController {
   async putLabelFields(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: UpdateLabelFieldsDto,
-  ): Promise<LabelFieldsResponseDto> {
+  ): Promise<WriteResponseDto<LabelFieldsResponseDto>> {
     const org = await this.dataSource.getRepository(Organization).findOneBy({ id });
     if (!org) throw new NotFoundException({ code: 'ORGANIZATION_NOT_FOUND' });
     const next: OrganizationLabelFields = {
@@ -65,6 +71,6 @@ export class OrgLabelFieldsController {
     };
     org.labelFields = next;
     await this.dataSource.getRepository(Organization).save(org);
-    return LabelFieldsResponseDto.fromEntity(org);
+    return toWriteResponse(LabelFieldsResponseDto.fromEntity(org));
   }
 }

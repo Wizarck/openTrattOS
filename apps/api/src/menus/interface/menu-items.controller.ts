@@ -5,7 +5,6 @@ import {
   Controller,
   Delete,
   Get,
-  HttpCode,
   NotFoundException,
   Param,
   ParseIntPipe,
@@ -15,7 +14,12 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AuditAggregate } from '../../shared/decorators/audit-aggregate.decorator';
 import { Roles } from '../../shared/decorators/roles.decorator';
+import {
+  WriteResponseDto,
+  toWriteResponse,
+} from '../../shared/dto/write-response.dto';
 import { CostRecipeNotFoundError, CostService } from '../../cost/application/cost.service';
 import { CostHistoryRowDto } from '../../cost/interface/dto/cost.dto';
 import { MenuItemChannel } from '../domain/menu-item.entity';
@@ -45,12 +49,15 @@ export class MenuItemsController {
 
   @Post()
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('menu_item', null)
   @ApiOperation({
     summary: 'Create a MenuItem (Recipe × Location × Channel)',
     description:
       'Composite uniqueness on (organizationId, recipeId, locationId, channel) enforced by partial unique index where is_active = true. Recreating a previously-deactivated combo is allowed.',
   })
-  async create(@Body() dto: CreateMenuItemDto): Promise<MenuItemResponseDto> {
+  async create(
+    @Body() dto: CreateMenuItemDto,
+  ): Promise<WriteResponseDto<MenuItemResponseDto>> {
     try {
       const view = await this.service.create({
         organizationId: dto.organizationId,
@@ -60,7 +67,7 @@ export class MenuItemsController {
         sellingPrice: dto.sellingPrice,
         targetMargin: dto.targetMargin,
       });
-      return MenuItemResponseDto.fromView(view);
+      return toWriteResponse(MenuItemResponseDto.fromView(view));
     } catch (err) {
       throw this.translate(err);
     }
@@ -102,15 +109,16 @@ export class MenuItemsController {
 
   @Put(':id')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('menu_item')
   @ApiOperation({ summary: 'Update a MenuItem (channel / sellingPrice / targetMargin)' })
   async update(
     @Query('organizationId', new ParseUUIDPipe({ version: '4' })) organizationId: string,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: UpdateMenuItemDto,
-  ): Promise<MenuItemResponseDto> {
+  ): Promise<WriteResponseDto<MenuItemResponseDto>> {
     try {
       const view = await this.service.update(organizationId, id, dto);
-      return MenuItemResponseDto.fromView(view);
+      return toWriteResponse(MenuItemResponseDto.fromView(view));
     } catch (err) {
       throw this.translate(err);
     }
@@ -118,14 +126,15 @@ export class MenuItemsController {
 
   @Delete(':id')
   @Roles('OWNER', 'MANAGER')
-  @HttpCode(204)
+  @AuditAggregate('menu_item')
   @ApiOperation({ summary: 'Soft-delete a MenuItem (sets isActive=false)' })
   async deactivate(
     @Query('organizationId', new ParseUUIDPipe({ version: '4' })) organizationId: string,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
-  ): Promise<void> {
+  ): Promise<WriteResponseDto<{ id: string }>> {
     try {
       await this.service.softDelete(organizationId, id);
+      return toWriteResponse({ id });
     } catch (err) {
       throw this.translate(err);
     }

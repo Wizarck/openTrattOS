@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  HttpCode,
   NotFoundException,
   Param,
   ParseUUIDPipe,
@@ -12,7 +11,12 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AuditAggregate } from '../../shared/decorators/audit-aggregate.decorator';
 import { Roles } from '../../shared/decorators/roles.decorator';
+import {
+  WriteResponseDto,
+  toWriteResponse,
+} from '../../shared/dto/write-response.dto';
 import { Location } from '../domain/location.entity';
 import { LocationRepository } from '../infrastructure/location.repository';
 import { CreateLocationDto, LocationResponseDto, UpdateLocationDto } from './dto/location.dto';
@@ -24,8 +28,9 @@ export class LocationController {
 
   @Post()
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('location', null)
   @ApiOperation({ summary: 'Create a new location for an organization' })
-  async create(@Body() dto: CreateLocationDto): Promise<LocationResponseDto> {
+  async create(@Body() dto: CreateLocationDto): Promise<WriteResponseDto<LocationResponseDto>> {
     const loc = Location.create({
       organizationId: dto.organizationId,
       name: dto.name,
@@ -33,7 +38,7 @@ export class LocationController {
       type: dto.type,
     });
     const saved = await this.locations.save(loc);
-    return LocationResponseDto.fromEntity(saved);
+    return toWriteResponse(LocationResponseDto.fromEntity(saved));
   }
 
   @Get(':id')
@@ -60,29 +65,33 @@ export class LocationController {
 
   @Patch(':id')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('location')
   @ApiOperation({ summary: 'Update a location (mutable fields only)' })
   async update(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: UpdateLocationDto,
-  ): Promise<LocationResponseDto> {
+  ): Promise<WriteResponseDto<LocationResponseDto>> {
     const l = await this.locations.findOneBy({ id });
     if (!l) throw new NotFoundException({ code: 'LOCATION_NOT_FOUND' });
     l.applyUpdate(dto);
     const saved = await this.locations.save(l);
-    return LocationResponseDto.fromEntity(saved);
+    return toWriteResponse(LocationResponseDto.fromEntity(saved));
   }
 
   @Delete(':id')
   @Roles('OWNER', 'MANAGER')
-  @HttpCode(204)
+  @AuditAggregate('location')
   @ApiOperation({
     summary: 'Soft-delete a location (sets isActive=false)',
     description: 'Idempotent. Historical references survive — see soft-delete policy in data-model.md §2.1.',
   })
-  async deactivate(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string): Promise<void> {
+  async deactivate(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ): Promise<WriteResponseDto<{ id: string }>> {
     const l = await this.locations.findOneBy({ id });
     if (!l) throw new NotFoundException({ code: 'LOCATION_NOT_FOUND' });
     l.deactivate();
     await this.locations.save(l);
+    return toWriteResponse({ id });
   }
 }

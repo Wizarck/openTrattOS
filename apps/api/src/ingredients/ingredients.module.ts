@@ -1,7 +1,9 @@
-import { Module } from '@nestjs/common';
+import { Module, OnApplicationBootstrap } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ExternalCatalogModule } from '../external-catalog/external-catalog.module';
 import { RecipesModule } from '../recipes/recipes.module';
+import { AuditResolverRegistry } from '../shared/application/audit-resolver-registry';
+import { SharedModule } from '../shared/shared.module';
 import { IngredientExportService } from './application/ingredient-export.service';
 import { IngredientImportService } from './application/ingredient-import.service';
 import { IngredientsService } from './application/ingredients.service';
@@ -15,7 +17,7 @@ import { RecipesMacrosController } from './interface/recipes-macros.controller';
 import { UoMController } from './interface/uom.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Category, Ingredient]), ExternalCatalogModule, RecipesModule],
+  imports: [SharedModule, TypeOrmModule.forFeature([Category, Ingredient]), ExternalCatalogModule, RecipesModule],
   controllers: [IngredientsController, CategoriesController, UoMController, RecipesMacrosController],
   providers: [
     CategoryRepository,
@@ -33,4 +35,27 @@ import { UoMController } from './interface/uom.controller';
     TypeOrmModule,
   ],
 })
-export class IngredientsModule {}
+export class IngredientsModule implements OnApplicationBootstrap {
+  constructor(
+    private readonly ingredients: IngredientRepository,
+    private readonly categories: CategoryRepository,
+    private readonly registry: AuditResolverRegistry,
+  ) {}
+
+  onApplicationBootstrap(): void {
+    this.registry.register('ingredient', async (id) => {
+      try {
+        return (await this.ingredients.findOneBy({ id })) ?? null;
+      } catch {
+        return null;
+      }
+    });
+    this.registry.register('category', async (id) => {
+      try {
+        return (await this.categories.findOneBy({ id })) ?? null;
+      } catch {
+        return null;
+      }
+    });
+  }
+}

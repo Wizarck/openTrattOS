@@ -4,7 +4,6 @@ import {
   Controller,
   Delete,
   Get,
-  HttpCode,
   NotFoundException,
   Param,
   ParseUUIDPipe,
@@ -14,7 +13,12 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { QueryFailedError } from 'typeorm';
+import { AuditAggregate } from '../../shared/decorators/audit-aggregate.decorator';
 import { Roles } from '../../shared/decorators/roles.decorator';
+import {
+  WriteResponseDto,
+  toWriteResponse,
+} from '../../shared/dto/write-response.dto';
 import { Category } from '../domain/category.entity';
 import { CategoryRepository } from '../infrastructure/category.repository';
 import { CategoryResponseDto, CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
@@ -49,8 +53,9 @@ export class CategoriesController {
 
   @Post()
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('category', null)
   @ApiOperation({ summary: 'Create a new category (custom; isDefault is false)' })
-  async create(@Body() dto: CreateCategoryDto): Promise<CategoryResponseDto> {
+  async create(@Body() dto: CreateCategoryDto): Promise<WriteResponseDto<CategoryResponseDto>> {
     const cat = Category.create({
       organizationId: dto.organizationId,
       parentId: dto.parentId ?? null,
@@ -61,7 +66,7 @@ export class CategoriesController {
     });
     try {
       const saved = await this.categories.save(cat);
-      return CategoryResponseDto.fromEntity(saved);
+      return toWriteResponse(CategoryResponseDto.fromEntity(saved));
     } catch (err) {
       if (err instanceof QueryFailedError && /uq_categories_org_parent_name/.test(err.message)) {
         throw new ConflictException({ code: 'CATEGORY_DUPLICATE_NAME_AT_PARENT' });
@@ -72,30 +77,34 @@ export class CategoriesController {
 
   @Patch(':id')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('category')
   @ApiOperation({ summary: 'Update a category — rename or reparent' })
   async update(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: UpdateCategoryDto,
-  ): Promise<CategoryResponseDto> {
+  ): Promise<WriteResponseDto<CategoryResponseDto>> {
     const cat = await this.categories.findOneBy({ id });
     if (!cat) throw new NotFoundException({ code: 'CATEGORY_NOT_FOUND' });
     cat.applyUpdate(dto);
     const saved = await this.categories.save(cat);
-    return CategoryResponseDto.fromEntity(saved);
+    return toWriteResponse(CategoryResponseDto.fromEntity(saved));
   }
 
   @Delete(':id')
   @Roles('OWNER', 'MANAGER')
-  @HttpCode(204)
+  @AuditAggregate('category')
   @ApiOperation({
     summary: 'Delete a category',
     description: 'Blocked (RESTRICT) if it has child categories or linked ingredients.',
   })
-  async remove(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string): Promise<void> {
+  async remove(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ): Promise<WriteResponseDto<{ id: string }>> {
     const cat = await this.categories.findOneBy({ id });
     if (!cat) throw new NotFoundException({ code: 'CATEGORY_NOT_FOUND' });
     try {
       await this.categories.delete({ id });
+      return toWriteResponse({ id });
     } catch (err) {
       if (err instanceof QueryFailedError) {
         const msg = err.message;

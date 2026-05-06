@@ -6,7 +6,6 @@ import {
   Delete,
   Get,
   Header,
-  HttpCode,
   NotFoundException,
   Param,
   ParseBoolPipe,
@@ -23,7 +22,12 @@ import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { Readable } from 'node:stream';
 import { QueryFailedError } from 'typeorm';
+import { AuditAggregate } from '../../shared/decorators/audit-aggregate.decorator';
 import { Roles } from '../../shared/decorators/roles.decorator';
+import {
+  WriteResponseDto,
+  toWriteResponse,
+} from '../../shared/dto/write-response.dto';
 import { CursorPaginationQueryDto, DEFAULT_PAGE_LIMIT } from '../../shared/pagination';
 import { CsvImportFormatError, IngredientImportService, ImportResult } from '../application/ingredient-import.service';
 import { IngredientExportService } from '../application/ingredient-export.service';
@@ -121,6 +125,7 @@ export class IngredientsController {
 
   @Post(':id/overrides')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('ingredient')
   @ApiOperation({
     summary: 'Apply a Manager+ override on a single Ingredient field',
     description:
@@ -130,7 +135,7 @@ export class IngredientsController {
     @Query('organizationId', new ParseUUIDPipe({ version: '4' })) organizationId: string,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: ApplyIngredientOverrideDto,
-  ): Promise<IngredientResponseDto> {
+  ): Promise<WriteResponseDto<IngredientResponseDto>> {
     try {
       const updated = await this.service.applyOverride({
         organizationId,
@@ -140,7 +145,7 @@ export class IngredientsController {
         value: dto.value,
         reason: dto.reason,
       });
-      return IngredientResponseDto.fromEntity(updated);
+      return toWriteResponse(IngredientResponseDto.fromEntity(updated));
     } catch (err) {
       if (err instanceof IngredientNotFoundError) {
         throw new NotFoundException({ code: 'INGREDIENT_NOT_FOUND', ingredientId: err.ingredientId });
@@ -163,11 +168,12 @@ export class IngredientsController {
 
   @Post()
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('ingredient', null)
   @ApiOperation({
     summary: 'Create a new ingredient',
     description: 'baseUnitType is immutable post-creation. internalCode auto-generated if not provided.',
   })
-  async create(@Body() dto: CreateIngredientDto): Promise<IngredientResponseDto> {
+  async create(@Body() dto: CreateIngredientDto): Promise<WriteResponseDto<IngredientResponseDto>> {
     const ing = Ingredient.create({
       organizationId: dto.organizationId,
       categoryId: dto.categoryId,
@@ -179,7 +185,7 @@ export class IngredientsController {
     });
     try {
       const saved = await this.ingredients.save(ing);
-      return IngredientResponseDto.fromEntity(saved);
+      return toWriteResponse(IngredientResponseDto.fromEntity(saved));
     } catch (err) {
       if (err instanceof QueryFailedError && /uq_ingredients_org_internal_code/.test(err.message)) {
         throw new ConflictException({ code: 'INGREDIENT_DUPLICATE_INTERNAL_CODE' });
@@ -190,45 +196,53 @@ export class IngredientsController {
 
   @Patch(':id')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('ingredient')
   @ApiOperation({ summary: 'Update an ingredient (mutable fields only)' })
   async update(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: UpdateIngredientDto,
-  ): Promise<IngredientResponseDto> {
+  ): Promise<WriteResponseDto<IngredientResponseDto>> {
     const i = await this.ingredients.findOneBy({ id });
     if (!i) throw new NotFoundException({ code: 'INGREDIENT_NOT_FOUND' });
     i.applyUpdate(dto);
     const saved = await this.ingredients.save(i);
-    return IngredientResponseDto.fromEntity(saved);
+    return toWriteResponse(IngredientResponseDto.fromEntity(saved));
   }
 
   @Delete(':id')
   @Roles('OWNER', 'MANAGER')
-  @HttpCode(204)
+  @AuditAggregate('ingredient')
   @ApiOperation({
     summary: 'Soft-delete an ingredient (sets isActive=false)',
     description: 'Idempotent. Recipes referring to this ingredient continue to read it (read-side soft-delete).',
   })
-  async deactivate(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string): Promise<void> {
+  async deactivate(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ): Promise<WriteResponseDto<{ id: string }>> {
     const i = await this.ingredients.findOneBy({ id });
     if (!i) throw new NotFoundException({ code: 'INGREDIENT_NOT_FOUND' });
     i.deactivate();
     await this.ingredients.save(i);
+    return toWriteResponse({ id });
   }
 
   @Post(':id/reactivate')
   @Roles('OWNER', 'MANAGER')
-  @HttpCode(204)
+  @AuditAggregate('ingredient')
   @ApiOperation({ summary: 'Reactivate a previously soft-deleted ingredient' })
-  async reactivate(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string): Promise<void> {
+  async reactivate(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ): Promise<WriteResponseDto<{ id: string }>> {
     const i = await this.ingredients.findOneBy({ id });
     if (!i) throw new NotFoundException({ code: 'INGREDIENT_NOT_FOUND' });
     i.reactivate();
     await this.ingredients.save(i);
+    return toWriteResponse({ id });
   }
 
   @Post('import')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('ingredient', null)
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 50 * 1024 * 1024 } }))
   @ApiOperation({
     summary: 'Bulk-import ingredients from a CSV file',
@@ -250,16 +264,17 @@ export class IngredientsController {
     @Query('organizationId', new ParseUUIDPipe({ version: '4' })) organizationId: string,
     @Query('dryRun', new ParseBoolPipe({ optional: true })) dryRun: boolean | undefined,
     @UploadedFile() file: UploadedCsvFile | undefined,
-  ): Promise<ImportResult> {
+  ): Promise<WriteResponseDto<ImportResult>> {
     if (!file) {
       throw new BadRequestException({ code: 'CSV_IMPORT_INVALID_FORMAT', detail: 'no file uploaded' });
     }
     try {
       const stream = Readable.from(file.buffer);
-      return await this.importService.parseAndCommit(stream, {
+      const result = await this.importService.parseAndCommit(stream, {
         organizationId,
         dryRun: dryRun ?? false,
       });
+      return toWriteResponse(result);
     } catch (err) {
       if (err instanceof CsvImportFormatError) {
         throw new BadRequestException({ code: 'CSV_IMPORT_INVALID_FORMAT', detail: err.detail });

@@ -3,9 +3,17 @@ import { OpenTrattosRestClient } from './http-client.js';
 import { registerRecipesCapabilities } from './capabilities/recipes.js';
 import { registerMenuItemsCapabilities } from './capabilities/menu-items.js';
 import { registerIngredientsCapabilities } from './capabilities/ingredients.js';
+import {
+  WRITE_CAPABILITIES,
+  UNSUPPORTED_VIA_MCP,
+  renderPath,
+} from './capabilities/write/index.js';
 
 /**
  * MCP server `opentrattos` — m2-mcp-server (read-only first per Gate D).
+ * Extended by `m2-mcp-write-capabilities` (Wave 1.13) with 43 write
+ * capabilities across 12 namespaces, registered via the `WRITE_CAPABILITIES`
+ * registry pattern (ADR-MCP-W-REGISTRY).
  *
  * `buildServer` is the test-friendly factory — it returns an `McpServer`
  * with every capability descriptor wired against a single
@@ -38,6 +46,52 @@ export function buildServer(options: ServerOptions): {
   registerRecipesCapabilities(server, rest);
   registerMenuItemsCapabilities(server, rest);
   registerIngredientsCapabilities(server, rest);
+
+  // m2-mcp-write-capabilities (Wave 1.13) — registry-driven write tools.
+  for (const cap of WRITE_CAPABILITIES) {
+    server.registerTool(
+      cap.name,
+      {
+        title: cap.title ?? cap.name,
+        description: cap.description,
+        inputSchema: cap.schema,
+      },
+      async (input: unknown) => {
+        if (UNSUPPORTED_VIA_MCP.has(cap.name)) {
+          throw new Error(
+            `${cap.name} via MCP not yet supported; use REST endpoint ${cap.restMethod} ${cap.restPathTemplate} with multipart/form-data`,
+          );
+        }
+        const inputObj = (input ?? {}) as Record<string, unknown>;
+        const idempotencyKey =
+          cap.forwardIdempotencyKey === false
+            ? undefined
+            : (inputObj['idempotencyKey'] as string | undefined);
+        const pathParams = cap.restPathParams
+          ? cap.restPathParams(input)
+          : {};
+        const path = renderPath(cap.restPathTemplate, pathParams);
+        const body = cap.restBodyExtractor
+          ? cap.restBodyExtractor(input)
+          : input;
+        const query = cap.restQueryExtractor
+          ? cap.restQueryExtractor(input)
+          : undefined;
+
+        const result = await rest.request<unknown>({
+          method: cap.restMethod,
+          capabilityName: cap.name,
+          path,
+          query,
+          body,
+          idempotencyKey,
+        });
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result) }],
+        };
+      },
+    );
+  }
 
   return { server, rest };
 }

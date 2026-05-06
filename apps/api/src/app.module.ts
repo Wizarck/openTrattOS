@@ -12,13 +12,23 @@ import { LabelsModule } from './labels/labels.module';
 import { MenusModule } from './menus/menus.module';
 import { RecipesModule } from './recipes/recipes.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
+import { AgentCapabilityGuard } from './shared/guards/agent-capability.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
+import { BeforeAfterAuditInterceptor } from './shared/interceptors/before-after-audit.interceptor';
 import { AgentAuditMiddleware } from './shared/middleware/agent-audit.middleware';
+import { IdempotencyMiddleware } from './shared/middleware/idempotency.middleware';
+import { SharedModule } from './shared/shared.module';
 
 @Module({
   imports: [
     EventEmitterModule.forRoot(),
+
+    // m2-mcp-write-capabilities (Wave 1.13): @Global() module exporting
+    // AuditResolverRegistry + AgentIdempotencyService + the
+    // AgentIdempotencyKey TypeORM repo. Reachable from every module's DI
+    // graph without explicit imports.
+    SharedModule,
 
     // M1 Foundation
     IamModule,
@@ -53,7 +63,15 @@ import { AgentAuditMiddleware } from './shared/middleware/agent-audit.middleware
   ],
   providers: [
     { provide: APP_GUARD, useClass: RolesGuard },
+    // m2-mcp-write-capabilities: per-capability kill-switch — runs AFTER
+    // RolesGuard (NestJS executes APP_GUARDs in registration order, but for
+    // safety the guard is itself no-op when viaAgent !== true so order is
+    // moot for direct REST/UI traffic).
+    { provide: APP_GUARD, useClass: AgentCapabilityGuard },
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
+    // m2-mcp-write-capabilities: forensic before/after capture for agent
+    // writes. Skips entirely when viaAgent !== true.
+    { provide: APP_INTERCEPTOR, useClass: BeforeAfterAuditInterceptor },
   ],
 })
 export class AppModule implements NestModule {
@@ -61,7 +79,12 @@ export class AppModule implements NestModule {
   // headers, populates `req.agentContext`, and emits `AGENT_ACTION_EXECUTED`.
   // Wired against `forRoutes('*')` so it runs ahead of every controller; it
   // is a no-op for non-agent traffic.
+  //
+  // m2-mcp-write-capabilities: IdempotencyMiddleware runs AFTER
+  // AgentAuditMiddleware so `req.user.organizationId` is available (auth
+  // populates user before NestJS middleware chain — the order between these
+  // two middleware is not load-bearing as long as auth has populated user).
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(AgentAuditMiddleware).forRoutes('*');
+    consumer.apply(AgentAuditMiddleware, IdempotencyMiddleware).forRoutes('*');
   }
 }

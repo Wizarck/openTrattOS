@@ -1,5 +1,8 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { Module, OnApplicationBootstrap } from '@nestjs/common';
+import { InjectDataSource, TypeOrmModule } from '@nestjs/typeorm';
+import type { DataSource } from 'typeorm';
+import { AuditResolverRegistry } from '../shared/application/audit-resolver-registry';
+import { SharedModule } from '../shared/shared.module';
 import { AiSuggestionsService } from './application/ai-suggestions.service';
 import {
   AI_SUGGESTION_PROVIDER,
@@ -23,7 +26,7 @@ import { AiSuggestionsController } from './interface/ai-suggestions.controller';
  * endpoint AND the service rejects every call (defence in depth).
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([AiSuggestion])],
+  imports: [SharedModule, TypeOrmModule.forFeature([AiSuggestion])],
   controllers: [AiSuggestionsController],
   providers: [
     {
@@ -38,7 +41,24 @@ import { AiSuggestionsController } from './interface/ai-suggestions.controller';
   ],
   exports: [AiSuggestionsService],
 })
-export class AiSuggestionsModule {}
+export class AiSuggestionsModule implements OnApplicationBootstrap {
+  constructor(
+    @InjectDataSource() private readonly dataSource: DataSource,
+    private readonly registry: AuditResolverRegistry,
+  ) {}
+
+  onApplicationBootstrap(): void {
+    this.registry.register('ai_suggestion', async (id) => {
+      try {
+        return (
+          (await this.dataSource.getRepository(AiSuggestion).findOneBy({ id })) ?? null
+        );
+      } catch {
+        return null;
+      }
+    });
+  }
+}
 
 function isFlagEnabled(): boolean {
   return String(process.env.OPENTRATTOS_AI_YIELD_SUGGESTIONS_ENABLED ?? '')

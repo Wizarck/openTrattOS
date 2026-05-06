@@ -1,6 +1,8 @@
-import { Module } from '@nestjs/common';
+import { Module, OnApplicationBootstrap } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MenuItem } from '../menus/domain/menu-item.entity';
+import { AuditResolverRegistry } from '../shared/application/audit-resolver-registry';
+import { SharedModule } from '../shared/shared.module';
 import { RecipesAllergensService } from './application/recipes-allergens.service';
 import { RecipesService } from './application/recipes.service';
 import { Recipe } from './domain/recipe.entity';
@@ -11,7 +13,7 @@ import { RecipesAllergensController } from './interface/recipes-allergens.contro
 import { RecipesController } from './interface/recipes.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Recipe, RecipeIngredient, MenuItem])],
+  imports: [SharedModule, TypeOrmModule.forFeature([Recipe, RecipeIngredient, MenuItem])],
   controllers: [RecipesController, RecipesAllergensController],
   providers: [
     RecipeRepository,
@@ -27,4 +29,22 @@ import { RecipesController } from './interface/recipes.controller';
     TypeOrmModule,
   ],
 })
-export class RecipesModule {}
+export class RecipesModule implements OnApplicationBootstrap {
+  constructor(
+    private readonly recipes: RecipesService,
+    private readonly registry: AuditResolverRegistry,
+  ) {}
+
+  onApplicationBootstrap(): void {
+    this.registry.register('recipe', async (id, req) => {
+      const orgId = (req as { user?: { organizationId?: string } }).user?.organizationId;
+      if (!orgId) return null;
+      try {
+        const result = await this.recipes.findOne(orgId, id);
+        return result?.recipe ?? null;
+      } catch {
+        return null;
+      }
+    });
+  }
+}

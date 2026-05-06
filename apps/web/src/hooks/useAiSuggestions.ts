@@ -7,6 +7,12 @@ export interface SuggestionEnvelope {
   reason?: 'no_citation_available' | 'provider_unavailable';
 }
 
+interface WriteEnvelope<T> {
+  data: T;
+  missingFields: string[];
+  nextRequired: string | null;
+}
+
 export interface SuggestYieldInput {
   organizationId: string;
   ingredientId: string;
@@ -22,22 +28,26 @@ export interface SuggestWasteInput {
 /** Mutation: POST /ai-suggestions/yield → wrapped envelope. */
 export function useYieldSuggestion() {
   return useMutation<SuggestionEnvelope, ApiError, SuggestYieldInput>({
-    mutationFn: async (input) =>
-      api<SuggestionEnvelope>('/ai-suggestions/yield', {
+    mutationFn: async (input) => {
+      const wrap = await api<WriteEnvelope<SuggestionEnvelope>>('/ai-suggestions/yield', {
         method: 'POST',
         body: JSON.stringify(input),
-      }),
+      });
+      return wrap.data;
+    },
   });
 }
 
 /** Mutation: POST /ai-suggestions/waste → wrapped envelope. */
 export function useWasteSuggestion() {
   return useMutation<SuggestionEnvelope, ApiError, SuggestWasteInput>({
-    mutationFn: async (input) =>
-      api<SuggestionEnvelope>('/ai-suggestions/waste', {
+    mutationFn: async (input) => {
+      const wrap = await api<WriteEnvelope<SuggestionEnvelope>>('/ai-suggestions/waste', {
         method: 'POST',
         body: JSON.stringify(input),
-      }),
+      });
+      return wrap.data;
+    },
   });
 }
 
@@ -50,11 +60,16 @@ export interface AcceptInput {
 
 export function useAcceptAiSuggestion() {
   return useMutation<AiSuggestionShape, ApiError, AcceptInput>({
-    mutationFn: async ({ organizationId, suggestionId, value }) =>
-      api<AiSuggestionShape>(`/ai-suggestions/${suggestionId}/accept`, {
-        method: 'POST',
-        body: JSON.stringify({ organizationId, value }),
-      }),
+    mutationFn: async ({ organizationId, suggestionId, value }) => {
+      const wrap = await api<WriteEnvelope<AiSuggestionShape>>(
+        `/ai-suggestions/${suggestionId}/accept`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ organizationId, value }),
+        },
+      );
+      return wrap.data;
+    },
   });
 }
 
@@ -67,10 +82,15 @@ export interface RejectInput {
 
 export function useRejectAiSuggestion() {
   return useMutation<AiSuggestionShape, ApiError, RejectInput>({
-    mutationFn: async ({ organizationId, suggestionId, reason }) =>
-      api<AiSuggestionShape>(`/ai-suggestions/${suggestionId}/reject`, {
-        method: 'POST',
-        body: JSON.stringify({ organizationId, reason }),
-      }),
+    mutationFn: async ({ organizationId, suggestionId, reason }) => {
+      const wrap = await api<WriteEnvelope<AiSuggestionShape>>(
+        `/ai-suggestions/${suggestionId}/reject`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ organizationId, reason }),
+        },
+      );
+      return wrap.data;
+    },
   });
 }
