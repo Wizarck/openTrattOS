@@ -1,7 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { AiSuggestionsModule } from './ai-suggestions/ai-suggestions.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { CostModule } from './cost/cost.module';
@@ -13,22 +12,23 @@ import { LabelsModule } from './labels/labels.module';
 import { MenusModule } from './menus/menus.module';
 import { RecipesModule } from './recipes/recipes.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
-import { AgentIdempotencyService } from './shared/application/agent-idempotency.service';
-import { AuditResolverRegistry } from './shared/application/audit-resolver-registry';
-import { AgentIdempotencyKey } from './shared/domain/agent-idempotency-key.entity';
 import { AgentCapabilityGuard } from './shared/guards/agent-capability.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
 import { BeforeAfterAuditInterceptor } from './shared/interceptors/before-after-audit.interceptor';
 import { AgentAuditMiddleware } from './shared/middleware/agent-audit.middleware';
 import { IdempotencyMiddleware } from './shared/middleware/idempotency.middleware';
+import { SharedModule } from './shared/shared.module';
 
 @Module({
   imports: [
     EventEmitterModule.forRoot(),
 
-    // m2-mcp-write-capabilities (Wave 1.13): idempotency table.
-    TypeOrmModule.forFeature([AgentIdempotencyKey]),
+    // m2-mcp-write-capabilities (Wave 1.13): @Global() module exporting
+    // AuditResolverRegistry + AgentIdempotencyService + the
+    // AgentIdempotencyKey TypeORM repo. Reachable from every module's DI
+    // graph without explicit imports.
+    SharedModule,
 
     // M1 Foundation
     IamModule,
@@ -72,11 +72,6 @@ import { IdempotencyMiddleware } from './shared/middleware/idempotency.middlewar
     // m2-mcp-write-capabilities: forensic before/after capture for agent
     // writes. Skips entirely when viaAgent !== true.
     { provide: APP_INTERCEPTOR, useClass: BeforeAfterAuditInterceptor },
-    // Singleton registry populated by each BC's onApplicationBootstrap with
-    // `findById` resolvers for the BeforeAfterAuditInterceptor.
-    AuditResolverRegistry,
-    // Idempotency-Key persistence for agent writes.
-    AgentIdempotencyService,
   ],
 })
 export class AppModule implements NestModule {
