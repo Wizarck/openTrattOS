@@ -98,6 +98,10 @@ describe('MenuItemsService (integration)', () => {
     suppliers = app.get(SupplierRepository);
     supplierItems = app.get(SupplierItemRepository);
     await dataSource.runMigrations();
+    // Required for EventSubscribersLoader to attach @OnEvent handlers on
+    // AuditLogSubscriber. Without this, RECIPE_COST_REBUILT events emit into
+    // the void and audit_log stays empty.
+    await app.init();
   });
 
   afterAll(async () => {

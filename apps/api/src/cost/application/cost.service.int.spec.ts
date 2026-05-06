@@ -90,6 +90,9 @@ describe('CostService (integration)', () => {
     supplierItems = app.get(SupplierItemRepository);
     auditLog = app.get(AuditLogService);
     await dataSource.runMigrations();
+    // app.init() runs onApplicationBootstrap() hooks; required for
+    // EventSubscribersLoader to attach AuditLogSubscriber's @OnEvent handlers.
+    await app.init();
   });
 
   afterAll(async () => {
