@@ -8,6 +8,7 @@ import {
   IsString,
   IsUUID,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 import {
@@ -77,4 +78,15 @@ export class AuditLogQueryDto {
   @IsInt()
   @Min(0)
   offset?: number = 0;
+
+  /**
+   * Optional full-text search term. Length-capped at 200 to prevent
+   * payload-bombing; `plainto_tsquery` handles pathological-looking input
+   * safely (it's tokenised, not regex). When set, results are ranked by
+   * relevance + recency tiebreaker against the dual-config GIN index.
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  q?: string;
 }

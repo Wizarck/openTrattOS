@@ -84,6 +84,13 @@ describe('AuditLogController', () => {
     expect(callArg.offset).toBe(10);
   });
 
+  it('passes q (FTS term) through to service filter', async () => {
+    queryMock.mockResolvedValue({ rows: [], total: 0, limit: 50, offset: 0 });
+    await controller.query(makeQuery({ q: 'tomate' }));
+    const callArg = queryMock.mock.calls[0][0];
+    expect(callArg.q).toBe('tomate');
+  });
+
   it('translates AuditLogQueryError to 422', async () => {
     queryMock.mockRejectedValue(
       new AuditLogQueryError('limit out of range', 'LIMIT_OUT_OF_RANGE'),

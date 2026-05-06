@@ -46,6 +46,7 @@ export class AuditLogController {
         until: query.until,
         limit: query.limit,
         offset: query.offset,
+        q: query.q,
       });
       return {
         rows: page.rows.map(toResponseDto),
