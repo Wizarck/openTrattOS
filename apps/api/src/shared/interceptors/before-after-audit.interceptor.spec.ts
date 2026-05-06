@@ -16,7 +16,7 @@ function makeCtx(req: Partial<Request>, handler: () => unknown = () => {}): Exec
 }
 
 describe('BeforeAfterAuditInterceptor', () => {
-  let events: { emit: jest.Mock };
+  let events: { emit: jest.Mock; emitAsync: jest.Mock };
   let reflector: Pick<Reflector, 'get'>;
   let resolvers: AuditResolverRegistry;
   let interceptor: BeforeAfterAuditInterceptor;
@@ -26,7 +26,7 @@ describe('BeforeAfterAuditInterceptor', () => {
   const ID = '33333333-3333-4333-8333-333333333333';
 
   beforeEach(() => {
-    events = { emit: jest.fn() };
+    events = { emit: jest.fn(), emitAsync: jest.fn().mockResolvedValue([]) };
     reflector = { get: jest.fn() };
     resolvers = new AuditResolverRegistry();
     interceptor = new BeforeAfterAuditInterceptor(
@@ -40,7 +40,7 @@ describe('BeforeAfterAuditInterceptor', () => {
     const ctx = makeCtx({ agentContext: undefined });
     const result$ = await interceptor.intercept(ctx, { handle: () => of('result') });
     await lastValueFrom(result$);
-    expect(events.emit).not.toHaveBeenCalled();
+    expect(events.emitAsync).not.toHaveBeenCalled();
   });
 
   it('skips when handler lacks @AuditAggregate metadata', async () => {
@@ -51,7 +51,7 @@ describe('BeforeAfterAuditInterceptor', () => {
     } as Partial<Request>);
     const result$ = await interceptor.intercept(ctx, { handle: () => of('result') });
     await lastValueFrom(result$);
-    expect(events.emit).not.toHaveBeenCalled();
+    expect(events.emitAsync).not.toHaveBeenCalled();
   });
 
   it('emits envelope with before captured + after from response', async () => {
@@ -76,8 +76,8 @@ describe('BeforeAfterAuditInterceptor', () => {
     const result$ = await interceptor.intercept(ctx, { handle: () => of(after) });
     await lastValueFrom(result$);
 
-    expect(events.emit).toHaveBeenCalledTimes(1);
-    const [channel, payload] = events.emit.mock.calls[0];
+    expect(events.emitAsync).toHaveBeenCalledTimes(1);
+    const [channel, payload] = events.emitAsync.mock.calls[0];
     expect(channel).toBe(AuditEventType.AGENT_ACTION_EXECUTED);
     expect(payload).toMatchObject({
       organizationId: ORG,
@@ -112,8 +112,8 @@ describe('BeforeAfterAuditInterceptor', () => {
     const result$ = await interceptor.intercept(ctx, { handle: () => of(wrapped) });
     await lastValueFrom(result$);
 
-    expect(events.emit).toHaveBeenCalledTimes(1);
-    expect(events.emit.mock.calls[0][1].payloadAfter).toEqual({
+    expect(events.emitAsync).toHaveBeenCalledTimes(1);
+    expect(events.emitAsync.mock.calls[0][1].payloadAfter).toEqual({
       id: ID,
       name: 'wrapped',
     });
@@ -132,8 +132,8 @@ describe('BeforeAfterAuditInterceptor', () => {
     const result$ = await interceptor.intercept(ctx, { handle: () => of(created) });
     await lastValueFrom(result$);
 
-    expect(events.emit).toHaveBeenCalledTimes(1);
-    const payload = events.emit.mock.calls[0][1];
+    expect(events.emitAsync).toHaveBeenCalledTimes(1);
+    const payload = events.emitAsync.mock.calls[0][1];
     expect(payload.payloadBefore).toBeNull();
     expect(payload.payloadAfter).toEqual(created);
     // aggregateId synthesised from response
@@ -156,8 +156,8 @@ describe('BeforeAfterAuditInterceptor', () => {
     const result$ = await interceptor.intercept(ctx, { handle: () => of(after) });
     await lastValueFrom(result$);
 
-    expect(events.emit).toHaveBeenCalledTimes(1);
-    expect(events.emit.mock.calls[0][1].payloadBefore).toBeNull();
+    expect(events.emitAsync).toHaveBeenCalledTimes(1);
+    expect(events.emitAsync.mock.calls[0][1].payloadBefore).toBeNull();
   });
 
   it('skips emission when no aggregate id can be derived', async () => {
@@ -172,7 +172,7 @@ describe('BeforeAfterAuditInterceptor', () => {
     } as Partial<Request>);
     const result$ = await interceptor.intercept(ctx, { handle: () => of(undefined) });
     await lastValueFrom(result$);
-    expect(events.emit).not.toHaveBeenCalled();
+    expect(events.emitAsync).not.toHaveBeenCalled();
   });
 
   it('skips emission when req.user is missing (pre-auth)', async () => {
@@ -187,6 +187,6 @@ describe('BeforeAfterAuditInterceptor', () => {
     } as Partial<Request>);
     const result$ = await interceptor.intercept(ctx, { handle: () => of({ id: ID }) });
     await lastValueFrom(result$);
-    expect(events.emit).not.toHaveBeenCalled();
+    expect(events.emitAsync).not.toHaveBeenCalled();
   });
 });
