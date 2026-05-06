@@ -115,8 +115,14 @@ describe('AiSuggestionsService', () => {
     const state: FakeRepoState = { rows: opts.seedRows ?? [], saveCalls: [] };
     const dataSource = makeFakeDataSource(state);
     const stub = makeProviderStub(opts.providerBehaviour ?? 'valid');
-    const service = new AiSuggestionsService(dataSource, stub.provider, opts.enabled ?? true);
-    return { service, state, stub };
+    const events = { emit: jest.fn() } as unknown as import('@nestjs/event-emitter').EventEmitter2;
+    const service = new AiSuggestionsService(
+      dataSource,
+      stub.provider,
+      opts.enabled ?? true,
+      events,
+    );
+    return { service, state, stub, events };
   }
 
   // --------- suggestYield ----------------

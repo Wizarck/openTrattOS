@@ -16,6 +16,10 @@ import {
 import { CostChangeReason, RecipeCostHistory } from '../domain/recipe-cost-history.entity';
 import { RecipeCostHistoryRepository } from '../infrastructure/recipe-cost-history.repository';
 import {
+  AuditEventEnvelope,
+  AuditEventType,
+} from '../../audit-log/application/types';
+import {
   RECIPE_INGREDIENT_UPDATED,
   RECIPE_SOURCE_OVERRIDE_CHANGED,
   RecipeIngredientUpdatedEvent,
@@ -472,6 +476,23 @@ export class CostService {
         subRecipeId: recipeId,
         organizationId,
       } satisfies SubRecipeCostChangedEvent);
+
+      // Audit-log channel: persist a row capturing the rebuild fact + reason.
+      // Per ADR-AUDIT-WRITER, audit goes through the bus; this service does not
+      // import AuditLogService. The subscriber persists the envelope.
+      const auditEnvelope: AuditEventEnvelope = {
+        organizationId,
+        aggregateType: 'recipe',
+        aggregateId: recipeId,
+        actorUserId: null,
+        actorKind: 'system',
+        payloadAfter: {
+          reason,
+          totalCost: Number(breakdown.totalCost),
+          componentCount: breakdown.components.length,
+        },
+      };
+      this.events.emit(AuditEventType.RECIPE_COST_REBUILT, auditEnvelope);
 
       return breakdown;
     });

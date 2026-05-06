@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>m2-audit-log Wave 1.9 — design mock</title>
+<style>
+:root {
+  --bg: oklch(94.5% 0.012 70);
+  --surface: oklch(91.5% 0.014 70);
+  --surface-2: oklch(88.5% 0.014 70);
+  --border: oklch(83% 0.018 70);
+  --border-strong: oklch(73% 0.020 70);
+  --ink: oklch(20% 0.010 60);
+  --mute: oklch(48% 0.012 70);
+  --accent: oklch(54% 0.072 190);
+  --accent-soft: oklch(91% 0.025 190);
+  --success: oklch(53% 0.080 130);
+  --destructive: oklch(48% 0.150 32);
+  --warn: oklch(91% 0.045 80);
+  --warn-fg: oklch(36% 0.060 70);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font: 15px/1.55 ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  margin: 0;
+  padding: 32px;
+  max-width: 1200px;
+  margin-inline: auto;
+}
+
+h1 {
+  font: 600 32px/1.2 "Fraunces", ui-serif, Georgia, serif;
+  margin: 0 0 4px;
+  color: var(--ink);
+}
+
+h1 .sub { font: 400 16px/1.4 ui-sans-serif; color: var(--mute); display: block; margin-top: 4px; }
+
+h2 {
+  font: 600 22px/1.3 "Fraunces", ui-serif, Georgia, serif;
+  margin: 56px 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+h3 {
+  font: 600 16px/1.3 ui-sans-serif;
+  margin: 24px 0 10px;
+}
+
+p { margin: 0 0 12px; }
+
+code, .mono {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", monospace;
+  font-size: 0.9em;
+  background: var(--surface);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+pre {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  margin: 12px 0;
+}
+
+pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 8px 0 24px; font-size: 13px; }
+.legend > span { display: inline-flex; align-items: center; gap: 6px; color: var(--mute); }
+.legend .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--border-strong); }
+
+/* ============== ARCHITECTURE FLOW ============== */
+.flow {
+  display: grid;
+  grid-template-columns: 1.2fr auto 1fr auto 1fr auto 1.2fr;
+  gap: 14px;
+  align-items: stretch;
+  margin: 20px 0 32px;
+}
+
+.flow .col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.flow .arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mute);
+  font-size: 22px;
+  font-weight: 300;
+}
+
+.flow .col-title {
+  text-align: center;
+  font: 600 12px/1.2 ui-sans-serif;
+  color: var(--mute);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.flow .node {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.flow .node strong { font-weight: 600; }
+.flow .node small { color: var(--mute); font-size: 11px; display: block; margin-top: 2px; }
+
+.flow .node.emitter { border-left: 3px solid var(--accent); }
+.flow .node.bus { background: var(--accent-soft); border-color: var(--accent); text-align: center; padding: 16px 12px; font-weight: 600; }
+.flow .node.subscriber { background: var(--warn); border-color: var(--warn-fg); border-left: 3px solid var(--warn-fg); }
+.flow .node.db { background: var(--surface-2); border: 1px solid var(--border-strong); padding: 16px 12px; text-align: center; font-weight: 600; }
+.flow .node.endpoint { border-left: 3px solid var(--success); }
+
+.flow .center-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* ============== SCHEMA TABLE ============== */
+.schema {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  padding: 0;
+  overflow: hidden;
+  margin: 16px 0 24px;
+}
+
+.schema-header {
+  background: var(--surface-2);
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border-strong);
+  font: 600 14px/1.3 ui-monospace, monospace;
+}
+
+.schema-cols {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.schema-cols .col-row {
+  display: grid;
+  grid-template-columns: 220px 200px 1fr;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.schema-cols .col-row:last-child { border-bottom: 0; }
+.schema-cols .col-row.pk { background: var(--accent-soft); }
+.schema-cols .col-row.fk { background: oklch(92% 0.015 130 / 0.4); }
+
+.schema-cols .col-row .col-name { font-family: ui-monospace, monospace; font-weight: 600; }
+.schema-cols .col-row .col-type { color: var(--mute); font-family: ui-monospace, monospace; font-size: 12px; }
+.schema-cols .col-row .col-note { color: var(--mute); font-size: 12px; }
+
+.indexes {
+  background: var(--surface-2);
+  padding: 14px 18px;
+  border-top: 1px solid var(--border-strong);
+}
+
+.indexes h4 { font: 600 12px ui-sans-serif; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 8px; color: var(--mute); }
+.indexes ul { margin: 0; padding-left: 20px; }
+.indexes li { font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.7; color: var(--ink); }
+.indexes li em { font-style: normal; color: var(--mute); margin-left: 8px; font-family: ui-sans-serif; }
+
+/* ============== EVENT TYPES TABLE ============== */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 12px 0 20px;
+}
+
+table th, table td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  vertical-align: top;
+}
+
+table th {
+  background: var(--surface-2);
+  font: 600 12px ui-sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--mute);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+table tr:last-child td { border-bottom: 0; }
+table code { font-size: 12px; }
+
+/* ============== GATE D RECAP ============== */
+.gates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.gate {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--success);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.gate .pick { font: 600 13px ui-sans-serif; color: var(--success); margin-bottom: 4px; }
+.gate .what { font: 600 14px ui-sans-serif; margin-bottom: 4px; }
+.gate .why  { font-size: 12px; color: var(--mute); line-height: 1.4; }
+
+.callout {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin: 16px 0;
+  font-size: 14px;
+}
+
+.callout strong { color: var(--accent); }
+
+/* ============== API SAMPLE ============== */
+.api-block {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.api-block .card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.api-block .card-header {
+  background: var(--surface-2);
+  padding: 10px 14px;
+  font: 600 12px ui-sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--mute);
+  border-bottom: 1px solid var(--border);
+}
+
+.api-block .card pre { margin: 0; border: 0; border-radius: 0; }
+
+@media (max-width: 900px) {
+  .flow { grid-template-columns: 1fr; }
+  .flow .arrow { transform: rotate(90deg); padding: 8px 0; }
+  .api-block { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<h1>m2-audit-log <span class="sub">Wave 1.9 design mock · 2026-05-06 · pre-implementation review</span></h1>
+
+<p>Single canonical <code>audit_log</code> table extracts the cache+audit pattern that 5 bounded contexts currently re-implement in their own per-BC tables and jsonb columns. <code>@OnEvent</code> subscriber persists a row per emitted event. Per-BC audit columns survive this slice (cleanup deferred to <code>m2-audit-log-cleanup</code>).</p>
+
+<div class="legend">
+  <span><span class="swatch" style="background:var(--accent)"></span> Emitter (BC service)</span>
+  <span><span class="swatch" style="background:var(--accent-soft);border-color:var(--accent)"></span> Event bus (in-process)</span>
+  <span><span class="swatch" style="background:var(--warn);border-color:var(--warn-fg)"></span> Subscriber</span>
+  <span><span class="swatch" style="background:var(--surface-2);border-color:var(--border-strong)"></span> Persistence</span>
+  <span><span class="swatch" style="background:var(--success);border-color:var(--success)"></span> Read endpoint</span>
+</div>
+
+<h2>1 · Architecture flow</h2>
+<p>One subscriber, eight event types, no per-BC import of <code>AuditLogService</code>. Subscriber crashes are caught + logged; emitter never blocks.</p>
+
+<div class="flow">
+  <div class="col">
+    <div class="col-title">5 BC emitters</div>
+    <div class="node emitter"><strong>cost.service</strong><small>RECIPE_COST_REBUILT (new)</small></div>
+    <div class="node emitter"><strong>ingredients.service</strong><small>INGREDIENT_OVERRIDE_CHANGED</small></div>
+    <div class="node emitter"><strong>recipes-allergens.service</strong><small>RECIPE_ALLERGENS_OVERRIDE_CHANGED</small></div>
+    <div class="node emitter"><strong>recipes.service</strong><small>RECIPE_SOURCE_OVERRIDE_CHANGED<br>RECIPE_INGREDIENT_UPDATED</small></div>
+    <div class="node emitter"><strong>ai-suggestions.service</strong><small>AI_SUGGESTION_ACCEPTED (new)<br>AI_SUGGESTION_REJECTED (new)</small></div>
+    <div class="node emitter"><strong>supplier-items.controller</strong><small>SUPPLIER_PRICE_UPDATED</small></div>
+    <div class="node emitter"><strong>agent-audit.middleware</strong><small>AGENT_ACTION_EXECUTED</small></div>
+  </div>
+
+  <div class="arrow center-block">→</div>
+
+  <div class="col center-block">
+    <div class="col-title">Event bus</div>
+    <div class="node bus">EventEmitter2<br><small style="color:var(--mute);font-size:11px;display:block;margin-top:6px">in-process · already wired</small></div>
+  </div>
+
+  <div class="arrow center-block">→</div>
+
+  <div class="col center-block">
+    <div class="col-title">Subscriber</div>
+    <div class="node subscriber">
+      <strong>AuditLogSubscriber</strong>
+      <small>8 × @OnEvent handlers<br>map envelope → row<br>try/catch swallows errors</small>
+    </div>
+  </div>
+
+  <div class="arrow center-block">→</div>
+
+  <div class="col">
+    <div class="col-title">Persistence + read</div>
+    <div class="node db"><strong>audit_log</strong><br><small style="color:var(--mute);font-size:11px;display:block;margin-top:6px">14 cols · 3 indexes</small></div>
+    <div class="node endpoint">
+      <strong>GET /audit-log</strong>
+      <small>RBAC Owner+Manager<br>filters: aggregate / event / actor / dates<br>limit ≤ 200, default 50</small>
+    </div>
+  </div>
+</div>
+
+<div class="callout">
+  <strong>Design invariant</strong>: BC services never import <code>AuditLogService</code>. They emit events; the subscriber persists. Adding a new event type in a future BC = 1 line of <code>@OnEvent</code> in the subscriber + a constants entry. No table or controller change.
+</div>
+
+<h2>2 · Schema (migration 0017)</h2>
+
+<div class="schema">
+  <div class="schema-header">CREATE TABLE audit_log</div>
+  <div class="schema-cols">
+    <div class="col-row pk"><span class="col-name">id</span><span class="col-type">uuid PK</span><span class="col-note">DEFAULT gen_random_uuid()</span></div>
+    <div class="col-row fk"><span class="col-name">organization_id</span><span class="col-type">uuid NOT NULL</span><span class="col-note">FK organizations(id) ON DELETE CASCADE</span></div>
+    <div class="col-row"><span class="col-name">event_type</span><span class="col-type">text NOT NULL</span><span class="col-note">CHECK len 1..100 — open enum, app-side validation</span></div>
+    <div class="col-row"><span class="col-name">aggregate_type</span><span class="col-type">text NOT NULL</span><span class="col-note">CHECK len 1..50 — polymorphic FK</span></div>
+    <div class="col-row"><span class="col-name">aggregate_id</span><span class="col-type">uuid NOT NULL</span><span class="col-note">no real FK (spans tables)</span></div>
+    <div class="col-row fk"><span class="col-name">actor_user_id</span><span class="col-type">uuid NULL</span><span class="col-note">FK users(id) ON DELETE SET NULL</span></div>
+    <div class="col-row"><span class="col-name">actor_kind</span><span class="col-type">text NOT NULL</span><span class="col-note">CHECK IN ('user','agent','system')</span></div>
+    <div class="col-row"><span class="col-name">agent_name</span><span class="col-type">text NULL</span><span class="col-note">populated when actor_kind='agent'</span></div>
+    <div class="col-row"><span class="col-name">payload_before</span><span class="col-type">jsonb NULL</span><span class="col-note">snapshot pre-mutation</span></div>
+    <div class="col-row"><span class="col-name">payload_after</span><span class="col-type">jsonb NULL</span><span class="col-note">snapshot post-mutation</span></div>
+    <div class="col-row"><span class="col-name">reason</span><span class="col-type">text NULL</span><span class="col-note">CHECK len ≤ 2000 — overrides + rejections</span></div>
+    <div class="col-row"><span class="col-name">citation_url</span><span class="col-type">text NULL</span><span class="col-note">AI events only</span></div>
+    <div class="col-row"><span class="col-name">snippet</span><span class="col-type">text NULL</span><span class="col-note">CHECK len ≤ 500 — AI events only</span></div>
+    <div class="col-row"><span class="col-name">created_at</span><span class="col-type">timestamptz NOT NULL</span><span class="col-note">DEFAULT now() — immutable</span></div>
+  </div>
+  <div class="indexes">
+    <h4>Indexes (3 — write-heavy table, minimise overhead)</h4>
+    <ul>
+      <li>(organization_id, aggregate_type, aggregate_id, created_at DESC) <em>drill-down by entity history</em></li>
+      <li>(organization_id, event_type, created_at DESC) <em>global filter by event type</em></li>
+      <li>(organization_id, actor_user_id, created_at DESC) WHERE actor_user_id IS NOT NULL <em>partial — user history</em></li>
+    </ul>
+  </div>
+</div>
+
+<h2>3 · The 8 known event types</h2>
+
+<table>
+<thead>
+  <tr><th>Event type</th><th>Aggregate type</th><th>Emitted by</th><th>Captures</th></tr>
+</thead>
+<tbody>
+  <tr><td><code>AI_SUGGESTION_ACCEPTED</code></td><td><code>ai_suggestion</code></td><td>ai-suggestions.service.accept()</td><td>chef accepts suggestion + optional value tweak; citation + snippet preserved</td></tr>
+  <tr><td><code>AI_SUGGESTION_REJECTED</code></td><td><code>ai_suggestion</code></td><td>ai-suggestions.service.reject()</td><td>chef rejects suggestion with reason ≥ 10 chars</td></tr>
+  <tr><td><code>INGREDIENT_OVERRIDE_CHANGED</code></td><td><code>ingredient</code></td><td>ingredients.service</td><td>nutritional / allergen / brand override on the entity</td></tr>
+  <tr><td><code>RECIPE_ALLERGENS_OVERRIDE_CHANGED</code></td><td><code>recipe</code></td><td>recipes-allergens.service</td><td>recipe-level allergen override (Article 21)</td></tr>
+  <tr><td><code>RECIPE_SOURCE_OVERRIDE_CHANGED</code></td><td><code>recipe</code></td><td>recipes.service</td><td>recipe ingredient source override (preferred supplier vs cheapest, etc.)</td></tr>
+  <tr><td><code>RECIPE_INGREDIENT_UPDATED</code></td><td><code>recipe</code></td><td>recipes.service</td><td>add / remove / quantity change on a RecipeIngredient line</td></tr>
+  <tr><td><code>SUPPLIER_PRICE_UPDATED</code></td><td><code>supplier_item</code></td><td>supplier-items.controller</td><td>price change for any supplier item</td></tr>
+  <tr><td><code>RECIPE_COST_REBUILT</code> <strong style="color:var(--accent)">new</strong></td><td><code>recipe</code></td><td>cost.service</td><td>per-rollup cost computation; mirrors recipe_cost_history rows</td></tr>
+  <tr><td><code>AGENT_ACTION_EXECUTED</code></td><td><code>varies</code></td><td>shared/agent-audit.middleware</td><td>any MCP-mediated write; aggregate_type carries the actual mutation target</td></tr>
+</tbody>
+</table>
+
+<h2>4 · AuditEventEnvelope shape — sample emit</h2>
+
+<p>Existing emitters publish ad-hoc payload objects today. This slice migrates them to a typed envelope so the subscriber can map without per-event-type translation logic.</p>
+
+<pre><code>// apps/api/src/audit-log/application/types.ts
+export interface AuditEventEnvelope&lt;TBefore = unknown, TAfter = unknown&gt; {
+  organizationId: string;
+  aggregateType: string;          // 'recipe' | 'ingredient' | 'ai_suggestion' | ...
+  aggregateId: string;
+  actorUserId: string | null;     // null for system events
+  actorKind: 'user' | 'agent' | 'system';
+  agentName?: string;             // populated when actorKind === 'agent'
+  payloadBefore: TBefore | null;
+  payloadAfter: TAfter | null;
+  reason?: string;                // overrides + rejections
+  citationUrl?: string;           // AI events
+  snippet?: string;               // AI events
+}
+
+// emit example — ai-suggestions.service.accept()
+this.events.emit(AuditEventType.AI_SUGGESTION_ACCEPTED, {
+  organizationId: orgId,
+  aggregateType: 'ai_suggestion',
+  aggregateId: suggestion.id,
+  actorUserId: userId,
+  actorKind: 'user',
+  payloadBefore: { status: 'pending', value: suggestion.suggestedValue },
+  payloadAfter:  { status: 'accepted', acceptedValue: suggestion.acceptedValue ?? suggestion.suggestedValue },
+  citationUrl: suggestion.citationUrl,
+  snippet: suggestion.snippet,
+} satisfies AuditEventEnvelope);
+</code></pre>
+
+<h2>5 · Backfill mapping (migration 0017, in-transaction)</h2>
+
+<table>
+<thead>
+  <tr><th>Source (current)</th><th>→ event_type</th><th>Per-row mapping</th></tr>
+</thead>
+<tbody>
+  <tr><td><code>ai_suggestions</code> rows where status='accepted'</td><td><code>AI_SUGGESTION_ACCEPTED</code></td><td>1:1 — payload_after = row, citation_url + snippet mirrored</td></tr>
+  <tr><td><code>ai_suggestions</code> rows where status='rejected'</td><td><code>AI_SUGGESTION_REJECTED</code></td><td>1:1 — payload_after = row, reason from rejected_reason</td></tr>
+  <tr><td><code>recipe_cost_history</code></td><td><code>RECIPE_COST_REBUILT</code></td><td>1:1 — payload_after = serialized history row</td></tr>
+  <tr><td><code>ingredients.overrides</code> jsonb (when non-empty array)</td><td><code>INGREDIENT_OVERRIDE_CHANGED</code></td><td>1:N — one row per array entry</td></tr>
+  <tr><td><code>recipes.allergens_overrides</code> jsonb</td><td><code>RECIPE_ALLERGENS_OVERRIDE_CHANGED</code></td><td>1:N — one row per array entry</td></tr>
+</tbody>
+</table>
+
+<div class="callout">
+  <strong>Known data gap</strong>: <code>SUPPLIER_PRICE_UPDATED</code> and <code>RECIPE_INGREDIENT_UPDATED</code> were never persisted anywhere; backfill cannot reconstruct them. Going forward they're captured by the subscriber. This is documented in the retro.
+</div>
+
+<h2>6 · GET /audit-log — sample request + response</h2>
+
+<div class="api-block">
+  <div class="card">
+    <div class="card-header">Request</div>
+    <pre><code>GET /audit-log?
+  organizationId=33b2…d9e0
+  &amp;aggregateType=recipe
+  &amp;aggregateId=7c2a…11b8
+  &amp;limit=20
+  &amp;offset=0
+
+Authorization: Bearer &lt;owner-or-manager-token&gt;</code></pre>
+  </div>
+  <div class="card">
+    <div class="card-header">Response · 200</div>
+    <pre><code>{
+  "rows": [
+    {
+      "id": "f8c1...",
+      "eventType": "RECIPE_INGREDIENT_UPDATED",
+      "aggregateType": "recipe",
+      "aggregateId": "7c2a...11b8",
+      "actorUserId": "lourdes-...",
+      "actorKind": "user",
+      "agentName": null,
+      "payloadBefore": { "lineId": "ab12", "quantity": 200 },
+      "payloadAfter":  { "lineId": "ab12", "quantity": 250 },
+      "reason": null,
+      "citationUrl": null,
+      "snippet": null,
+      "createdAt": "2026-05-06T11:42:08Z"
+    },
+    {
+      "id": "9a44...",
+      "eventType": "AI_SUGGESTION_ACCEPTED",
+      "aggregateType": "ai_suggestion",
+      "aggregateId": "ce5b...",
+      "actorUserId": "lourdes-...",
+      "actorKind": "user",
+      "payloadAfter": { "status": "accepted", "acceptedValue": 0.65 },
+      "citationUrl": "https://fdc.nal.usda.gov/.../173109",
+      "snippet": "USDA: beef chuck slow-cooked yield 60-70%…",
+      "createdAt": "2026-05-06T11:38:51Z"
+    }
+  ],
+  "total": 47,
+  "limit": 20,
+  "offset": 0
+}</code></pre>
+  </div>
+</div>
+
+<h2>7 · Gate D recap (your picks · approved)</h2>
+
+<div class="gates">
+  <div class="gate">
+    <div class="pick">Pick 1 · OK</div>
+    <div class="what">Schema canónico</div>
+    <div class="why">14 columnas · 3 indexes · polymorphic FK por aggregate_type+aggregate_id · CHECK constraints inline</div>
+  </div>
+  <div class="gate">
+    <div class="pick">Pick 2 · d</div>
+    <div class="what">New + backfill</div>
+    <div class="why">Migración 0017 crea tabla + backfillea 4 fuentes históricas en mismo SQL transaction. Columnas legacy se quedan (drop deferred a m2-audit-log-cleanup).</div>
+  </div>
+  <div class="gate">
+    <div class="pick">Pick 3 · a</div>
+    <div class="what">@OnEvent subscriber</div>
+    <div class="why">Desacopla audit de business logic. Servicios no importan AuditLogService. Crashes del subscriber → log sin propagar al emitter.</div>
+  </div>
+  <div class="gate">
+    <div class="pick">Pick 4 · c</div>
+    <div class="what">Endpoint canónico único</div>
+    <div class="why">Solo GET /audit-log con query params componibles. Sin wrappers per-BC. RBAC Owner+Manager. Default 30d window + max 200 rows.</div>
+  </div>
+  <div class="gate">
+    <div class="pick">Pick 5 · suggested</div>
+    <div class="what">Conectar 5 BCs vía @OnEvent</div>
+    <div class="why">Migrar emitters a AuditEventEnvelope típado en este slice. Diferir el drop de columnas legacy a m2-audit-log-cleanup follow-up.</div>
+  </div>
+</div>
+
+<h2>8 · Out of scope (filed as follow-ups)</h2>
+
+<ul>
+  <li><strong>m2-audit-log-cleanup</strong> — drop redundant per-BC audit columns + tables (recipe_cost_history, ingredients.overrides jsonb, recipes.allergens_overrides jsonb).</li>
+  <li><strong>m2-audit-log-export</strong> — <code>GET /audit-log/export.csv</code> for offline analysis.</li>
+  <li><strong>m2-audit-log-fts</strong> — Postgres FTS index on payload_before/after + reason + snippet for cross-BC search by free text.</li>
+  <li><strong>m2-audit-log-retention</strong> — archival policy (partitioning by month, cold storage after N years).</li>
+</ul>
+
+<h2>9 · Risks acknowledged</h2>
+
+<ul>
+  <li><strong>Subscriber crash</strong> swallows audit events — try/catch + log; emitter never blocks. Dead-letter queue is a future slice if reliability becomes a concern.</li>
+  <li><strong>High write volume</strong> — single row + 3 index updates ≤ 1ms. Storage growth ~22 GB/mes/heavy-org → partitioning when justified (years out).</li>
+  <li><strong>Polymorphic FK</strong> — aggregate_id has no real FK; aggregate validity guaranteed by emitter (entity exists when event fires).</li>
+  <li><strong>Trade-off: per-BC audit columns survive</strong> — two sources of truth for one release. Canonical path = audit_log; legacy columns deprecated-but-readable until cleanup slice.</li>
+</ul>
+
+<p style="margin-top: 48px; color: var(--mute); font-size: 13px; font-style: italic; border-top: 1px solid var(--border); padding-top: 18px;">
+Generated as a one-off design mock for review. The source of truth is <code>openspec/changes/m2-audit-log/{proposal,design,tasks}.md</code> + the spec delta. PR <a href="https://github.com/Wizarck/openTrattOS/pull/90" style="color:var(--accent)">#90</a>.
+</p>
+
+</body>
+</html>
