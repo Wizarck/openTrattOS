@@ -126,3 +126,17 @@ dist
 # TypeScript incremental build cache + Turbo cache
 *.tsbuildinfo
 .turbo/
+
+# Python tooling (tools/rag-proxy, tools/rag-corpus)
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.egg-info/
+.env
+!.env.example

@@ -419,3 +419,110 @@ emphasis (bold) is trivially supported.
 - Codegen for backend DTOs → ui-kit types (manual hand-keeping today; risks drift).
 - Per-PR Storybook previews via Chromatic / Vercel — deferred; Pages-on-master is sufficient for v0.
 
+---
+
+## ADR-021: Operational corpus is USDA + EU 1169/2011 + Escoffier (Gutenberg); modern cookbooks deferred
+
+**Decision:** The AI yield/waste suggestion corpus ingested into the openTrattOS RAG store comprises:
+- **USDA FoodData Central** (Foundation + SR Legacy datasets) — public domain (US Government Work, 17 U.S.C. §105).
+- **EU Reglamento (UE) Nº 1169/2011** consolidated text — free reuse under Commission Decision 2011/833/EU.
+- **Escoffier *Le Guide Culinaire*** Project Gutenberg edition — public domain (>100 years post mortem auctoris).
+- **CIAA Spain materials** — gated behind explicit written permission (`CIAA_PERMISSION_GRANTED=true` env flag); script committed but inert until permission obtained.
+
+Modern copyrighted cookbooks (Larousse Gastronomique, *The Professional Chef* CIA, *On Food and Cooking* McGee) are **explicitly out of scope** and filed in follow-up slice `m2-ai-yield-cookbooks-modern` pending publisher licensing agreements.
+
+**Rationale:** ADR-018 mandates the iron rule (no suggestion without a verifiable citation). The audit trail — `ai_suggestions.citation_url` + `snippet` per Wave 1.7 — must be defensible if regulators or auditors ever ask "where did this 65% yield come from?". Ingesting copyrighted material without a positive permission record breaks that defensibility regardless of how internal the use feels. Escoffier 1903 is tagged `era=historical` so the LLM is told to prefer modern sources for modern technique queries; it is included for free-cost coverage of fundamental classical techniques (sauces, stocks, basic preparations).
+
+**Consequence:**
+- `tools/rag-corpus/` ingestion package with one script per source, each tagging chunks with canonical source URL as metadata so the LLM can cite back via `user_prompt` schema.
+- `LICENSE_NOTE.md` enumerates upstream licenses and the explicit list of out-of-scope copyrighted works.
+- CIAA script is committed but inert until permission. Re-running with the env flag set proceeds (with placeholder logic) so the corpus structure can evolve when permission lands.
+
+**Alternatives considered:**
+- **Ingest cookbooks "best-effort" with disclaimer**: rejected — the iron rule's audit trail demands a positive permission record, not a disclaimer.
+- **Skip Escoffier**: rejected — public domain coverage of classical technique is too valuable to leave on the table; the historical tag mitigates style drift.
+- **Brave-only, no corpus**: rejected — Brave is a fallback, not a substitute. The corpus gives stable, deterministic citations for common cases; Brave handles the long tail.
+
+---
+
+## ADR-022: rag-proxy as stateless Python service in front of LightRAG (no LightRAG modification)
+
+**Decision:** Translation between LightRAG's prose+references response shape and openTrattOS's canonical `{value, citationUrl, snippet}` AI suggestion contract lives in a separate Python FastAPI service (`tools/rag-proxy/`) sitting in front of an unmodified LightRAG deployment on the VPS. The proxy is stateless — every audit/cache row stays in `apps/api`'s `ai_suggestions` table per Wave 1.7.
+
+The proxy is responsible for:
+- Bearer auth from `apps/api` (`Authorization: Bearer <RAG_PROXY_API_KEY>`).
+- `user_prompt` JSON-only schema injection into LightRAG queries.
+- One retry on parse failure with a stricter prompt.
+- Brave Search fallback (per ADR-023) when LightRAG returns no parseable result.
+- Iron-rule preflight (mirrored from `apps/api/src/ai-suggestions/application/types.ts::applyIronRule`) before responding.
+- Translation to LightRAG's `X-API-Key` auth scheme internally.
+
+`apps/api/`'s `GptOssRagProvider` already speaks the canonical contract; no TypeScript code changes — only `OPENTRATTOS_AI_RAG_BASE_URL` flips at deploy time.
+
+**Rationale:**
+- **No LightRAG fork or upstream PR dependency.** LightRAG's response shape, auth, and storage stay vanilla.
+- **Python is the right place for LLM-prose-parsing and HTTP I/O against arbitrary search APIs.** Pulling that into the TypeScript monorepo would couple `apps/api` to LightRAG specifics and increase ESM/CJS surface area for no benefit.
+- **Stateless proxy → simple ops.** Restart safe; no migrations; no per-org access control needed because `apps/api` authenticates per-org *upstream* of the proxy and the corpus is non-PII scientific data.
+- **Pluggable per `AI_SUGGESTION_PROVIDER` DI token.** Future providers (Claude Haiku, Hermes, alternative RAG engines) drop in at the apps/api layer; the proxy is one of N possible backends.
+
+**Consequence:**
+- New Docker image `opentrattos/rag-proxy`, ~250 LOC Python, deployed alongside LightRAG on the VPS.
+- ADR-018's "single feature flag controls the surface" still holds: `OPENTRATTOS_AI_YIELD_SUGGESTIONS_ENABLED` is the master switch; the proxy URL is a config detail.
+- Operational rollback: stop the proxy container → `apps/api` falls back to "manual entry only" via the existing iron-rule null path.
+
+**Alternatives considered:**
+- **`LightRagProvider` class inside `apps/api`**: rejected — pulls Brave HTTP + LLM-prose-parsing into TypeScript; couples `apps/api` to LightRAG's response shape; Python tooling for this work is more mature.
+- **Modify LightRAG (response shape, auth, structured outputs)**: rejected per user constraint and to avoid upstream PR/fork maintenance burden.
+- **Deploy rag-proxy as a Node service inside the Turborepo monorepo**: considered, but FastAPI + httpx + respx for testing is the simpler stack for this use case, and the proxy lives close to LightRAG operationally anyway.
+
+---
+
+## ADR-023: Brave Search fallback with hostname whitelist + daily budget; off by default
+
+**Decision:** The rag-proxy's `BRAVE_ENABLED` defaults to `false`. When enabled by the operator, Brave Search is invoked only when LightRAG returns no parseable result after one retry. Results are filtered against a configurable hostname whitelist of authoritative domains; non-whitelisted results are dropped. A per-UTC-day query counter enforces a soft budget (`BRAVE_DAILY_BUDGET`, default 1000); over budget the proxy short-circuits to `null` without an API call.
+
+Default whitelist: `fdc.nal.usda.gov`, `eur-lex.europa.eu`, `efsa.europa.eu`, `fda.gov`, `who.int`, `fao.org`, `ciaa.es`, `en.wikipedia.org`, `es.wikipedia.org` (subdomain-suffix matching).
+
+Value extraction from a Brave snippet uses a small downstream LightRAG call with a focused prompt: "given this snippet, return `{value: <0-1>}`". If extraction fails, returns `null`.
+
+**Rationale:**
+- **Iron rule (ADR-018) extends to web search.** A Reddit thread or recipe content farm is not a citation. Whitelisting at the hostname level enforces source authority before the iron rule even fires on the structured fields.
+- **Default-off is conservative.** First production rollout proves the corpus path; Brave is a follow-on operator decision once corpus coverage is measured.
+- **Daily budget protects against runaway cost.** Brave's free tier is 2000 queries/month; the default budget keeps usage well inside even if a hot loop hits.
+- **Per-result post-LLM critique would double cost without measurable quality gain** vs. a pre-vetted whitelist.
+
+**Consequence:**
+- Operators must explicitly opt in via `BRAVE_ENABLED=true` and supply `BRAVE_API_KEY`.
+- Whitelist is env-configurable (`BRAVE_DOMAIN_WHITELIST`) so trusted sources can be added without redeploying — but the default is intentionally narrow.
+- Budget counter is in-memory and resets at UTC midnight; multi-replica deployments would double-count, accepted as "soft" budget until usage volume justifies a Redis-backed counter.
+
+**Alternatives considered:**
+- **Brave's `result_filter=news`**: rejected — excludes USDA / EUR-Lex / EFSA regulatory content.
+- **Per-result LLM critique pass**: rejected — extra round-trip per query without measurable gain over whitelist.
+- **Drop Brave entirely**: rejected — the corpus is finite; Brave fills gaps (regional ingredients, modern techniques) when LightRAG misses.
+
+---
+
+## ADR-024: LightRAG → canonical contract response mapping via user_prompt JSON schema; ignore references[] for citationUrl
+
+**Decision:** The rag-proxy injects a JSON-only `user_prompt` instructing the LightRAG-backed LLM to respond with `{"value": <0-1>, "citationUrl": <string>, "snippet": <string>}`. The proxy parses this LLM-emitted JSON to derive the canonical contract fields. The proxy **does not** use `LightRagResponse.references[].file_path` as `citationUrl` — those are local corpus paths, not verifiable URLs.
+
+The `citationUrl` is what the LLM committed to in its structured output. The corpus ingestion scripts (ADR-021) stamp every chunk with a canonical source URL as metadata so the LLM has the URL to cite. This forms the bridge: ingestion stamps URL → retrieval surfaces it via context → LLM cites it via `user_prompt` schema.
+
+If the LLM's response cannot be parsed as JSON after one retry (with a stricter prompt), the proxy falls through to the Brave fallback (per ADR-023). If both paths fail, the proxy returns `null` — `apps/api` honours its existing iron-rule contract and surfaces "manual entry only" to the chef.
+
+**Rationale:**
+- **Citation must be what the LLM committed to**, not what the retrieval layer happens to surface. Otherwise the LLM could cite source-A content while paying lip service to source-B's URL.
+- **`user_prompt` is the only LightRAG hook that doesn't require modification.** ADR-022 forbids LightRAG modification; structured outputs (response_format / tools) would require it.
+- **Acceptable failure mode (~5–10%).** When the LLM ignores the schema, the proxy retries once. If still bad → Brave → null. The chef sees "manual entry" — same UX as Wave 1.7's `OPENTRATTOS_AI_YIELD_SUGGESTIONS_ENABLED=false` path. Acceptable per FR19.
+
+**Consequence:**
+- Corpus ingestion includes `[source_url=… era=… source=…]` metadata header on every chunk so the LLM has it as context.
+- If reliability becomes a problem in production, follow-up slice `m2-ai-yield-structured-outputs` patches LightRAG's LLM call layer to pass `response_format` through to the underlying model API. That slice is intentionally deferred until measured failure rate justifies the patch maintenance burden.
+- Failure-mode telemetry (LightRAG miss / Brave fallback / null) is logged structured-JSON in the proxy so operators can monitor the ratio.
+
+**Alternatives considered:**
+- **Use `references[0].file_path` as citationUrl**: rejected — leaks internal corpus paths, isn't a URL the chef can open.
+- **Patch LightRAG for structured outputs (response_format)**: rejected for this slice; filed as `m2-ai-yield-structured-outputs` follow-up.
+- **Train a fine-tuned model on the schema**: rejected — operational complexity dwarfs the marginal reliability gain at this scale.
+

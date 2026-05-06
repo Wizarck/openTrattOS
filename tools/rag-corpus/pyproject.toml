@@ -1,0 +1,54 @@
+[project]
+name = "rag-corpus"
+version = "0.1.0"
+description = "Authoritative corpus ingestion scripts for openTrattOS RAG (USDA, EU 1169, Escoffier, CIAA)"
+requires-python = ">=3.12"
+dependencies = [
+  "requests>=2.32.0",
+  "tqdm>=4.66.0",
+  "pdfplumber>=0.11.0",
+  "beautifulsoup4>=4.12.0",
+]
+
+[project.optional-dependencies]
+# raganything[all] is the production runtime ingestion dep; it pulls heavy ML stack
+# (torch, transformers, etc.) and is intentionally NOT in the base deps so CI/CI-lite
+# can lint/test the scripts without downloading multi-GB wheels.
+prod = [
+  "raganything>=1.0.0",
+  "lightrag-hku>=1.4.0",
+]
+dev = [
+  "pytest>=8.3.0",
+  "pytest-mock>=3.14.0",
+  "ruff>=0.7.0",
+  "mypy>=1.13.0",
+  "types-requests",
+  "types-beautifulsoup4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rag_corpus"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--strict-markers"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+disallow_untyped_decorators = false
+ignore_missing_imports = true

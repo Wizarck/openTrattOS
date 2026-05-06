@@ -1,0 +1,29 @@
+# Sample compose stanza for VPS deployment alongside an existing LightRAG service.
+# Adapt to your operational needs (TLS, secrets, network, observability).
+# This file is illustrative; actual deploy is operational, not part of CI.
+version: "3.9"
+
+services:
+  rag-proxy:
+    build: .
+    image: opentrattos/rag-proxy:latest
+    restart: unless-stopped
+    environment:
+      - LIGHTRAG_BASE_URL=http://lightrag:9621
+      - LIGHTRAG_API_KEY=${LIGHTRAG_API_KEY}
+      - LIGHTRAG_MODE=hybrid
+      - LIGHTRAG_SCORE_THRESHOLD=0.6
+      - BRAVE_ENABLED=true
+      - BRAVE_API_KEY=${BRAVE_API_KEY}
+      - BRAVE_DAILY_BUDGET=1000
+      - RAG_PROXY_API_KEY=${RAG_PROXY_API_KEY}
+    ports:
+      - "127.0.0.1:8000:8000"
+    networks:
+      - rag-net
+    depends_on:
+      - lightrag
+
+networks:
+  rag-net:
+    external: true
