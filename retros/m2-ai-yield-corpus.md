@@ -1,6 +1,6 @@
 # retros/m2-ai-yield-corpus.md
 
-> **Slice**: `m2-ai-yield-corpus` · **PR**: [#88](https://github.com/Wizarck/openTrattOS/pull/88) · **Merged**: TBD · **Squash SHA**: TBD
+> **Slice**: `m2-ai-yield-corpus` · **PR**: [#88](https://github.com/Wizarck/openTrattOS/pull/88) · **Merged**: 2026-05-06 · **Squash SHA**: `6d63e6c`
 > **Cadence**: post-archive (per `runbook-bmad-openspec.md` §4)
 > **Notable**: **Wave 1.8 — first cross-language slice**. Closes the operational loop on Wave 1.7 (`m2-ai-yield-suggestions`) so the production AI feature flag becomes flippable. Zero TypeScript LOC modified — the proxy speaks the canonical contract `apps/api`'s `GptOssRagProvider` already expects. First slice that introduces a Python toolchain alongside the Turborepo TS workspaces (`tools/rag-proxy/` + `tools/rag-corpus/`).
 
