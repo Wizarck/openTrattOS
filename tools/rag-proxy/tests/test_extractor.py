@@ -52,11 +52,6 @@ def test_empty_string_returns_none() -> None:
     assert extract_json("   ") is None
 
 
-def test_non_string_returns_none() -> None:
-    assert extract_json(None) is None  # type: ignore[arg-type]
-    assert extract_json(123) is None  # type: ignore[arg-type]
-
-
 def test_top_level_array_returns_none() -> None:
     text = '[1, 2, 3]'
     assert extract_json(text) is None

@@ -139,10 +139,10 @@ async def ingest_chunk(
 def init_lightrag(working_dir: Path) -> Any:
     """Lazy import of LightRAG to keep dev/test installs lightweight."""
     try:
-        from lightrag import LightRAG  # type: ignore[import-not-found]
-        from lightrag.llm.ollama import ollama_embed  # type: ignore[import-not-found]
-        from lightrag.llm.openai import openai_complete_if_cache  # type: ignore[import-not-found]
-        from lightrag.utils import EmbeddingFunc  # type: ignore[import-not-found]
+        from lightrag import LightRAG
+        from lightrag.llm.ollama import ollama_embed
+        from lightrag.llm.openai import openai_complete_if_cache
+        from lightrag.utils import EmbeddingFunc
     except ImportError as exc:
         raise RuntimeError(
             "lightrag-hku is not installed. Install with `pip install -e \".[prod]\"`."

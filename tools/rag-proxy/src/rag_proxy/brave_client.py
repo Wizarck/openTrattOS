@@ -76,7 +76,7 @@ class BraveClient:
             "Accept": "application/json",
             "X-Subscription-Token": self._settings.BRAVE_API_KEY,
         }
-        params = {"q": query, "count": 10}
+        params: dict[str, str | int] = {"q": query, "count": 10}
 
         client = self._client or httpx.AsyncClient(timeout=self._settings.BRAVE_TIMEOUT_S)
         owns_client = self._client is None

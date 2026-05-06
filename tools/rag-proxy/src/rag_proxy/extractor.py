@@ -55,8 +55,6 @@ def extract_json(response_text: str) -> dict[str, Any] | None:
     Tries: (1) direct parse, (2) strip markdown fence, (3) scan for embedded JSON object.
     Returns None if no parseable JSON found.
     """
-    if not isinstance(response_text, str):
-        return None
     text = response_text.strip()
     if not text:
         return None
