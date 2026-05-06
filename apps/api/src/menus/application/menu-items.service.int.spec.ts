@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { AuditLog } from '../../audit-log/domain/audit-log.entity';
 import { AuditLogService } from '../../audit-log/application/audit-log.service';
+import { AuditLogSubscriber } from '../../audit-log/application/audit-log.subscriber';
 import { CostService } from '../../cost/application/cost.service';
 import { PreferredSupplierResolver } from '../../cost/application/preferred-supplier.resolver';
 import { INVENTORY_COST_RESOLVER } from '../../cost/inventory-cost-resolver';
@@ -80,6 +81,7 @@ describe('MenuItemsService (integration)', () => {
         RecipeRepository,
         MenuItemRepository,
         AuditLogService,
+        AuditLogSubscriber,
         PreferredSupplierResolver,
         { provide: INVENTORY_COST_RESOLVER, useExisting: PreferredSupplierResolver },
         CostService,

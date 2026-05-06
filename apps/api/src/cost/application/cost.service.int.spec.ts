@@ -22,6 +22,7 @@ import { CostService } from './cost.service';
 import { PreferredSupplierResolver } from './preferred-supplier.resolver';
 import { AuditLog } from '../../audit-log/domain/audit-log.entity';
 import { AuditLogService } from '../../audit-log/application/audit-log.service';
+import { AuditLogSubscriber } from '../../audit-log/application/audit-log.subscriber';
 import { INVENTORY_COST_RESOLVER } from '../inventory-cost-resolver';
 
 const ALL_ENTITIES = [
@@ -73,6 +74,7 @@ describe('CostService (integration)', () => {
         SupplierRepository,
         SupplierItemRepository,
         AuditLogService,
+        AuditLogSubscriber,
         PreferredSupplierResolver,
         { provide: INVENTORY_COST_RESOLVER, useExisting: PreferredSupplierResolver },
         CostService,
