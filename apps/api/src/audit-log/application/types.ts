@@ -81,6 +81,15 @@ export interface AuditLogFilter {
   until?: Date;
   limit?: number;
   offset?: number;
+  /**
+   * Optional full-text search term. When set, `query()` adds an OR'd
+   * dual-config (Spanish + English) WHERE clause backed by the
+   * `ix_audit_log_fts_es` + `ix_audit_log_fts_en` GIN indexes, and replaces
+   * the default `created_at DESC` ordering with
+   * `GREATEST(ts_rank_es, ts_rank_en) DESC, created_at DESC`. Length is
+   * enforced at the DTO (≤200 chars).
+   */
+  q?: string;
 }
 
 export interface AuditLogPage<T> {

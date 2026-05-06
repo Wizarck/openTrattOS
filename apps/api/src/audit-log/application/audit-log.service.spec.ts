@@ -12,6 +12,7 @@ import type { AuditEventEnvelope } from './types';
 interface FakeQueryBuilder {
   whereCalls: Array<{ sql: string; params: Record<string, unknown> }>;
   orderByCalled?: { col: string; dir: 'ASC' | 'DESC' };
+  addOrderByCalled?: Array<{ col: string; dir: 'ASC' | 'DESC' }>;
   skipValue?: number;
   takeValue?: number;
   rows: AuditLog[];
@@ -22,16 +23,13 @@ type FakeQbHandle = Record<string, unknown> & {
   where: (sql: string, params: Record<string, unknown>) => FakeQbHandle;
   andWhere: (sqlOrBrackets: unknown, params?: Record<string, unknown>) => FakeQbHandle;
   orderBy: (col: string, dir: 'ASC' | 'DESC') => FakeQbHandle;
+  addOrderBy: (col: string, dir: 'ASC' | 'DESC') => FakeQbHandle;
   skip: (n: number) => FakeQbHandle;
   take: (n: number) => FakeQbHandle;
   getManyAndCount: () => Promise<[AuditLog[], number]>;
 };
 
-function makeFakeQueryBuilder(rows: AuditLog[], total: number): {
-  qb: FakeQbHandle;
-  state: FakeQueryBuilder;
-} {
-  const state: FakeQueryBuilder = { whereCalls: [], rows, total };
+function makeFakeQueryBuilder(state: FakeQueryBuilder): FakeQbHandle {
   const qb: FakeQbHandle = {
     where(sql: string, params: Record<string, unknown>) {
       state.whereCalls.push({ sql, params });
@@ -52,6 +50,10 @@ function makeFakeQueryBuilder(rows: AuditLog[], total: number): {
       state.orderByCalled = { col, dir };
       return qb;
     },
+    addOrderBy(col: string, dir: 'ASC' | 'DESC') {
+      state.addOrderByCalled = [...(state.addOrderByCalled ?? []), { col, dir }];
+      return qb;
+    },
     skip(n: number) {
       state.skipValue = n;
       return qb;
@@ -64,7 +66,7 @@ function makeFakeQueryBuilder(rows: AuditLog[], total: number): {
       return [state.rows, state.total];
     },
   };
-  return { qb, state };
+  return qb;
 }
 
 function makeAuditLog(overrides: Partial<AuditLog> = {}): AuditLog {
@@ -106,7 +108,7 @@ describe('AuditLogService', () => {
         createQueryBuilder: () => {
           const next = qbStates.shift();
           if (!next) throw new Error('No QB state pre-loaded for test');
-          return makeFakeQueryBuilder(next.rows, next.total).qb;
+          return makeFakeQueryBuilder(next);
         },
       }),
     };
@@ -225,6 +227,90 @@ describe('AuditLogService', () => {
       const page = await service.query({ organizationId: orgId, limit: 10, offset: 5 });
       expect(page.limit).toBe(10);
       expect(page.offset).toBe(5);
+    });
+
+    describe('FTS (q parameter)', () => {
+      it('q absent → orderBy is created_at DESC, no FTS clause in WHERE', async () => {
+        const state: FakeQueryBuilder = { whereCalls: [], rows: [], total: 0 };
+        qbStates.push(state);
+        await service.query({ organizationId: orgId });
+
+        expect(state.orderByCalled).toEqual({ col: 'a.created_at', dir: 'DESC' });
+        expect(state.addOrderByCalled).toBeUndefined();
+        const ftsClauses = state.whereCalls.filter((c) =>
+          c.sql.includes('plainto_tsquery'),
+        );
+        expect(ftsClauses).toHaveLength(0);
+      });
+
+      it('q present → adds dual-config OR\'d FTS clause with both spanish + english', async () => {
+        const state: FakeQueryBuilder = { whereCalls: [], rows: [], total: 0 };
+        qbStates.push(state);
+        await service.query({ organizationId: orgId, q: 'tomate' });
+
+        const ftsClauses = state.whereCalls.filter((c) =>
+          c.sql.includes('plainto_tsquery'),
+        );
+        expect(ftsClauses).toHaveLength(1);
+        const clause = ftsClauses[0];
+        expect(clause.sql).toContain("plainto_tsquery('spanish', :q)");
+        expect(clause.sql).toContain("plainto_tsquery('english', :q)");
+        expect(clause.sql).toContain('jsonb_to_tsvector');
+        expect(clause.sql).toMatch(/\sOR\s/);
+        expect(clause.params).toEqual({ q: 'tomate' });
+      });
+
+      it('q present → orderBy uses GREATEST(ts_rank…) DESC, addOrderBy created_at DESC', async () => {
+        const state: FakeQueryBuilder = { whereCalls: [], rows: [], total: 0 };
+        qbStates.push(state);
+        await service.query({ organizationId: orgId, q: 'pollo' });
+
+        expect(state.orderByCalled?.dir).toBe('DESC');
+        expect(state.orderByCalled?.col).toContain('GREATEST');
+        expect(state.orderByCalled?.col).toContain('ts_rank');
+        expect(state.orderByCalled?.col).toContain("plainto_tsquery('spanish', :q)");
+        expect(state.orderByCalled?.col).toContain("plainto_tsquery('english', :q)");
+        expect(state.addOrderByCalled).toEqual([
+          { col: 'a.created_at', dir: 'DESC' },
+        ]);
+      });
+
+      it('empty q (length 0) is treated as absent — no FTS clause', async () => {
+        const state: FakeQueryBuilder = { whereCalls: [], rows: [], total: 0 };
+        qbStates.push(state);
+        await service.query({ organizationId: orgId, q: '' });
+
+        const ftsClauses = state.whereCalls.filter((c) =>
+          c.sql.includes('plainto_tsquery'),
+        );
+        expect(ftsClauses).toHaveLength(0);
+        expect(state.orderByCalled).toEqual({ col: 'a.created_at', dir: 'DESC' });
+      });
+
+      it('q combines AND-wise with aggregateType + actorUserId', async () => {
+        const state: FakeQueryBuilder = { whereCalls: [], rows: [], total: 0 };
+        qbStates.push(state);
+        await service.query({
+          organizationId: orgId,
+          q: 'tomate',
+          aggregateType: 'recipe',
+          actorUserId: '00000000-0000-4000-8000-000000000999',
+        });
+
+        // The FTS clause is one andWhere; aggregateType + actorUserId are
+        // separate andWhere calls. All sit alongside the org_id WHERE +
+        // since/until WHERE — so we expect ≥ 5 captured WHERE calls.
+        expect(state.whereCalls.length).toBeGreaterThanOrEqual(5);
+        expect(
+          state.whereCalls.some((c) => c.sql.includes('a.aggregate_type = :aggregateType')),
+        ).toBe(true);
+        expect(
+          state.whereCalls.some((c) => c.sql.includes('a.actor_user_id = :actorUserId')),
+        ).toBe(true);
+        expect(
+          state.whereCalls.some((c) => c.sql.includes('plainto_tsquery')),
+        ).toBe(true);
+      });
     });
   });
 });

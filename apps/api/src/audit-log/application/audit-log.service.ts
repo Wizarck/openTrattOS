@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Brackets, DataSource } from 'typeorm';
 import { AuditLog } from '../domain/audit-log.entity';
+import { ES_VECTOR_SQL, EN_VECTOR_SQL } from './audit-log-fts.sql';
 import { AuditLogQueryError } from './errors';
 import {
   AuditEventEnvelope,
@@ -79,7 +80,34 @@ export class AuditLogService {
       qb.andWhere('a.actor_kind = :actorKind', { actorKind: filter.actorKind });
     }
 
-    qb.orderBy('a.created_at', 'DESC').skip(offset).take(limit);
+    if (filter.q && filter.q.length > 0) {
+      // Dual-config FTS: OR the Spanish and English vector matches. The two
+      // expressions reference the EXACT same SQL fragments used by the
+      // CREATE INDEX in migration 0019 (via audit-log-fts.sql.ts) so the
+      // planner uses ix_audit_log_fts_es / ix_audit_log_fts_en bitmap-OR.
+      qb.andWhere(
+        `(
+          (${ES_VECTOR_SQL}) @@ plainto_tsquery('spanish', :q)
+          OR
+          (${EN_VECTOR_SQL}) @@ plainto_tsquery('english', :q)
+        )`,
+        { q: filter.q },
+      );
+      // Relevance first, recency as tiebreaker. GREATEST takes the higher of
+      // the two per-config ranks so a row matching strongly in only one
+      // language still surfaces high.
+      qb.orderBy(
+        `GREATEST(
+          ts_rank((${ES_VECTOR_SQL}), plainto_tsquery('spanish', :q)),
+          ts_rank((${EN_VECTOR_SQL}), plainto_tsquery('english', :q))
+        )`,
+        'DESC',
+      ).addOrderBy('a.created_at', 'DESC');
+    } else {
+      qb.orderBy('a.created_at', 'DESC');
+    }
+
+    qb.skip(offset).take(limit);
 
     const [rows, total] = await qb.getManyAndCount();
     return { rows, total, limit, offset };
