@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ExternalCatalogModule } from '../external-catalog/external-catalog.module';
 import { RecipesModule } from '../recipes/recipes.module';
 import { AuditResolverRegistry } from '../shared/application/audit-resolver-registry';
+import { SharedModule } from '../shared/shared.module';
 import { IngredientExportService } from './application/ingredient-export.service';
 import { IngredientImportService } from './application/ingredient-import.service';
 import { IngredientsService } from './application/ingredients.service';
@@ -16,7 +17,7 @@ import { RecipesMacrosController } from './interface/recipes-macros.controller';
 import { UoMController } from './interface/uom.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Category, Ingredient]), ExternalCatalogModule, RecipesModule],
+  imports: [SharedModule, TypeOrmModule.forFeature([Category, Ingredient]), ExternalCatalogModule, RecipesModule],
   controllers: [IngredientsController, CategoriesController, UoMController, RecipesMacrosController],
   providers: [
     CategoryRepository,

@@ -1,6 +1,7 @@
 import { Module, OnApplicationBootstrap } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuditResolverRegistry } from '../shared/application/audit-resolver-registry';
+import { SharedModule } from '../shared/shared.module';
 import { AssignUserToLocations } from './application/assign-user-to-locations.use-case';
 import { CreateOrganization } from './application/create-organization.use-case';
 import { Location } from './domain/location.entity';
@@ -16,7 +17,7 @@ import { OrganizationController } from './interface/organization.controller';
 import { UserController } from './interface/user.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Organization, User, Location, UserLocation])],
+  imports: [SharedModule, TypeOrmModule.forFeature([Organization, User, Location, UserLocation])],
   controllers: [OrganizationController, UserController, LocationController],
   providers: [
     OrganizationRepository,

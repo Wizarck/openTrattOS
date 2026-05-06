@@ -2,6 +2,7 @@ import { Module, OnApplicationBootstrap } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MenuItem } from '../menus/domain/menu-item.entity';
 import { AuditResolverRegistry } from '../shared/application/audit-resolver-registry';
+import { SharedModule } from '../shared/shared.module';
 import { RecipesAllergensService } from './application/recipes-allergens.service';
 import { RecipesService } from './application/recipes.service';
 import { Recipe } from './domain/recipe.entity';
@@ -12,7 +13,7 @@ import { RecipesAllergensController } from './interface/recipes-allergens.contro
 import { RecipesController } from './interface/recipes.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Recipe, RecipeIngredient, MenuItem])],
+  imports: [SharedModule, TypeOrmModule.forFeature([Recipe, RecipeIngredient, MenuItem])],
   controllers: [RecipesController, RecipesAllergensController],
   providers: [
     RecipeRepository,

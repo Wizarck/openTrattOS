@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { IamModule } from '../iam/iam.module';
 import { IngredientsModule } from '../ingredients/ingredients.module';
 import { AuditResolverRegistry } from '../shared/application/audit-resolver-registry';
+import { SharedModule } from '../shared/shared.module';
 import { Supplier } from './domain/supplier.entity';
 import { SupplierItem } from './domain/supplier-item.entity';
 import { SupplierItemRepository } from './infrastructure/supplier-item.repository';
@@ -11,7 +12,7 @@ import { SupplierItemsController } from './interface/supplier-items.controller';
 import { SuppliersController } from './interface/suppliers.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Supplier, SupplierItem]), IngredientsModule, IamModule],
+  imports: [SharedModule, TypeOrmModule.forFeature([Supplier, SupplierItem]), IngredientsModule, IamModule],
   controllers: [SuppliersController, SupplierItemsController],
   providers: [SupplierRepository, SupplierItemRepository],
   exports: [SupplierRepository, SupplierItemRepository, TypeOrmModule],

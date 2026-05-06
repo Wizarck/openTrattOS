@@ -2,6 +2,7 @@ import { Module, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectDataSource, TypeOrmModule } from '@nestjs/typeorm';
 import type { DataSource } from 'typeorm';
 import { AuditResolverRegistry } from '../shared/application/audit-resolver-registry';
+import { SharedModule } from '../shared/shared.module';
 import { AiSuggestionsService } from './application/ai-suggestions.service';
 import {
   AI_SUGGESTION_PROVIDER,
@@ -25,7 +26,7 @@ import { AiSuggestionsController } from './interface/ai-suggestions.controller';
  * endpoint AND the service rejects every call (defence in depth).
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([AiSuggestion])],
+  imports: [SharedModule, TypeOrmModule.forFeature([AiSuggestion])],
   controllers: [AiSuggestionsController],
   providers: [
     {
