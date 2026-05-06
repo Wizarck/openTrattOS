@@ -3,6 +3,8 @@ import { getDataSourceToken } from '@nestjs/typeorm';
 import { AuditLog } from '../domain/audit-log.entity';
 import {
   AUDIT_LOG_DEFAULT_LIMIT,
+  AUDIT_LOG_EXPORT_BATCH_SIZE,
+  AUDIT_LOG_EXPORT_HARD_CAP,
   AUDIT_LOG_MAX_LIMIT,
   AuditLogService,
 } from './audit-log.service';
@@ -15,6 +17,8 @@ interface FakeQueryBuilder {
   addOrderByCalled?: Array<{ col: string; dir: 'ASC' | 'DESC' }>;
   skipValue?: number;
   takeValue?: number;
+  limitValue?: number;
+  selectArg?: string;
   rows: AuditLog[];
   total: number;
 }
@@ -26,7 +30,12 @@ type FakeQbHandle = Record<string, unknown> & {
   addOrderBy: (col: string, dir: 'ASC' | 'DESC') => FakeQbHandle;
   skip: (n: number) => FakeQbHandle;
   take: (n: number) => FakeQbHandle;
+  limit: (n: number) => FakeQbHandle;
+  select: (arg: string) => FakeQbHandle;
+  getQuery: () => string;
+  getParameters: () => Record<string, unknown>;
   getManyAndCount: () => Promise<[AuditLog[], number]>;
+  getMany: () => Promise<AuditLog[]>;
 };
 
 function makeFakeQueryBuilder(state: FakeQueryBuilder): FakeQbHandle {
@@ -65,6 +74,26 @@ function makeFakeQueryBuilder(state: FakeQueryBuilder): FakeQbHandle {
     async getManyAndCount(): Promise<[AuditLog[], number]> {
       return [state.rows, state.total];
     },
+    async getMany(): Promise<AuditLog[]> {
+      return state.rows;
+    },
+    limit(n: number) {
+      state.limitValue = n;
+      return qb;
+    },
+    select(arg: string) {
+      state.selectArg = arg;
+      return qb;
+    },
+    getQuery() {
+      // Capture-only stub; tests of wouldExceedCap pre-program dataSource.query.
+      return 'SELECT 1 FROM audit_log a /* fake */';
+    },
+    getParameters() {
+      const merged: Record<string, unknown> = {};
+      for (const c of state.whereCalls) Object.assign(merged, c.params);
+      return merged;
+    },
   };
   return qb;
 }
@@ -94,10 +123,12 @@ describe('AuditLogService', () => {
   let service: AuditLogService;
   let savedRows: AuditLog[];
   let qbStates: FakeQueryBuilder[] = [];
+  let rawQueryQueue: unknown[][] = [];
 
   beforeEach(async () => {
     savedRows = [];
     qbStates = [];
+    rawQueryQueue = [];
 
     const dataSource = {
       getRepository: () => ({
@@ -110,6 +141,12 @@ describe('AuditLogService', () => {
           if (!next) throw new Error('No QB state pre-loaded for test');
           return makeFakeQueryBuilder(next);
         },
+      }),
+      // Used by wouldExceedCap (raw SELECT count(*) FROM (subquery) sub).
+      query: jest.fn(async () => {
+        const next = rawQueryQueue.shift();
+        if (!next) throw new Error('No raw-query result pre-loaded for test');
+        return next;
       }),
     };
 
@@ -311,6 +348,154 @@ describe('AuditLogService', () => {
           state.whereCalls.some((c) => c.sql.includes('plainto_tsquery')),
         ).toBe(true);
       });
+    });
+  });
+
+  describe('streamRows()', () => {
+    function rowsForBatch(count: number, batchTag: string): AuditLog[] {
+      return Array.from({ length: count }, (_, i) =>
+        makeAuditLog({
+          id: `00000000-0000-4000-8000-${batchTag}${String(i).padStart(8, '0')}`,
+          createdAt: new Date(2026, 0, 1, 0, 0, count - i),
+        }),
+      );
+    }
+
+    it('yields zero rows on empty result set', async () => {
+      qbStates.push({ whereCalls: [], rows: [], total: 0 });
+      const out: AuditLog[] = [];
+      for await (const r of service.streamRows({ organizationId: orgId }, 100)) {
+        out.push(r);
+      }
+      expect(out).toHaveLength(0);
+    });
+
+    it('yields all rows when result set is below cap', async () => {
+      // 50 rows in one batch; the second batch returns empty so generator stops.
+      qbStates.push({ whereCalls: [], rows: rowsForBatch(50, 'aaaa'), total: 50 });
+      qbStates.push({ whereCalls: [], rows: [], total: 0 });
+      const out: AuditLog[] = [];
+      for await (const r of service.streamRows({ organizationId: orgId }, 200)) {
+        out.push(r);
+      }
+      expect(out).toHaveLength(50);
+    });
+
+    it('caps at exactly hardCap when source has more rows', async () => {
+      // 1000 rows in batch 1, 500 in batch 2 — but cap is 1500.
+      qbStates.push({ whereCalls: [], rows: rowsForBatch(1000, 'aaaa'), total: 1000 });
+      qbStates.push({ whereCalls: [], rows: rowsForBatch(500, 'bbbb'), total: 500 });
+      // No third batch should be requested because we hit cap=1500 exactly.
+      const out: AuditLog[] = [];
+      for await (const r of service.streamRows({ organizationId: orgId }, 1500)) {
+        out.push(r);
+      }
+      expect(out).toHaveLength(1500);
+      expect(qbStates).toHaveLength(0); // both batches consumed, no extra call
+    });
+
+    it('caps mid-batch when hardCap < batchSize', async () => {
+      qbStates.push({ whereCalls: [], rows: rowsForBatch(50, 'aaaa'), total: 50 });
+      const out: AuditLog[] = [];
+      for await (const r of service.streamRows({ organizationId: orgId }, 10)) {
+        out.push(r);
+      }
+      expect(out).toHaveLength(10);
+    });
+
+    it('uses default hardCap = AUDIT_LOG_EXPORT_HARD_CAP when omitted', async () => {
+      qbStates.push({ whereCalls: [], rows: [], total: 0 });
+      const out: AuditLog[] = [];
+      for await (const r of service.streamRows({ organizationId: orgId })) {
+        out.push(r);
+      }
+      // Smoke: didn't crash, didn't try to fetch billions of batches.
+      expect(out).toHaveLength(0);
+      expect(AUDIT_LOG_EXPORT_HARD_CAP).toBe(100_000);
+      expect(AUDIT_LOG_EXPORT_BATCH_SIZE).toBe(1_000);
+    });
+
+    it('orderBy is created_at DESC then addOrderBy id DESC (cursor-friendly)', async () => {
+      const state: FakeQueryBuilder = {
+        whereCalls: [],
+        rows: rowsForBatch(3, 'aaaa'),
+        total: 3,
+      };
+      qbStates.push(state);
+      qbStates.push({ whereCalls: [], rows: [], total: 0 });
+      const out: AuditLog[] = [];
+      for await (const r of service.streamRows({ organizationId: orgId }, 10)) {
+        out.push(r);
+      }
+      expect(state.orderByCalled).toEqual({ col: 'a.created_at', dir: 'DESC' });
+      expect(state.addOrderByCalled).toEqual([{ col: 'a.id', dir: 'DESC' }]);
+    });
+
+    it('second batch query carries cursor from previous batch last row', async () => {
+      const batch1Rows = rowsForBatch(1000, 'aaaa');
+      const lastOfBatch1 = batch1Rows[batch1Rows.length - 1];
+      const state1: FakeQueryBuilder = { whereCalls: [], rows: batch1Rows, total: 1000 };
+      const state2: FakeQueryBuilder = { whereCalls: [], rows: [], total: 0 };
+      qbStates.push(state1, state2);
+
+      const out: AuditLog[] = [];
+      for await (const r of service.streamRows({ organizationId: orgId }, 10_000)) {
+        out.push(r);
+      }
+      // Second batch should have a where call with cursor params.
+      const cursorClauses = state2.whereCalls.filter((c) =>
+        c.sql.includes('(a.created_at, a.id) <'),
+      );
+      expect(cursorClauses).toHaveLength(1);
+      expect(cursorClauses[0].params.cursorCreatedAt).toEqual(lastOfBatch1.createdAt);
+      expect(cursorClauses[0].params.cursorId).toEqual(lastOfBatch1.id);
+    });
+
+    it('honours filter.q via FTS clause in cursor batches', async () => {
+      const state: FakeQueryBuilder = { whereCalls: [], rows: [], total: 0 };
+      qbStates.push(state);
+      const out: AuditLog[] = [];
+      for await (const r of service.streamRows(
+        { organizationId: orgId, q: 'tomate' },
+        10,
+      )) {
+        out.push(r);
+      }
+      const ftsClauses = state.whereCalls.filter((c) =>
+        c.sql.includes('plainto_tsquery'),
+      );
+      expect(ftsClauses).toHaveLength(1);
+      expect(ftsClauses[0].params.q).toBe('tomate');
+    });
+  });
+
+  describe('wouldExceedCap()', () => {
+    it('returns true when capped count > cap', async () => {
+      // The fake QB will be created for the inner subquery.
+      qbStates.push({ whereCalls: [], rows: [], total: 0 });
+      // dataSource.query returns count = cap+1 = 101.
+      rawQueryQueue.push([{ count: '101' }]);
+      const result = await service.wouldExceedCap({ organizationId: orgId }, 100);
+      expect(result).toBe(true);
+    });
+
+    it('returns false when capped count ≤ cap', async () => {
+      qbStates.push({ whereCalls: [], rows: [], total: 0 });
+      rawQueryQueue.push([{ count: '50' }]);
+      const result = await service.wouldExceedCap({ organizationId: orgId }, 100);
+      expect(result).toBe(false);
+    });
+
+    it('returns false when result set has zero rows', async () => {
+      qbStates.push({ whereCalls: [], rows: [], total: 0 });
+      rawQueryQueue.push([{ count: '0' }]);
+      expect(await service.wouldExceedCap({ organizationId: orgId }, 100)).toBe(false);
+    });
+
+    it('returns false when count equals cap exactly (boundary)', async () => {
+      qbStates.push({ whereCalls: [], rows: [], total: 0 });
+      rawQueryQueue.push([{ count: '100' }]);
+      expect(await service.wouldExceedCap({ organizationId: orgId }, 100)).toBe(false);
     });
   });
 });

@@ -1,4 +1,5 @@
-import { UnprocessableEntityException } from '@nestjs/common';
+import { StreamableFile, UnprocessableEntityException } from '@nestjs/common';
+import type { Response } from 'express';
 import { AuditLogQueryError } from '../application/errors';
 import { AuditLog } from '../domain/audit-log.entity';
 import { AuditLogController } from './audit-log.controller';
@@ -35,14 +36,18 @@ function makeQuery(overrides: Partial<AuditLogQueryDto> = {}): AuditLogQueryDto 
 describe('AuditLogController', () => {
   let controller: AuditLogController;
   let queryMock: jest.Mock;
+  let streamRowsMock: jest.Mock;
+  let wouldExceedCapMock: jest.Mock;
 
   beforeEach(() => {
     queryMock = jest.fn();
-    const auditLog = { query: queryMock } as unknown as Parameters<
-      typeof AuditLogController.prototype.query
-    >[0] extends never
-      ? unknown
-      : unknown;
+    streamRowsMock = jest.fn();
+    wouldExceedCapMock = jest.fn();
+    const auditLog = {
+      query: queryMock,
+      streamRows: streamRowsMock,
+      wouldExceedCap: wouldExceedCapMock,
+    };
     controller = new AuditLogController(auditLog as never);
   });
 
@@ -103,6 +108,115 @@ describe('AuditLogController', () => {
   it('rethrows non-query errors unchanged', async () => {
     queryMock.mockRejectedValue(new Error('db gone'));
     await expect(controller.query(makeQuery())).rejects.toThrow('db gone');
+  });
+
+  describe('exportCsv()', () => {
+    function makeFakeResponse(): Response & {
+      _headers: Record<string, string>;
+    } {
+      const headers: Record<string, string> = {};
+      return {
+        setHeader: jest.fn((name: string, value: string) => {
+          headers[name.toLowerCase()] = value;
+        }),
+        _headers: headers,
+      } as unknown as Response & { _headers: Record<string, string> };
+    }
+
+    async function* emptyAsyncGen(): AsyncGenerator<AuditLog> {
+      // intentionally empty
+    }
+
+    async function consumeStream(file: StreamableFile): Promise<string> {
+      const stream = file.getStream();
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream as AsyncIterable<Buffer | string>) {
+        chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+      }
+      return Buffer.concat(chunks).toString('utf8');
+    }
+
+    it('sets text/csv content-type + dated attachment filename', async () => {
+      wouldExceedCapMock.mockResolvedValue(false);
+      streamRowsMock.mockReturnValue(emptyAsyncGen());
+      const res = makeFakeResponse();
+      const file = await controller.exportCsv(makeQuery(), res);
+      expect(file).toBeInstanceOf(StreamableFile);
+      expect(res._headers['content-type']).toBe('text/csv; charset=utf-8');
+      const today = new Date().toISOString().slice(0, 10);
+      expect(res._headers['content-disposition']).toBe(
+        `attachment; filename="audit-log-${today}.csv"`,
+      );
+      expect(res._headers['x-audit-log-export-truncated']).toBeUndefined();
+    });
+
+    it('sets X-Audit-Log-Export-Truncated header when wouldExceedCap returns true', async () => {
+      wouldExceedCapMock.mockResolvedValue(true);
+      streamRowsMock.mockReturnValue(emptyAsyncGen());
+      const res = makeFakeResponse();
+      await controller.exportCsv(makeQuery(), res);
+      expect(res._headers['x-audit-log-export-truncated']).toBe('true');
+    });
+
+    it('emits CSV header + serialised rows in the body', async () => {
+      wouldExceedCapMock.mockResolvedValue(false);
+      const seedRows = [
+        makeAuditLog({
+          id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          eventType: 'TEST_X',
+          reason: 'r1',
+        }),
+        makeAuditLog({
+          id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          eventType: 'TEST_Y',
+          reason: 'r2',
+        }),
+      ];
+      streamRowsMock.mockImplementation(async function* () {
+        for (const row of seedRows) yield row;
+      });
+      const res = makeFakeResponse();
+      const file = await controller.exportCsv(makeQuery(), res);
+      const body = await consumeStream(file);
+      const lines = body.split('\n').filter((l) => l.length > 0);
+      expect(lines).toHaveLength(3); // header + 2 data rows
+      expect(lines[0]).toContain('id,organizationId,eventType');
+      expect(lines[1]).toContain('TEST_X');
+      expect(lines[1]).toContain('r1');
+      expect(lines[2]).toContain('TEST_Y');
+      expect(lines[2]).toContain('r2');
+    });
+
+    it('passes filter through to wouldExceedCap and streamRows', async () => {
+      wouldExceedCapMock.mockResolvedValue(false);
+      streamRowsMock.mockReturnValue(emptyAsyncGen());
+      const res = makeFakeResponse();
+      await controller.exportCsv(
+        makeQuery({
+          q: 'tomate',
+          aggregateType: 'recipe',
+          actorKind: 'user',
+        }),
+        res,
+      );
+      // Wait microtask flush so the generator's first awaited call lands.
+      await new Promise((r) => setImmediate(r));
+      expect(wouldExceedCapMock).toHaveBeenCalledTimes(1);
+      const cwArg = wouldExceedCapMock.mock.calls[0][0];
+      expect(cwArg.q).toBe('tomate');
+      expect(cwArg.aggregateType).toBe('recipe');
+      expect(cwArg.actorKind).toBe('user');
+    });
+
+    it('translates AuditLogQueryError from wouldExceedCap to 422', async () => {
+      wouldExceedCapMock.mockRejectedValue(
+        new AuditLogQueryError('bad range', 'INVALID_DATE_RANGE'),
+      );
+      const res = makeFakeResponse();
+      await expect(controller.exportCsv(makeQuery(), res)).rejects.toBeInstanceOf(
+        UnprocessableEntityException,
+      );
+    });
   });
 
   it('exposes nullable fields as nulls in DTO', async () => {
