@@ -20,8 +20,8 @@ import { SupplierItemRepository } from '../../suppliers/infrastructure/supplier-
 import { SupplierRepository } from '../../suppliers/infrastructure/supplier.repository';
 import { CostService } from './cost.service';
 import { PreferredSupplierResolver } from './preferred-supplier.resolver';
-import { RecipeCostHistory } from '../domain/recipe-cost-history.entity';
-import { RecipeCostHistoryRepository } from '../infrastructure/recipe-cost-history.repository';
+import { AuditLog } from '../../audit-log/domain/audit-log.entity';
+import { AuditLogService } from '../../audit-log/application/audit-log.service';
 import { INVENTORY_COST_RESOLVER } from '../inventory-cost-resolver';
 
 const ALL_ENTITIES = [
@@ -36,7 +36,7 @@ const ALL_ENTITIES = [
   Recipe,
   RecipeIngredient,
   MenuItem,
-  RecipeCostHistory,
+  AuditLog,
 ];
 
 describe('CostService (integration)', () => {
@@ -48,7 +48,7 @@ describe('CostService (integration)', () => {
   let ingredients: IngredientRepository;
   let suppliers: SupplierRepository;
   let supplierItems: SupplierItemRepository;
-  let history: RecipeCostHistoryRepository;
+  let auditLog: AuditLogService;
 
   beforeAll(async () => {
     app = await Test.createTestingModule({
@@ -72,7 +72,7 @@ describe('CostService (integration)', () => {
         IngredientRepository,
         SupplierRepository,
         SupplierItemRepository,
-        RecipeCostHistoryRepository,
+        AuditLogService,
         PreferredSupplierResolver,
         { provide: INVENTORY_COST_RESOLVER, useExisting: PreferredSupplierResolver },
         CostService,
@@ -86,7 +86,7 @@ describe('CostService (integration)', () => {
     ingredients = app.get(IngredientRepository);
     suppliers = app.get(SupplierRepository);
     supplierItems = app.get(SupplierItemRepository);
-    history = app.get(RecipeCostHistoryRepository);
+    auditLog = app.get(AuditLogService);
     await dataSource.runMigrations();
   });
 
@@ -104,7 +104,7 @@ describe('CostService (integration)', () => {
 
   beforeEach(async () => {
     await dataSource.query(
-      'TRUNCATE TABLE "recipe_cost_history", "menu_items", "recipe_ingredients", "recipes", "supplier_items", "suppliers", "ingredients", "categories", "user_locations", "users", "locations", "organizations" RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE "audit_log", "menu_items", "recipe_ingredients", "recipes", "supplier_items", "suppliers", "ingredients", "categories", "user_locations", "users", "locations", "organizations" RESTART IDENTITY CASCADE',
     );
     org = await organizations.save(
       Organization.create({ name: 'Acme', currencyCode: 'EUR', defaultLocale: 'es', timezone: 'Europe/Madrid' }),
@@ -203,6 +203,6 @@ describe('CostService (integration)', () => {
     const delta = await cost.computeCostDelta(org.id, recipe.id, t0, t1);
     expect(delta.totalDelta).toBeGreaterThan(0);
     expect(delta.components.length).toBeGreaterThan(0);
-    void history;
+    void auditLog;
   });
 });

@@ -5,7 +5,7 @@ import { Recipe } from '../../recipes/domain/recipe.entity';
 import { RecipeIngredient } from '../../recipes/domain/recipe-ingredient.entity';
 import { CostService } from './cost.service';
 import { InventoryCostResolver, ResolvedCost } from '../inventory-cost-resolver';
-import { RecipeCostHistoryRepository } from '../infrastructure/recipe-cost-history.repository';
+import type { AuditLogService } from '../../audit-log/application/audit-log.service';
 
 const orgId = '11111111-1111-4111-8111-111111111111';
 const categoryId = '22222222-2222-4222-8222-222222222222';
@@ -108,12 +108,12 @@ describe('CostService.computeRecipeCost performance', () => {
       getRepository: (e: unknown) => manager.getRepository(e),
       transaction: async <T>(fn: (em: typeof manager) => Promise<T>) => fn(manager),
     } as unknown as DataSource;
-    const history = {
-      findInWindow: jest.fn(async () => []),
-      findLatestForRecipe: jest.fn(async () => []),
-    } as unknown as RecipeCostHistoryRepository;
+    const auditLog = {
+      record: jest.fn(async () => undefined),
+      query: jest.fn(async () => ({ rows: [], total: 0, limit: 200, offset: 0 })),
+    } as unknown as AuditLogService;
     const events = new EventEmitter2();
-    const service = new CostService(ds, resolver, history, events);
+    const service = new CostService(ds, resolver, auditLog, events);
 
     // Warm-up.
     await service.computeRecipeCost(orgId, rootRecipe.id);

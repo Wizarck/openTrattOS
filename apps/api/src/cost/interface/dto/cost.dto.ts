@@ -6,7 +6,7 @@ import {
   CostDelta,
   CostDeltaComponent,
 } from '../../application/cost.service';
-import { RecipeCostHistory } from '../../domain/recipe-cost-history.entity';
+import type { CostHistoryUnpacked } from '../../application/cost-history-unpack';
 
 export class CostBreakdownComponentDto {
   recipeIngredientId!: string;
@@ -72,16 +72,22 @@ export class CostHistoryRowDto {
   reason!: string;
   computedAt!: Date;
 
-  static fromEntity(h: RecipeCostHistory): CostHistoryRowDto {
+  /**
+   * Build a DTO from the unpacked audit_log row (Wave 1.10+). Wire shape
+   * preserved from Wave 1.9 — the only client-visible difference is the
+   * synthetic `id` format (`<auditLogRowId>:<componentRefId|'totals'>`)
+   * which is opaque to the frontend.
+   */
+  static fromAuditUnpack(u: CostHistoryUnpacked): CostHistoryRowDto {
     return {
-      id: h.id,
-      recipeId: h.recipeId,
-      componentRefId: h.componentRefId,
-      costPerBaseUnit: Number(h.costPerBaseUnit),
-      totalCost: Number(h.totalCost),
-      sourceRefId: h.sourceRefId,
-      reason: h.reason,
-      computedAt: h.computedAt,
+      id: u.id,
+      recipeId: u.recipeId,
+      componentRefId: u.componentRefId,
+      costPerBaseUnit: u.costPerBaseUnit,
+      totalCost: u.totalCost,
+      sourceRefId: u.sourceRefId,
+      reason: u.reason,
+      computedAt: u.computedAt,
     };
   }
 }

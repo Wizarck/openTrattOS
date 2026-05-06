@@ -2,10 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { AuditLog } from '../../audit-log/domain/audit-log.entity';
+import { AuditLogService } from '../../audit-log/application/audit-log.service';
 import { CostService } from '../../cost/application/cost.service';
 import { PreferredSupplierResolver } from '../../cost/application/preferred-supplier.resolver';
-import { RecipeCostHistory } from '../../cost/domain/recipe-cost-history.entity';
-import { RecipeCostHistoryRepository } from '../../cost/infrastructure/recipe-cost-history.repository';
 import { INVENTORY_COST_RESOLVER } from '../../cost/inventory-cost-resolver';
 import { Organization } from '../../iam/domain/organization.entity';
 import { Location } from '../../iam/domain/location.entity';
@@ -40,7 +40,7 @@ const ALL_ENTITIES = [
   Recipe,
   RecipeIngredient,
   MenuItem,
-  RecipeCostHistory,
+  AuditLog,
 ];
 
 describe('MenuItemsService (integration)', () => {
@@ -79,7 +79,7 @@ describe('MenuItemsService (integration)', () => {
         SupplierItemRepository,
         RecipeRepository,
         MenuItemRepository,
-        RecipeCostHistoryRepository,
+        AuditLogService,
         PreferredSupplierResolver,
         { provide: INVENTORY_COST_RESOLVER, useExisting: PreferredSupplierResolver },
         CostService,
@@ -109,7 +109,7 @@ describe('MenuItemsService (integration)', () => {
 
   beforeEach(async () => {
     await dataSource.query(
-      'TRUNCATE TABLE "recipe_cost_history", "menu_items", "recipe_ingredients", "recipes", "supplier_items", "suppliers", "ingredients", "categories", "user_locations", "users", "locations", "organizations" RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE "audit_log", "menu_items", "recipe_ingredients", "recipes", "supplier_items", "suppliers", "ingredients", "categories", "user_locations", "users", "locations", "organizations" RESTART IDENTITY CASCADE',
     );
     org = await organizations.save(
       Organization.create({

@@ -55,7 +55,7 @@ export class RecipesCostController {
   ): Promise<CostHistoryRowDto[]> {
     try {
       const rows = await this.cost.getHistory(organizationId, id, windowDays ?? 14);
-      return rows.map(CostHistoryRowDto.fromEntity);
+      return rows.map(CostHistoryRowDto.fromAuditUnpack);
     } catch (err) {
       throw this.translate(err);
     }

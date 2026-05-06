@@ -13,12 +13,20 @@ import {
   InventoryCostResolver,
   NoCostSourceError,
 } from '../inventory-cost-resolver';
-import { CostChangeReason, RecipeCostHistory } from '../domain/recipe-cost-history.entity';
-import { RecipeCostHistoryRepository } from '../infrastructure/recipe-cost-history.repository';
+import {
+  AUDIT_LOG_MAX_LIMIT,
+  AuditLogService,
+} from '../../audit-log/application/audit-log.service';
 import {
   AuditEventEnvelope,
   AuditEventType,
+  AuditEventTypeName,
 } from '../../audit-log/application/types';
+import type { CostChangeReason } from './cost-change-reason';
+import {
+  CostHistoryUnpacked,
+  unpackHistoryRows,
+} from './cost-history-unpack';
 import {
   RECIPE_INGREDIENT_UPDATED,
   RECIPE_SOURCE_OVERRIDE_CHANGED,
@@ -119,7 +127,7 @@ export class CostService {
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
     @Inject(INVENTORY_COST_RESOLVER) private readonly resolver: InventoryCostResolver,
-    private readonly history: RecipeCostHistoryRepository,
+    private readonly auditLog: AuditLogService,
     private readonly events: EventEmitter2,
   ) {}
 
@@ -319,17 +327,33 @@ export class CostService {
   /**
    * Returns history rows in the requested window. Defaults to the last 14d
    * per design.md §"Default window 14d vs 7d/30d".
+   *
+   * Per Wave 1.10 (m2-audit-log-cost-history-merge), data is read from the
+   * canonical `audit_log` table — `event_type='RECIPE_COST_REBUILT'` rows
+   * each carry the full per-component breakdown in `payload_after`. The
+   * `unpackHistoryRows` helper turns each audit row into N+1 wire rows
+   * (1 totals + N components) preserving the legacy `CostHistoryRowDto`
+   * shape.
    */
   async getHistory(
     organizationId: string,
     recipeId: string,
     windowDays: number = DEFAULT_HISTORY_WINDOW_DAYS,
-  ): Promise<RecipeCostHistory[]> {
+  ): Promise<CostHistoryUnpacked[]> {
     const recipe = await this.dataSource.getRepository(Recipe).findOneBy({ id: recipeId, organizationId });
     if (!recipe) throw new CostRecipeNotFoundError(recipeId);
     const to = new Date();
     const from = new Date(to.getTime() - windowDays * 24 * 60 * 60 * 1000);
-    return this.history.findInWindow(recipeId, from, to);
+    const page = await this.auditLog.query({
+      organizationId,
+      aggregateType: 'recipe',
+      aggregateId: recipeId,
+      eventTypes: [AuditEventTypeName[AuditEventType.RECIPE_COST_REBUILT]],
+      since: from,
+      until: to,
+      limit: AUDIT_LOG_MAX_LIMIT,
+    });
+    return page.rows.flatMap(unpackHistoryRows);
   }
 
   /**
@@ -348,7 +372,19 @@ export class CostService {
     if (!recipe) throw new CostRecipeNotFoundError(recipeId);
     if (from > to) throw new Error('CostService: from must be <= to');
 
-    const rows = await this.history.findInWindow(recipeId, new Date(0), to);
+    // Per Wave 1.10: read from canonical audit_log instead of recipe_cost_history.
+    // The window is [epoch, to] so we have every rebuild up to the `to` boundary;
+    // the snapshot logic below picks the right ones per boundary.
+    const page = await this.auditLog.query({
+      organizationId,
+      aggregateType: 'recipe',
+      aggregateId: recipeId,
+      eventTypes: [AuditEventTypeName[AuditEventType.RECIPE_COST_REBUILT]],
+      since: new Date(0),
+      until: to,
+      limit: AUDIT_LOG_MAX_LIMIT,
+    });
+    const rows = page.rows.flatMap(unpackHistoryRows);
 
     type Snapshot = {
       total: number;
@@ -359,10 +395,10 @@ export class CostService {
       for (const row of rows) {
         if (row.computedAt > boundary) continue;
         if (row.componentRefId === null) {
-          snapshot.total = Number(row.totalCost);
+          snapshot.total = row.totalCost;
         } else {
           snapshot.perComponent.set(row.componentRefId, {
-            cost: Number(row.totalCost),
+            cost: row.totalCost,
             sourceRefId: row.sourceRefId,
           });
         }
@@ -433,9 +469,14 @@ export class CostService {
   }
 
   /**
-   * Recomputes the cost for `recipeId`, persists a history row per component
-   * + a totals row, and emits a `SUB_RECIPE_COST_CHANGED` event so parents
-   * cascade. Returns the fresh breakdown.
+   * Recomputes the cost for `recipeId` and persists ONE `audit_log` row
+   * (`event_type=RECIPE_COST_REBUILT`) carrying the full per-component
+   * breakdown + the totals + the reason. Emits `SUB_RECIPE_COST_CHANGED` so
+   * parents cascade. Returns the fresh breakdown.
+   *
+   * Per Wave 1.10 (m2-audit-log-cost-history-merge), this is the ONLY
+   * persistence path — `recipe_cost_history` was retired. The audit_log row
+   * carries everything; `getHistory()` and `computeCostDelta()` unpack it.
    */
   async recordSnapshot(
     organizationId: string,
@@ -444,42 +485,15 @@ export class CostService {
   ): Promise<CostBreakdown> {
     return this.dataSource.transaction(async (em) => {
       const breakdown = await this.computeWithEm(em, organizationId, recipeId);
-      const rows: RecipeCostHistory[] = [];
-      for (const c of breakdown.components) {
-        rows.push(
-          RecipeCostHistory.create({
-            recipeId,
-            organizationId,
-            componentRefId: c.recipeIngredientId,
-            costPerBaseUnit: c.costPerBaseUnit,
-            totalCost: c.lineCost,
-            sourceRefId: c.sourceRefId,
-            reason,
-          }),
-        );
-      }
-      // Totals row (componentRefId NULL) drives delta queries' `total`.
-      rows.push(
-        RecipeCostHistory.create({
-          recipeId,
-          organizationId,
-          componentRefId: null,
-          costPerBaseUnit: 0,
-          totalCost: breakdown.totalCost,
-          sourceRefId: null,
-          reason,
-        }),
-      );
-      await em.getRepository(RecipeCostHistory).save(rows);
 
       this.events.emit(SUB_RECIPE_COST_CHANGED, {
         subRecipeId: recipeId,
         organizationId,
       } satisfies SubRecipeCostChangedEvent);
 
-      // Audit-log channel: persist a row capturing the rebuild fact + reason.
-      // Per ADR-AUDIT-WRITER, audit goes through the bus; this service does not
-      // import AuditLogService. The subscriber persists the envelope.
+      // Audit-log channel: ONE envelope per rebuild carrying the full breakdown.
+      // Per ADR-AUDIT-WRITER + ADR-COST-PAYLOAD, audit goes through the bus;
+      // the subscriber persists the envelope to audit_log atomically.
       const auditEnvelope: AuditEventEnvelope = {
         organizationId,
         aggregateType: 'recipe',
@@ -489,7 +503,12 @@ export class CostService {
         payloadAfter: {
           reason,
           totalCost: Number(breakdown.totalCost),
-          componentCount: breakdown.components.length,
+          components: breakdown.components.map((c) => ({
+            recipeIngredientId: c.recipeIngredientId,
+            costPerBaseUnit: Number(c.costPerBaseUnit),
+            totalCost: Number(c.lineCost),
+            sourceRefId: c.sourceRefId,
+          })),
         },
       };
       this.events.emit(AuditEventType.RECIPE_COST_REBUILT, auditEnvelope);
