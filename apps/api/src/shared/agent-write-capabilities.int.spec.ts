@@ -31,14 +31,13 @@ import { RecipesModule } from '../recipes/recipes.module';
 import { Supplier } from '../suppliers/domain/supplier.entity';
 import { SupplierItem } from '../suppliers/domain/supplier-item.entity';
 
-import { AgentIdempotencyService } from './application/agent-idempotency.service';
-import { AuditResolverRegistry } from './application/audit-resolver-registry';
 import { AgentIdempotencyKey } from './domain/agent-idempotency-key.entity';
 import { AgentCapabilityGuard } from './guards/agent-capability.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { BeforeAfterAuditInterceptor } from './interceptors/before-after-audit.interceptor';
 import { AgentAuditMiddleware } from './middleware/agent-audit.middleware';
 import { IdempotencyMiddleware } from './middleware/idempotency.middleware';
+import { SharedModule } from './shared.module';
 
 const ALL_ENTITIES = [
   Organization,
@@ -108,7 +107,6 @@ function readHeader(req: Request, name: string): string | null {
       synchronize: false,
     }),
     TypeOrmModule.forFeature([
-      AgentIdempotencyKey,
       Organization,
       User,
       Location,
@@ -116,6 +114,7 @@ function readHeader(req: Request, name: string): string | null {
       Category,
       Ingredient,
     ]),
+    SharedModule,
     RecipesModule,
     AuditLogModule,
   ],
@@ -123,8 +122,6 @@ function readHeader(req: Request, name: string): string | null {
     OrganizationRepository,
     CategoryRepository,
     IngredientRepository,
-    AgentIdempotencyService,
-    AuditResolverRegistry,
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_GUARD, useClass: AgentCapabilityGuard },
     { provide: APP_INTERCEPTOR, useClass: BeforeAfterAuditInterceptor },

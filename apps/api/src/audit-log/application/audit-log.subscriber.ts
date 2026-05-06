@@ -123,26 +123,38 @@ export class AuditLogSubscriber {
   }
 
   @OnEvent(AuditEventType.AGENT_ACTION_EXECUTED)
-  onAgentActionExecuted(event: AgentActionExecutedEvent): Promise<void> {
-    // Pre-auth probes can fire this with `organizationId === null`. We need an
-    // organization to anchor the audit row, so skip in that case (logged at
-    // info — forensics on unauthenticated requests is out of scope here).
-    if (!event.organizationId) {
+  onAgentActionExecuted(
+    event: AgentActionExecutedEvent | AuditEventEnvelope,
+  ): Promise<void> {
+    // Two payload shapes share this channel:
+    //   1. Lean (legacy, from AgentAuditMiddleware Wave 1.5): `{ executedBy,
+    //      agentName, capabilityName, organizationId, timestamp }` — anchored
+    //      to `organization` by translation, captures the agent request only.
+    //   2. Rich (Wave 1.13 BeforeAfterAuditInterceptor): canonical
+    //      `AuditEventEnvelope` with `aggregateType` ≠ 'organization' +
+    //      payload_before/after — captures the agent mutation forensically.
+    // Both rows coexist for a single agent write (request + mutation), so
+    // discrimination here is by envelope shape rather than separate channels.
+    if (isRichAuditEnvelope(event)) {
+      return this.persistEnvelope(AuditEventType.AGENT_ACTION_EXECUTED, event);
+    }
+    const legacy = event as AgentActionExecutedEvent;
+    if (!legacy.organizationId) {
       this.logger.debug(
         `audit-log.subscriber.skipped: AGENT_ACTION_EXECUTED — no organizationId (pre-auth probe)`,
       );
       return Promise.resolve();
     }
     return this.persistTranslated(AuditEventType.AGENT_ACTION_EXECUTED, () => ({
-      organizationId: event.organizationId as string,
+      organizationId: legacy.organizationId as string,
       aggregateType: 'organization',
-      aggregateId: event.organizationId as string,
-      actorUserId: event.executedBy,
+      aggregateId: legacy.organizationId as string,
+      actorUserId: legacy.executedBy,
       actorKind: 'agent',
-      agentName: event.agentName,
+      agentName: legacy.agentName,
       payloadAfter: {
-        capabilityName: event.capabilityName,
-        timestamp: event.timestamp,
+        capabilityName: legacy.capabilityName,
+        timestamp: legacy.timestamp,
       },
     }));
   }
@@ -208,4 +220,16 @@ export class AuditLogSubscriber {
     }
     return candidate as AuditEventEnvelope;
   }
+}
+
+function isRichAuditEnvelope(event: unknown): event is AuditEventEnvelope {
+  if (!event || typeof event !== 'object') return false;
+  const obj = event as Record<string, unknown>;
+  return (
+    typeof obj.aggregateType === 'string' &&
+    obj.aggregateType.length > 0 &&
+    obj.aggregateType !== 'organization' &&
+    typeof obj.aggregateId === 'string' &&
+    obj.aggregateId.length > 0
+  );
 }

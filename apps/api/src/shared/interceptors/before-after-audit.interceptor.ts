@@ -8,8 +8,8 @@ import {
 import { Reflector } from '@nestjs/core';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import type { Request } from 'express';
-import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { Observable, from } from 'rxjs';
+import { mergeMap } from 'rxjs/operators';
 import { AuditEventType } from '../../audit-log/application/types';
 import {
   AUDIT_AGGREGATE_KEY,
@@ -83,36 +83,51 @@ export class BeforeAfterAuditInterceptor implements NestInterceptor {
     const user = (req as Request & { user?: AuthenticatedUserPayload }).user;
 
     return next.handle().pipe(
-      tap((response) => {
-        const after = unwrapWriteResponse(response);
-        const aggregateId = id ?? extractIdFromResponse(after);
-        if (!aggregateId) {
-          // Couldn't determine the aggregate id (e.g. handler returned void
-          // and isn't an :id route). Skip emission rather than persist a
-          // shape-broken row.
-          this.logger.debug(
-            `audit.skipped: aggregateType=${meta.aggregateType} no aggregateId derivable`,
-          );
-          return;
-        }
-        const organizationId = user?.organizationId;
-        if (!organizationId) {
-          this.logger.debug('audit.skipped: no organizationId on req.user');
-          return;
-        }
-        this.events.emit(AuditEventType.AGENT_ACTION_EXECUTED, {
-          organizationId,
-          aggregateType: meta.aggregateType,
-          aggregateId,
-          actorUserId: user?.userId ?? null,
-          actorKind: 'agent' as const,
-          agentName: req.agentContext?.agentName,
-          payloadBefore: before,
-          payloadAfter: after,
-          reason: req.agentContext?.capabilityName ?? undefined,
-        });
-      }),
+      mergeMap((response) =>
+        from(this.emitForensicRow(response, meta, id, before, user, req).then(() => response)),
+      ),
     );
+  }
+
+  /**
+   * Awaits subscribers via `emitAsync` so the HTTP response is held until the
+   * audit row is persisted. Without this, `tap + emit` returns the response
+   * before the @OnEvent handler completes — INT specs read the DB and see 0
+   * rows because the write hasn't landed yet (read-after-write hazard across
+   * the event bus).
+   */
+  private async emitForensicRow(
+    response: unknown,
+    meta: AuditAggregateMeta,
+    id: string | null,
+    before: unknown,
+    user: AuthenticatedUserPayload | undefined,
+    req: Request,
+  ): Promise<void> {
+    const after = unwrapWriteResponse(response);
+    const aggregateId = id ?? extractIdFromResponse(after);
+    if (!aggregateId) {
+      this.logger.debug(
+        `audit.skipped: aggregateType=${meta.aggregateType} no aggregateId derivable`,
+      );
+      return;
+    }
+    const organizationId = user?.organizationId;
+    if (!organizationId) {
+      this.logger.debug('audit.skipped: no organizationId on req.user');
+      return;
+    }
+    await this.events.emitAsync(AuditEventType.AGENT_ACTION_EXECUTED, {
+      organizationId,
+      aggregateType: meta.aggregateType,
+      aggregateId,
+      actorUserId: user?.userId ?? null,
+      actorKind: 'agent' as const,
+      agentName: req.agentContext?.agentName,
+      payloadBefore: before,
+      payloadAfter: after,
+      reason: req.agentContext?.capabilityName ?? undefined,
+    });
   }
 }
 
