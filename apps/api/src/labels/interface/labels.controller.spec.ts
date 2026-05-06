@@ -125,8 +125,8 @@ describe('LabelsController', () => {
     it('returns ok+jobId on successful dispatch', async () => {
       const { controller } = buildController();
       const result = await controller.printLabel(RECIPE_ID, buildDto({ locale: 'es' }));
-      expect(result.ok).toBe(true);
-      expect(result.jobId).toBe('job-42');
+      expect(result.data.ok).toBe(true);
+      expect(result.data.jobId).toBe('job-42');
     });
 
     it('returns 502 when adapter PrintResult.ok = false', async () => {

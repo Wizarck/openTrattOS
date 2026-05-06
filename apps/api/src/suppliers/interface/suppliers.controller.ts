@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  HttpCode,
   NotFoundException,
   Param,
   ParseUUIDPipe,
@@ -12,7 +11,12 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AuditAggregate } from '../../shared/decorators/audit-aggregate.decorator';
 import { Roles } from '../../shared/decorators/roles.decorator';
+import {
+  WriteResponseDto,
+  toWriteResponse,
+} from '../../shared/dto/write-response.dto';
 import { Supplier } from '../domain/supplier.entity';
 import { SupplierRepository } from '../infrastructure/supplier.repository';
 import { CreateSupplierDto, SupplierResponseDto, UpdateSupplierDto } from './dto/supplier.dto';
@@ -46,8 +50,9 @@ export class SuppliersController {
 
   @Post()
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('supplier', null)
   @ApiOperation({ summary: 'Create a new supplier' })
-  async create(@Body() dto: CreateSupplierDto): Promise<SupplierResponseDto> {
+  async create(@Body() dto: CreateSupplierDto): Promise<WriteResponseDto<SupplierResponseDto>> {
     const s = Supplier.create({
       organizationId: dto.organizationId,
       name: dto.name,
@@ -57,31 +62,35 @@ export class SuppliersController {
       phone: dto.phone,
     });
     const saved = await this.suppliers.save(s);
-    return SupplierResponseDto.fromEntity(saved);
+    return toWriteResponse(SupplierResponseDto.fromEntity(saved));
   }
 
   @Patch(':id')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('supplier')
   @ApiOperation({ summary: 'Update a supplier (mutable fields)' })
   async update(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: UpdateSupplierDto,
-  ): Promise<SupplierResponseDto> {
+  ): Promise<WriteResponseDto<SupplierResponseDto>> {
     const s = await this.suppliers.findOneBy({ id });
     if (!s) throw new NotFoundException({ code: 'SUPPLIER_NOT_FOUND' });
     s.applyUpdate(dto);
     const saved = await this.suppliers.save(s);
-    return SupplierResponseDto.fromEntity(saved);
+    return toWriteResponse(SupplierResponseDto.fromEntity(saved));
   }
 
   @Delete(':id')
   @Roles('OWNER', 'MANAGER')
-  @HttpCode(204)
+  @AuditAggregate('supplier')
   @ApiOperation({ summary: 'Soft-delete a supplier (sets isActive=false)' })
-  async deactivate(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string): Promise<void> {
+  async deactivate(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+  ): Promise<WriteResponseDto<{ id: string }>> {
     const s = await this.suppliers.findOneBy({ id });
     if (!s) throw new NotFoundException({ code: 'SUPPLIER_NOT_FOUND' });
     s.deactivate();
     await this.suppliers.save(s);
+    return toWriteResponse({ id });
   }
 }

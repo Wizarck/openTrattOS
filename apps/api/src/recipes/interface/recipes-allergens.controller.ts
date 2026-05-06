@@ -14,7 +14,12 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request } from 'express';
+import { AuditAggregate } from '../../shared/decorators/audit-aggregate.decorator';
 import { Roles } from '../../shared/decorators/roles.decorator';
+import {
+  WriteResponseDto,
+  toWriteResponse,
+} from '../../shared/dto/write-response.dto';
 import { AuthenticatedUserPayload } from '../../shared/guards/roles.guard';
 import {
   CrossContaminationMissingTagsError,
@@ -90,6 +95,7 @@ export class RecipesAllergensController {
 
   @Put(':id/allergens-override')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('recipe')
   @ApiOperation({
     summary: 'Apply a Manager+ override to the aggregated allergen list',
     description:
@@ -100,7 +106,7 @@ export class RecipesAllergensController {
     @Query('organizationId', new ParseUUIDPipe({ version: '4' })) organizationId: string,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: ApplyAllergensOverrideDto,
-  ): Promise<AllergensRollupResponseDto> {
+  ): Promise<WriteResponseDto<AllergensRollupResponseDto>> {
     const actor = this.actor(req);
     try {
       await this.service.applyAllergensOverride(organizationId, actor, id, {
@@ -109,7 +115,7 @@ export class RecipesAllergensController {
         reason: dto.reason,
       });
       const rollup = await this.service.getAllergensRollup(organizationId, id);
-      return AllergensRollupResponseDto.from(rollup);
+      return toWriteResponse(AllergensRollupResponseDto.from(rollup));
     } catch (err) {
       throw this.translate(err);
     }
@@ -117,6 +123,7 @@ export class RecipesAllergensController {
 
   @Put(':id/diet-flags-override')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('recipe')
   @ApiOperation({
     summary: 'Apply a Manager+ override to the inferred diet-flag set',
     description: 'Replaces the inferred set wholesale. Reason is required for audit.',
@@ -126,7 +133,7 @@ export class RecipesAllergensController {
     @Query('organizationId', new ParseUUIDPipe({ version: '4' })) organizationId: string,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: ApplyDietFlagsOverrideDto,
-  ): Promise<DietFlagsRollupResponseDto> {
+  ): Promise<WriteResponseDto<DietFlagsRollupResponseDto>> {
     const actor = this.actor(req);
     try {
       await this.service.applyDietFlagsOverride(organizationId, actor, id, {
@@ -134,7 +141,7 @@ export class RecipesAllergensController {
         reason: dto.reason,
       });
       const rollup = await this.service.getDietFlagsRollup(organizationId, id);
-      return DietFlagsRollupResponseDto.from(rollup);
+      return toWriteResponse(DietFlagsRollupResponseDto.from(rollup));
     } catch (err) {
       throw this.translate(err);
     }
@@ -142,6 +149,7 @@ export class RecipesAllergensController {
 
   @Put(':id/cross-contamination')
   @Roles('OWNER', 'MANAGER')
+  @AuditAggregate('recipe')
   @ApiOperation({
     summary: 'Record cross-contamination ("may contain traces of [X]") for a Recipe',
     description:
@@ -153,7 +161,7 @@ export class RecipesAllergensController {
     @Query('organizationId', new ParseUUIDPipe({ version: '4' })) organizationId: string,
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
     @Body() dto: ApplyCrossContaminationDto,
-  ): Promise<AllergensRollupResponseDto> {
+  ): Promise<WriteResponseDto<AllergensRollupResponseDto>> {
     const actor = this.actor(req);
     try {
       await this.service.applyCrossContamination(organizationId, actor, id, {
@@ -161,7 +169,7 @@ export class RecipesAllergensController {
         allergens: dto.allergens,
       });
       const rollup = await this.service.getAllergensRollup(organizationId, id);
-      return AllergensRollupResponseDto.from(rollup);
+      return toWriteResponse(AllergensRollupResponseDto.from(rollup));
     } catch (err) {
       throw this.translate(err);
     }

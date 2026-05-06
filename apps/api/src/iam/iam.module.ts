@@ -1,5 +1,6 @@
-import { Module } from '@nestjs/common';
+import { Module, OnApplicationBootstrap } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuditResolverRegistry } from '../shared/application/audit-resolver-registry';
 import { AssignUserToLocations } from './application/assign-user-to-locations.use-case';
 import { CreateOrganization } from './application/create-organization.use-case';
 import { Location } from './domain/location.entity';
@@ -34,4 +35,35 @@ import { UserController } from './interface/user.controller';
     AssignUserToLocations,
   ],
 })
-export class IamModule {}
+export class IamModule implements OnApplicationBootstrap {
+  constructor(
+    private readonly users: UserRepository,
+    private readonly locations: LocationRepository,
+    private readonly organizations: OrganizationRepository,
+    private readonly registry: AuditResolverRegistry,
+  ) {}
+
+  onApplicationBootstrap(): void {
+    this.registry.register('user', async (id) => {
+      try {
+        return (await this.users.findOneBy({ id })) ?? null;
+      } catch {
+        return null;
+      }
+    });
+    this.registry.register('location', async (id) => {
+      try {
+        return (await this.locations.findOneBy({ id })) ?? null;
+      } catch {
+        return null;
+      }
+    });
+    this.registry.register('organization', async (id) => {
+      try {
+        return (await this.organizations.findOneBy({ id })) ?? null;
+      } catch {
+        return null;
+      }
+    });
+  }
+}

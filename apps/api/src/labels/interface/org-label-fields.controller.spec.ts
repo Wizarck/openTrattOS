@@ -72,8 +72,8 @@ describe('OrgLabelFieldsController', () => {
     // pageSize NOT in dto → preserved
 
     const result = await controller.putLabelFields(ORG_ID, dto);
-    expect(result.businessName).toBe('Updated');
-    expect(result.pageSize).toBe('a4');
+    expect(result.data.businessName).toBe('Updated');
+    expect(result.data.pageSize).toBe('a4');
     expect(saved).toHaveLength(1);
     expect(saved[0].labelFields.businessName).toBe('Updated');
     expect(saved[0].labelFields.pageSize).toBe('a4');
@@ -96,10 +96,10 @@ describe('OrgLabelFieldsController', () => {
     dto.printAdapter = { id: 'ipp', config: { url: 'http://printer.local:631/ipp/print' } };
 
     const result = await controller.putLabelFields(ORG_ID, dto);
-    expect(result.businessName).toBe('Restaurante');
-    expect(result.pageSize).toBe('thermal-4x6');
-    expect(result.postalAddress?.city).toBe('Madrid');
-    expect(result.printAdapter?.id).toBe('ipp');
+    expect(result.data.businessName).toBe('Restaurante');
+    expect(result.data.pageSize).toBe('thermal-4x6');
+    expect(result.data.postalAddress?.city).toBe('Madrid');
+    expect(result.data.printAdapter?.id).toBe('ipp');
   });
 
   it('PUT returns 404 when org missing', async () => {

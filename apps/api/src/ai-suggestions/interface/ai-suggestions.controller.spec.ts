@@ -112,10 +112,10 @@ describe('AiSuggestionsController — POST /yield', () => {
   it('returns wrapped suggestion on success', async () => {
     const { controller } = buildController();
     const result = await controller.suggestYield(yieldDto());
-    expect(result.suggestion).not.toBeNull();
-    expect(result.suggestion!.kind).toBe('yield');
-    expect(result.suggestion!.citationUrl).toBe('https://example.com');
-    expect(result.reason).toBeUndefined();
+    expect(result.data.suggestion).not.toBeNull();
+    expect(result.data.suggestion!.kind).toBe('yield');
+    expect(result.data.suggestion!.citationUrl).toBe('https://example.com');
+    expect(result.data.reason).toBeUndefined();
   });
 
   it('returns { suggestion: null, reason: "no_citation_available" } when service returns null', async () => {
@@ -123,8 +123,8 @@ describe('AiSuggestionsController — POST /yield', () => {
       serviceOverrides: { suggestYield: jest.fn().mockResolvedValue(null) },
     });
     const result = await controller.suggestYield(yieldDto());
-    expect(result.suggestion).toBeNull();
-    expect(result.reason).toBe('no_citation_available');
+    expect(result.data.suggestion).toBeNull();
+    expect(result.data.reason).toBe('no_citation_available');
   });
 });
 
@@ -132,7 +132,7 @@ describe('AiSuggestionsController — POST /waste', () => {
   it('returns wrapped suggestion on success', async () => {
     const { controller } = buildController();
     const result = await controller.suggestWaste(wasteDto());
-    expect(result.suggestion).not.toBeNull();
+    expect(result.data.suggestion).not.toBeNull();
   });
 
   it('returns null wrapper when no result', async () => {
@@ -140,8 +140,8 @@ describe('AiSuggestionsController — POST /waste', () => {
       serviceOverrides: { suggestWaste: jest.fn().mockResolvedValue(null) },
     });
     const result = await controller.suggestWaste(wasteDto());
-    expect(result.suggestion).toBeNull();
-    expect(result.reason).toBe('no_citation_available');
+    expect(result.data.suggestion).toBeNull();
+    expect(result.data.reason).toBe('no_citation_available');
   });
 });
 
@@ -149,7 +149,7 @@ describe('AiSuggestionsController — POST /:id/accept', () => {
   it('returns updated DTO on accept (no tweak)', async () => {
     const { controller, service } = buildController();
     const result = await controller.accept(SUG, acceptDto());
-    expect(result.id).toBeTruthy();
+    expect(result.data.id).toBeTruthy();
     expect(service.acceptSuggestion).toHaveBeenCalledWith(
       expect.objectContaining({
         organizationId: ORG,

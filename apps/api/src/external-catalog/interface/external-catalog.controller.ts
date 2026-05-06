@@ -7,7 +7,12 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { AuditAggregate } from '../../shared/decorators/audit-aggregate.decorator';
 import { Roles } from '../../shared/decorators/roles.decorator';
+import {
+  WriteResponseDto,
+  toWriteResponse,
+} from '../../shared/dto/write-response.dto';
 import { ExternalCatalogService } from '../application/external-catalog.service';
 import { OffSyncInProgressError } from '../application/off-api.types';
 import { OffSyncService, SyncRunResult } from '../application/off-sync.service';
@@ -62,16 +67,17 @@ export class ExternalCatalogController {
   @Post('external-catalog/sync')
   @Roles('OWNER')
   @HttpCode(202)
+  @AuditAggregate('organization', null)
   @ApiOperation({
     summary: 'Manually trigger an OFF sync (Owner only)',
     description:
       'Runs a region-scoped incremental sync inline. Returns 202 Accepted with a job id and per-region results.',
   })
-  async triggerSync(): Promise<SyncResponseDto> {
+  async triggerSync(): Promise<WriteResponseDto<SyncResponseDto>> {
     const jobId = `off-sync-${Date.now()}`;
     try {
       const results = await this.syncService.syncAll();
-      return { jobId, status: 'completed', results };
+      return toWriteResponse({ jobId, status: 'completed', results });
     } catch (err) {
       if (err instanceof OffSyncInProgressError) {
         throw new ServiceUnavailableException({ code: 'EXTERNAL_CATALOG_SYNC_IN_PROGRESS' });

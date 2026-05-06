@@ -15,6 +15,12 @@ export interface PrintLabelResponse {
   jobId?: string;
 }
 
+interface WriteEnvelope<T> {
+  data: T;
+  missingFields: string[];
+  nextRequired: string | null;
+}
+
 /**
  * Fires `POST /recipes/:id/print` to dispatch the rendered label via the
  * org-configured `printAdapter`. Returns the typed response or surfaces the
@@ -22,10 +28,15 @@ export interface PrintLabelResponse {
  */
 export function useLabelPrint() {
   return useMutation<PrintLabelResponse, ApiError, PrintLabelInput>({
-    mutationFn: async ({ recipeId, organizationId, locale, copies, printerId }) =>
-      api<PrintLabelResponse>(`/recipes/${recipeId}/print`, {
-        method: 'POST',
-        body: JSON.stringify({ organizationId, locale, copies, printerId }),
-      }),
+    mutationFn: async ({ recipeId, organizationId, locale, copies, printerId }) => {
+      const wrap = await api<WriteEnvelope<PrintLabelResponse>>(
+        `/recipes/${recipeId}/print`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ organizationId, locale, copies, printerId }),
+        },
+      );
+      return wrap.data;
+    },
   });
 }
