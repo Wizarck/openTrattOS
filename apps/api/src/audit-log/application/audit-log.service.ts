@@ -141,9 +141,13 @@ export class AuditLogService {
     this.applyBaseFilters(inner, filter, since, until);
     inner.limit(cap + 1);
 
+    // getQueryAndParameters() interpolates the named `:orgId / :q / …`
+    // params into positional `$1, $2, …` placeholders + returns a parallel
+    // array — required form for `dataSource.query(sql, params)`.
+    const [innerSql, innerParams] = inner.getQueryAndParameters();
     const result: Array<{ count: string }> = await this.dataSource.query(
-      `SELECT count(*) AS count FROM (${inner.getQuery()}) sub`,
-      inner.getParameters() as unknown[] as never,
+      `SELECT count(*) AS count FROM (${innerSql}) sub`,
+      innerParams,
     );
     const total = Number.parseInt(result[0]?.count ?? '0', 10);
     return total > cap;

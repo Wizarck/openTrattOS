@@ -34,6 +34,7 @@ type FakeQbHandle = Record<string, unknown> & {
   select: (arg: string) => FakeQbHandle;
   getQuery: () => string;
   getParameters: () => Record<string, unknown>;
+  getQueryAndParameters: () => [string, unknown[]];
   getManyAndCount: () => Promise<[AuditLog[], number]>;
   getMany: () => Promise<AuditLog[]>;
 };
@@ -93,6 +94,11 @@ function makeFakeQueryBuilder(state: FakeQueryBuilder): FakeQbHandle {
       const merged: Record<string, unknown> = {};
       for (const c of state.whereCalls) Object.assign(merged, c.params);
       return merged;
+    },
+    getQueryAndParameters() {
+      const merged: Record<string, unknown> = {};
+      for (const c of state.whereCalls) Object.assign(merged, c.params);
+      return ['SELECT 1 FROM audit_log a /* fake */', Object.values(merged)];
     },
   };
   return qb;
