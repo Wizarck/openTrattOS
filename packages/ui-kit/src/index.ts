@@ -59,3 +59,5 @@ export type {
   ChatSseEvent as AgentChatSseEvent,
   SendRequest as AgentChatSendRequest,
 } from './components/AgentChatWidget';
+export { RoleGuard } from './components/RoleGuard';
+export type { RoleGuardProps, UserRole } from './components/RoleGuard';
