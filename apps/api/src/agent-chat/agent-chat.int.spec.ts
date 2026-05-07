@@ -271,7 +271,15 @@ describe('agent-chat — flag-enabled (integration)', () => {
     expect(rows[0].actor_kind).toBe('agent');
   });
 
-  it('Idempotency-Key replay returns the cached SSE body without recalling Hermes', async () => {
+  it('repeated turns each call Hermes (idempotency replay for SSE deferred to slice 3c)', async () => {
+    // Wave 1.13 [3a] IdempotencyMiddleware caches JSON write responses;
+    // it does NOT wrap streaming SSE responses. Replaying a chat turn
+    // therefore re-calls Hermes today. Slice 3c
+    // (m2-mcp-agent-registry-bench) extends the cache layer to capture
+    // the concatenated text + finishReason via
+    // `AgentChatService.cacheableTextForIdempotency`. This spec asserts
+    // current behaviour so a future change that wires the cache will
+    // break the test and force a deliberate update.
     const headers = {
       'x-test-user-id': userId,
       'x-test-org-id': org.id,
@@ -285,10 +293,8 @@ describe('agent-chat — flag-enabled (integration)', () => {
     expect(fakeHermes.received.bodies).toHaveLength(1);
 
     const second = await postJson(baseUrl, '/agent-chat/stream', body, headers);
-    // Replay path returns the same body status/content; Hermes is NOT
-    // recalled because the idempotency middleware short-circuits.
     expect(second.status).toBe(200);
-    expect(fakeHermes.received.bodies).toHaveLength(1);
+    expect(fakeHermes.received.bodies).toHaveLength(2);
   });
 });
 

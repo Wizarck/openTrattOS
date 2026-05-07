@@ -25,16 +25,6 @@ describe('AgentChatController', () => {
     controller = new AgentChatController(service as unknown as AgentChatService);
   });
 
-  it('returns 404 when the feature flag is off', () => {
-    service.isEnabled.mockReturnValue(false);
-    expect(() =>
-      controller.stream(
-        { message: { type: 'text', content: 'x' } },
-        fakeReq({ userId: 'u', organizationId: 'o' }),
-      ),
-    ).toThrow(NotFoundException);
-  });
-
   it('returns 404 when req.user is missing (defence in depth)', () => {
     expect(() =>
       controller.stream(
@@ -77,7 +67,7 @@ describe('AgentChatController', () => {
     );
   });
 
-  it('wraps each SSE event in a {data} envelope for NestJS @Sse()', async () => {
+  it('maps each ChatSseEvent to a NestJS MessageEvent with `type` so @Sse() emits proper SSE frames', async () => {
     service.stream.mockReturnValue(
       of(
         { event: 'token' as const, data: { chunk: 'Hi' } },
@@ -90,9 +80,10 @@ describe('AgentChatController', () => {
         .stream({ message: { type: 'text', content: 'x' } }, req)
         .pipe(toArray()),
     );
+    // `type` becomes the `event:` SSE line; `data` becomes the JSON payload.
     expect(out).toEqual([
-      { data: { event: 'token', data: { chunk: 'Hi' } } },
-      { data: { event: 'done', data: { finishReason: 'stop' } } },
+      { data: { chunk: 'Hi' }, type: 'token' },
+      { data: { finishReason: 'stop' }, type: 'done' },
     ]);
   });
 });

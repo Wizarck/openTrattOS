@@ -3,6 +3,7 @@ import { IamModule } from '../iam/iam.module';
 import { SharedModule } from '../shared/shared.module';
 import { AgentChatService } from './application/agent-chat.service';
 import { AgentChatController } from './interface/agent-chat.controller';
+import { AgentChatEnabledGuard } from './interface/agent-chat-enabled.guard';
 
 /**
  * Wave 1.13 [3b] — m2-mcp-agent-chat-widget BC. Exposes
@@ -19,7 +20,7 @@ import { AgentChatController } from './interface/agent-chat.controller';
 @Module({
   imports: [SharedModule, IamModule],
   controllers: [AgentChatController],
-  providers: [AgentChatService],
+  providers: [AgentChatService, AgentChatEnabledGuard],
   exports: [AgentChatService],
 })
 export class AgentChatModule {}
