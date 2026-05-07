@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Post,
@@ -104,12 +105,13 @@ export class AgentCredentialsController {
   }
 
   @Post(':id/rotate')
+  @HttpCode(200)
   @Roles('OWNER')
   @AuditAggregate('agent_credential')
   @ApiOperation({
     summary: 'Rotate an agent credential\'s public key (atomic swap)',
     description:
-      'Replaces the row\'s public_key in a single transaction. The id, agentName, role, and createdAt are preserved. Refuses revoked credentials (409 AGENT_CREDENTIAL_REVOKED). Use this for planned key turnover; for emergency invalidation use the revoke endpoint then re-register.',
+      'Replaces the row\'s public_key in a single transaction. The id, agentName, role, and createdAt are preserved. Refuses revoked credentials (409 AGENT_CREDENTIAL_REVOKED). Use this for planned key turnover; for emergency invalidation use the revoke endpoint then re-register. Returns 200 (not 201) because rotation mutates an existing row rather than creating a new resource.',
   })
   async rotate(
     @Param('id', new ParseUUIDPipe()) id: string,
