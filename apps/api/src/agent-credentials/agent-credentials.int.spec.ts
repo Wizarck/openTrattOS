@@ -272,4 +272,70 @@ describe('agent_credentials (integration)', () => {
     });
     expect(res.status).toBe(403);
   });
+
+  it('rotation: POST /:id/rotate swaps publicKey atomically (Wave 1.17)', async () => {
+    const pubkey1 = generateSamplePublicKey();
+    const pubkey2 = generateSamplePublicKey();
+    expect(pubkey1).not.toBe(pubkey2);
+    const headers = { ...ownerHeaders, 'x-test-org-id': org.id };
+
+    // Register
+    const created = await request(baseUrl, 'POST', '/agent-credentials', headers, {
+      agentName: 'hermes-rot',
+      publicKey: pubkey1,
+      role: 'OWNER',
+    });
+    expect(created.status).toBe(201);
+    const credId = (created.json() as { data: { id: string } }).data.id;
+
+    // Rotate
+    const rotated = await request(baseUrl, 'POST', `/agent-credentials/${credId}/rotate`, headers, {
+      publicKey: pubkey2,
+    });
+    expect(rotated.status).toBe(200);
+    const data = (rotated.json() as { data: { id: string; agentName: string; revokedAt: string | null } }).data;
+    expect(data.id).toBe(credId);
+    expect(data.agentName).toBe('hermes-rot');
+    expect(data.revokedAt).toBeNull();
+    // Response does NOT echo publicKey
+    expect(rotated.body).not.toContain(pubkey2);
+
+    // Direct DB read to confirm the swap landed
+    const dbRow = await dataSource.query(
+      'SELECT public_key FROM agent_credentials WHERE id = $1',
+      [credId],
+    );
+    expect(dbRow[0].public_key).toBe(pubkey2);
+  });
+
+  it('rotation: rejects rotation against a revoked credential with HTTP 409', async () => {
+    const pubkey1 = generateSamplePublicKey();
+    const pubkey2 = generateSamplePublicKey();
+    const headers = { ...ownerHeaders, 'x-test-org-id': org.id };
+
+    const created = await request(baseUrl, 'POST', '/agent-credentials', headers, {
+      agentName: 'hermes-rev',
+      publicKey: pubkey1,
+      role: 'OWNER',
+    });
+    const credId = (created.json() as { data: { id: string } }).data.id;
+
+    // Revoke
+    const revoked = await request(baseUrl, 'PUT', `/agent-credentials/${credId}/revoke`, headers);
+    expect(revoked.status).toBe(200);
+
+    // Attempt rotation
+    const rotated = await request(baseUrl, 'POST', `/agent-credentials/${credId}/rotate`, headers, {
+      publicKey: pubkey2,
+    });
+    expect(rotated.status).toBe(409);
+    expect(rotated.body).toContain('AGENT_CREDENTIAL_REVOKED');
+
+    // DB row's public_key should be unchanged (still pubkey1)
+    const dbRow = await dataSource.query(
+      'SELECT public_key FROM agent_credentials WHERE id = $1',
+      [credId],
+    );
+    expect(dbRow[0].public_key).toBe(pubkey1);
+  });
 });

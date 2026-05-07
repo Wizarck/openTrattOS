@@ -70,4 +70,14 @@ export class AgentCredential {
       this.revokedAt = at;
     }
   }
+
+  /**
+   * Atomic key swap (Wave 1.17 m2-agent-credential-rotation per ADR).
+   * Encapsulates the field assignment so service code reads
+   * `row.rotatePublicKey(...)` mirroring the existing `revoke()` shape.
+   * Caller (the DTO) is responsible for length / format validation.
+   */
+  rotatePublicKey(newPublicKey: string): void {
+    this.publicKey = newPublicKey;
+  }
 }

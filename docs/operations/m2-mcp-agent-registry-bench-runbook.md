@@ -145,6 +145,53 @@ Remove the org id from `OPENTRATTOS_AGENT_SIGNATURE_REQUIRED` and
 restart. The `agent_credentials` rows persist; flipping back later
 re-activates them without re-registration.
 
+## Key rotation (Wave 1.17)
+
+Use `POST /agent-credentials/:id/rotate` for **planned key turnover**
+(quarterly hygiene, regulatory cadence, vendor rotation policy). The
+endpoint UPDATEs the existing row's `public_key` in a single
+transaction. The row's `id`, `agentName`, `role`, and `createdAt`
+remain — agents reconfigure only the new private key, NOT the
+`X-Agent-Id` header.
+
+```bash
+# 1. Generate the new keypair locally
+NEW_PUB=$(node -e "
+  const {generateKeyPairSync}=require('crypto');
+  const {publicKey,privateKey}=generateKeyPairSync('ed25519');
+  console.log(publicKey.export({type:'spki',format:'der'}).toString('base64'));
+")
+
+# 2. Rotate (Owner only)
+curl -X POST -H "Authorization: Bearer $OWNER_JWT" \
+  -H 'Content-Type: application/json' \
+  -d "{\"publicKey\":\"$NEW_PUB\"}" \
+  https://api.example.com/agent-credentials/<id>/rotate
+
+# 3. Roll out the new private key to the agent's secret store + restart it
+```
+
+The audit_log will carry one `AGENT_ACTION_FORENSIC` row with
+`payload_before.publicKey` (old) and `payload_after.publicKey` (new),
+attributed to the Owner who triggered the rotation. Auditors get a
+forensic timeline of every key change without polling the live row.
+
+**When to rotate vs revoke + re-register:**
+
+| Situation                                  | Use         |
+|---|---|
+| Planned hygiene / quarterly turnover       | Rotation    |
+| Suspected key compromise — agent suspect   | Revoke (instant invalidation) + re-register |
+| Re-using an existing `agentName`           | Revoke + DELETE + register (rotation refuses revoked rows) |
+| Agent identity itself is being retired     | Revoke (no re-register; row preserved for audit) |
+
+**Caveat: in-flight requests signed with the old key.** The swap is
+atomic at the DB level, but a request signed with the old private key
+that arrives mid-rotation fails verification. Restart the agent
+immediately after rotation so its signing pipeline picks up the new
+private key. Acceptable for planned rotations; not acceptable for
+emergency invalidation (use revoke for those — see the table above).
+
 ## Signing a request (agent side)
 
 ```bash
