@@ -1,6 +1,7 @@
 import { Module, OnApplicationBootstrap } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuditResolverRegistry } from '../shared/application/audit-resolver-registry';
+import { AgentSignatureMiddleware } from '../shared/middleware/agent-signature.middleware';
 import { SharedModule } from '../shared/shared.module';
 import { AgentCredentialsService } from './application/agent-credentials.service';
 import { AgentCredential } from './domain/agent-credential.entity';
@@ -20,9 +21,9 @@ import { AgentCredentialsController } from './interface/agent-credentials.contro
  */
 @Module({
   imports: [SharedModule, TypeOrmModule.forFeature([AgentCredential])],
-  providers: [AgentCredentialsService, AgentCredentialRepository],
+  providers: [AgentCredentialsService, AgentCredentialRepository, AgentSignatureMiddleware],
   controllers: [AgentCredentialsController],
-  exports: [AgentCredentialsService, AgentCredentialRepository],
+  exports: [AgentCredentialsService, AgentCredentialRepository, AgentSignatureMiddleware],
 })
 export class AgentCredentialsModule implements OnApplicationBootstrap {
   constructor(

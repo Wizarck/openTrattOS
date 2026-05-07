@@ -19,6 +19,7 @@ import { RolesGuard } from './shared/guards/roles.guard';
 import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
 import { BeforeAfterAuditInterceptor } from './shared/interceptors/before-after-audit.interceptor';
 import { AgentAuditMiddleware } from './shared/middleware/agent-audit.middleware';
+import { AgentSignatureMiddleware } from './shared/middleware/agent-signature.middleware';
 import { IdempotencyMiddleware } from './shared/middleware/idempotency.middleware';
 import { SharedModule } from './shared/shared.module';
 
@@ -97,6 +98,12 @@ export class AppModule implements NestModule {
   // populates user before NestJS middleware chain — the order between these
   // two middleware is not load-bearing as long as auth has populated user).
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(AgentAuditMiddleware, IdempotencyMiddleware).forRoutes('*');
+    // m2-mcp-agent-registry-bench (Wave 1.13 [3c]): AgentSignatureMiddleware
+    // runs FIRST so a verified signature stamps `req.agentContext` before
+    // AgentAuditMiddleware reads it. AgentAuditMiddleware is idempotent —
+    // it leaves a context with `signatureVerified=true` untouched.
+    consumer
+      .apply(AgentSignatureMiddleware, AgentAuditMiddleware, IdempotencyMiddleware)
+      .forRoutes('*');
   }
 }

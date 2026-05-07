@@ -22,6 +22,14 @@ export interface AgentContext {
   viaAgent: true;
   agentName: string;
   capabilityName: string | null;
+  /**
+   * True when `AgentSignatureMiddleware` (Wave 1.13 [3c]) verified the
+   * Ed25519 signature against a registered `agent_credentials` row.
+   * Absent / false when the request flowed through the legacy 3a unsigned
+   * path. Downstream code that needs strong attribution guarantees should
+   * gate on this flag.
+   */
+  signatureVerified?: boolean;
 }
 
 declare module 'express-serve-static-core' {
@@ -91,18 +99,26 @@ export class AgentAuditMiddleware implements NestMiddleware {
         ? capabilityName.trim()
         : null;
 
-    req.agentContext = {
-      viaAgent: true,
-      agentName: agentName.trim(),
-      capabilityName: trimmedCapability,
-    };
+    // Preserve a previously-verified context. Wave 1.13 [3c]'s
+    // AgentSignatureMiddleware runs ahead of this one and stamps
+    // signatureVerified=true with the agentName lifted from the verified
+    // credential. Overwriting here would lose the stronger attribution
+    // and let a tampered X-Agent-Name spoof the signed identity.
+    if (req.agentContext?.signatureVerified !== true) {
+      req.agentContext = {
+        viaAgent: true,
+        agentName: agentName.trim(),
+        capabilityName: trimmedCapability,
+      };
+    }
 
+    const ctx = req.agentContext;
     const user = (req as Request & { user?: AuthenticatedUserPayload }).user;
     const payload: AgentActionExecutedEvent = {
       executedBy: user?.userId ?? null,
       viaAgent: true,
-      agentName: agentName.trim(),
-      capabilityName: trimmedCapability,
+      agentName: ctx?.agentName ?? agentName.trim(),
+      capabilityName: ctx?.capabilityName ?? trimmedCapability,
       organizationId: user?.organizationId ?? null,
       timestamp: new Date().toISOString(),
     };
