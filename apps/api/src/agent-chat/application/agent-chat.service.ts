@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   Injectable,
   Logger,
@@ -109,6 +109,11 @@ export class AgentChatService {
     }
 
     const sessionId = body.sessionId ?? deterministicSessionId(user.userId, user.organizationId);
+    // The audit_log.aggregate_id column is typed as UUID; sessionIds are
+    // free-form (browser-supplied or `web-{shortHash}` derivations) and
+    // would fail the cast. Generate a fresh UUID per turn and carry the
+    // chat sessionId in `payloadAfter.sessionId` for forensic linkage.
+    const turnAggregateId = randomUUID();
     const collected: ChatSseEvent[] = [];
 
     return new Observable<ChatSseEvent>((subscriber) => {
@@ -118,7 +123,7 @@ export class AgentChatService {
       const emitAuditOnce = (): Promise<void> => {
         if (auditEmitted) return Promise.resolve();
         auditEmitted = true;
-        return this.emitTurnAudit(user, sessionId, collected, body);
+        return this.emitTurnAudit(user, turnAggregateId, sessionId, collected, body);
       };
       subscriber.add(() => {
         cancelled = true;
@@ -185,6 +190,7 @@ export class AgentChatService {
    */
   private async emitTurnAudit(
     user: { userId: string; organizationId: string },
+    aggregateId: string,
     sessionId: string,
     events: ChatSseEvent[],
     body: ChatRequestDto,
@@ -198,12 +204,13 @@ export class AgentChatService {
     const envelope: AuditEventEnvelope = {
       organizationId: user.organizationId,
       aggregateType: 'chat_session',
-      aggregateId: sessionId,
+      aggregateId,
       actorUserId: user.userId,
       actorKind: 'agent',
       agentName: 'hermes-web',
       payloadBefore: null,
       payloadAfter: {
+        sessionId,
         finishReason: summary.finishReason,
         replyChars: summary.text.length,
         messageType: body.message.type,

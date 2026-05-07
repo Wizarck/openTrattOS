@@ -261,17 +261,21 @@ describe('agent-chat — flag-enabled (integration)', () => {
     expect(sent.user_attribution.user_id).toBe(userId);
 
     // Assert exactly one AGENT_ACTION_EXECUTED audit row was written, scoped
-    // to chat_session aggregate, agent_name=hermes-web.
+    // to chat_session aggregate, agent_name=hermes-web. The aggregate_id is
+    // a fresh UUID per turn (chat sessionIds are free-form strings; the
+    // aggregate_id column is UUID-typed). The chat sessionId itself is
+    // carried in `payload_after.sessionId` for forensic linkage.
     const rows = await dataSource.query(
-      `SELECT event_type, agent_name, aggregate_type, aggregate_id, actor_kind
+      `SELECT event_type, agent_name, aggregate_type, aggregate_id, actor_kind, payload_after
          FROM "audit_log"
          WHERE event_type = 'AGENT_ACTION_EXECUTED'
            AND agent_name = 'hermes-web'`,
     );
     expect(rows).toHaveLength(1);
     expect(rows[0].aggregate_type).toBe('chat_session');
-    expect(rows[0].aggregate_id).toBe('sess-1');
     expect(rows[0].actor_kind).toBe('agent');
+    expect(rows[0].aggregate_id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(rows[0].payload_after.sessionId).toBe('sess-1');
   });
 
   it('repeated turns each call Hermes (idempotency replay for SSE deferred to slice 3c)', async () => {

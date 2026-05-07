@@ -298,14 +298,18 @@ describe('AgentChatService — turn audit emission', () => {
     expect(envelope).toMatchObject({
       organizationId: ORG_ID,
       aggregateType: 'chat_session',
-      aggregateId: 'sess-1',
       actorUserId: USER_ID,
       actorKind: 'agent',
       agentName: 'hermes-web',
       payloadBefore: null,
       reason: 'chat.message',
     });
+    // aggregate_id is a fresh UUID per turn (the audit_log column is
+    // UUID-typed; sessionIds are free-form). The chat sessionId is
+    // captured in payloadAfter.sessionId.
+    expect(envelope.aggregateId).toMatch(/^[0-9a-f-]{36}$/);
     expect(envelope.payloadAfter).toMatchObject({
+      sessionId: 'sess-1',
       finishReason: 'stop',
       replyChars: 'Hola Lourdes'.length,
       messageType: 'text',
