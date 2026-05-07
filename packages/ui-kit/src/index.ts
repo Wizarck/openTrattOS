@@ -59,3 +59,21 @@ export type {
   ChatSseEvent as AgentChatSseEvent,
   SendRequest as AgentChatSendRequest,
 } from './components/AgentChatWidget';
+export { RoleGuard } from './components/RoleGuard';
+export type { RoleGuardProps, UserRole } from './components/RoleGuard';
+export {
+  LabelFieldsForm,
+  sanitizeLabelFieldsValues,
+  LABEL_PAGE_SIZES,
+  PRINT_ADAPTER_IDS,
+} from './components/LabelFieldsForm';
+export type {
+  LabelFieldsFormProps,
+  LabelFieldsFormValues,
+  LabelFieldsFormErrors,
+  LabelFieldsContactInfo,
+  LabelFieldsPostalAddress,
+  LabelFieldsPrintAdapter,
+  LabelPageSize,
+  PrintAdapterId,
+} from './components/LabelFieldsForm';
