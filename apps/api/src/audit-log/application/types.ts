@@ -24,6 +24,7 @@ export const AuditEventType = {
   RECIPE_COST_REBUILT: 'cost.recipe-cost-rebuilt',
   SUPPLIER_PRICE_UPDATED: 'cost.supplier-price-updated',
   AGENT_ACTION_EXECUTED: 'agent.action-executed',
+  AGENT_ACTION_FORENSIC: 'agent.action-forensic',
 } as const;
 
 /**
@@ -43,6 +44,7 @@ export const AuditEventTypeName: Record<AuditEventType, string> = {
   'cost.recipe-cost-rebuilt': 'RECIPE_COST_REBUILT',
   'cost.supplier-price-updated': 'SUPPLIER_PRICE_UPDATED',
   'agent.action-executed': 'AGENT_ACTION_EXECUTED',
+  'agent.action-forensic': 'AGENT_ACTION_FORENSIC',
 };
 
 export type AuditEventType = (typeof AuditEventType)[keyof typeof AuditEventType];

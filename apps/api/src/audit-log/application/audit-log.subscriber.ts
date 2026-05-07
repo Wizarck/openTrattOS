@@ -123,40 +123,39 @@ export class AuditLogSubscriber {
   }
 
   @OnEvent(AuditEventType.AGENT_ACTION_EXECUTED)
-  onAgentActionExecuted(
-    event: AgentActionExecutedEvent | AuditEventEnvelope,
-  ): Promise<void> {
-    // Two payload shapes share this channel:
-    //   1. Lean (legacy, from AgentAuditMiddleware Wave 1.5): `{ executedBy,
-    //      agentName, capabilityName, organizationId, timestamp }` — anchored
-    //      to `organization` by translation, captures the agent request only.
-    //   2. Rich (Wave 1.13 BeforeAfterAuditInterceptor): canonical
-    //      `AuditEventEnvelope` with `aggregateType` ≠ 'organization' +
-    //      payload_before/after — captures the agent mutation forensically.
-    // Both rows coexist for a single agent write (request + mutation), so
-    // discrimination here is by envelope shape rather than separate channels.
-    if (isRichAuditEnvelope(event)) {
-      return this.persistEnvelope(AuditEventType.AGENT_ACTION_EXECUTED, event);
-    }
-    const legacy = event as AgentActionExecutedEvent;
-    if (!legacy.organizationId) {
+  onAgentActionExecuted(event: AgentActionExecutedEvent): Promise<void> {
+    // Lean, request-anchored row from `AgentAuditMiddleware`. Per ADR-026
+    // (Wave 1.14 m2-audit-log-forensic-split) this channel carries ONLY the
+    // lean shape; rich aggregate-anchored emissions go to
+    // AGENT_ACTION_FORENSIC. `aggregate_type='organization'` because the lean
+    // payload has no aggregate.
+    if (!event.organizationId) {
       this.logger.debug(
         `audit-log.subscriber.skipped: AGENT_ACTION_EXECUTED — no organizationId (pre-auth probe)`,
       );
       return Promise.resolve();
     }
     return this.persistTranslated(AuditEventType.AGENT_ACTION_EXECUTED, () => ({
-      organizationId: legacy.organizationId as string,
+      organizationId: event.organizationId as string,
       aggregateType: 'organization',
-      aggregateId: legacy.organizationId as string,
-      actorUserId: legacy.executedBy,
+      aggregateId: event.organizationId as string,
+      actorUserId: event.executedBy,
       actorKind: 'agent',
-      agentName: legacy.agentName,
+      agentName: event.agentName,
       payloadAfter: {
-        capabilityName: legacy.capabilityName,
-        timestamp: legacy.timestamp,
+        capabilityName: event.capabilityName,
+        timestamp: event.timestamp,
       },
     }));
+  }
+
+  @OnEvent(AuditEventType.AGENT_ACTION_FORENSIC)
+  onAgentActionForensic(payload: AuditEventEnvelope): Promise<void> {
+    // Rich, aggregate-anchored row from `BeforeAfterAuditInterceptor` (write
+    // RPCs) and `AgentChatService` (chat turns; per ADR-027 streaming-handler
+    // pattern). Persisted as-is — no per-type translation. See ADR-026 for
+    // the channel split rationale.
+    return this.persistEnvelope(AuditEventType.AGENT_ACTION_FORENSIC, payload);
   }
 
   // ------------- Internals -------------
@@ -220,16 +219,4 @@ export class AuditLogSubscriber {
     }
     return candidate as AuditEventEnvelope;
   }
-}
-
-function isRichAuditEnvelope(event: unknown): event is AuditEventEnvelope {
-  if (!event || typeof event !== 'object') return false;
-  const obj = event as Record<string, unknown>;
-  return (
-    typeof obj.aggregateType === 'string' &&
-    obj.aggregateType.length > 0 &&
-    obj.aggregateType !== 'organization' &&
-    typeof obj.aggregateId === 'string' &&
-    obj.aggregateId.length > 0
-  );
 }
