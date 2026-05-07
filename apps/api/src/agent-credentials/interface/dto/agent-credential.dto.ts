@@ -36,6 +36,20 @@ export class CreateAgentCredentialDto {
 }
 
 /**
+ * Wave 1.17 — m2-agent-credential-rotation. Body shape for POST
+ * /agent-credentials/:id/rotate. The new public key replaces the row's
+ * stored value atomically. Same length / format constraints as
+ * `CreateAgentCredentialDto.publicKey` so rotation accepts any key the
+ * registration endpoint would.
+ */
+export class RotateAgentCredentialDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(4096)
+  publicKey!: string;
+}
+
+/**
  * Response shape — public key is intentionally NOT echoed back. Operators
  * who lose track of which public key was registered must inspect the row
  * directly via psql; the API surface treats public keys as write-only.

@@ -58,6 +58,23 @@ export class AgentCredentialsService {
     return this.repo.save(row);
   }
 
+  /**
+   * Wave 1.17 — m2-agent-credential-rotation. Atomic public-key swap.
+   * Refuses revoked credentials (rotation does NOT un-revoke; ADR SD5).
+   */
+  async rotate(
+    id: string,
+    organizationId: string,
+    publicKey: string,
+  ): Promise<AgentCredential> {
+    const row = await this.getById(id, organizationId);
+    if (!row.isActive()) {
+      throw new ConflictException({ code: 'AGENT_CREDENTIAL_REVOKED' });
+    }
+    row.rotatePublicKey(publicKey);
+    return this.repo.save(row);
+  }
+
   async deleteHard(id: string, organizationId: string): Promise<void> {
     const row = await this.getById(id, organizationId);
     await this.repo.remove(row);

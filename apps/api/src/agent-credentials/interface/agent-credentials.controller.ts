@@ -24,6 +24,7 @@ import { AgentCredential } from '../domain/agent-credential.entity';
 import {
   AgentCredentialResponse,
   CreateAgentCredentialDto,
+  RotateAgentCredentialDto,
 } from './dto/agent-credential.dto';
 
 /**
@@ -99,6 +100,24 @@ export class AgentCredentialsController {
   ): Promise<WriteResponseDto<AgentCredentialResponse>> {
     const user = requireUser(req);
     const row = await this.service.revoke(id, user.organizationId);
+    return toWriteResponse(toResponse(row));
+  }
+
+  @Post(':id/rotate')
+  @Roles('OWNER')
+  @AuditAggregate('agent_credential')
+  @ApiOperation({
+    summary: 'Rotate an agent credential\'s public key (atomic swap)',
+    description:
+      'Replaces the row\'s public_key in a single transaction. The id, agentName, role, and createdAt are preserved. Refuses revoked credentials (409 AGENT_CREDENTIAL_REVOKED). Use this for planned key turnover; for emergency invalidation use the revoke endpoint then re-register.',
+  })
+  async rotate(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: RotateAgentCredentialDto,
+    @Req() req: Request,
+  ): Promise<WriteResponseDto<AgentCredentialResponse>> {
+    const user = requireUser(req);
+    const row = await this.service.rotate(id, user.organizationId, dto.publicKey);
     return toWriteResponse(toResponse(row));
   }
 

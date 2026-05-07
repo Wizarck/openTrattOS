@@ -21,6 +21,7 @@ describe('AgentCredentialsController', () => {
       list: jest.fn(),
       getById: jest.fn(),
       revoke: jest.fn(),
+      rotate: jest.fn(),
       deleteHard: jest.fn(),
     } as unknown as jest.Mocked<AgentCredentialsService>;
     ctrl = new AgentCredentialsController(service);
@@ -121,5 +122,44 @@ describe('AgentCredentialsController', () => {
     );
     expect(res.data).toEqual({ id });
     expect(service.deleteHard).toHaveBeenCalledWith(id, ORG_A);
+  });
+
+  it('rotate() forwards orgId from req.user + new publicKey to service.rotate()', async () => {
+    const NEW_PUBKEY =
+      'MCowBQYDK2VwAyEAEXAMPLE_NEW_PUBKEY_BASE64_PLACEHOLDER12345';
+    const row = AgentCredential.create({
+      organizationId: ORG_A,
+      agentName: 'hermes',
+      publicKey: NEW_PUBKEY,
+      role: 'OWNER',
+    });
+    service.rotate.mockResolvedValue(row);
+    const req = fakeReq({ userId: 'u', organizationId: ORG_A, role: 'OWNER' });
+
+    const res = await ctrl.rotate(row.id, { publicKey: NEW_PUBKEY }, req);
+
+    expect(service.rotate).toHaveBeenCalledWith(row.id, ORG_A, NEW_PUBKEY);
+    expect(res.data.id).toBe(row.id);
+    expect(res.data.agentName).toBe('hermes');
+    expect(res.missingFields).toEqual([]);
+  });
+
+  it('rotate() response does NOT echo the new public key back', async () => {
+    const NEW_PUBKEY =
+      'MCowBQYDK2VwAyEAEXAMPLE_NEW_PUBKEY_BASE64_PLACEHOLDER12345';
+    const row = AgentCredential.create({
+      organizationId: ORG_A,
+      agentName: 'hermes',
+      publicKey: NEW_PUBKEY,
+      role: 'OWNER',
+    });
+    service.rotate.mockResolvedValue(row);
+    const res = await ctrl.rotate(
+      row.id,
+      { publicKey: NEW_PUBKEY },
+      fakeReq({ userId: 'u', organizationId: ORG_A, role: 'OWNER' }),
+    );
+    const json = JSON.stringify(res);
+    expect(json).not.toContain(NEW_PUBKEY);
   });
 });

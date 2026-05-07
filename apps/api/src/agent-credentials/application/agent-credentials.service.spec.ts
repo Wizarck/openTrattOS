@@ -165,6 +165,72 @@ describe('AgentCredentialsService — list/get/revoke/delete', () => {
   });
 });
 
+describe('AgentCredentialsService — rotate() (Wave 1.17)', () => {
+  const NEW_PUBKEY =
+    'MCowBQYDK2VwAyEAEXAMPLE_NEW_PUBKEY_BASE64_PLACEHOLDER12345';
+
+  it('updates publicKey on an active row + persists', async () => {
+    const repo = makeRepo();
+    const row = AgentCredential.create({
+      organizationId: ORG_A,
+      agentName: 'hermes',
+      publicKey: SAMPLE_PUBKEY,
+      role: 'OWNER',
+    });
+    repo.findOneBy.mockResolvedValue(row);
+    repo.save.mockImplementation(async (r) => r as AgentCredential);
+    const svc = new AgentCredentialsService(repo);
+
+    const updated = await svc.rotate(row.id, ORG_A, NEW_PUBKEY);
+
+    expect(updated.id).toBe(row.id);
+    expect(updated.publicKey).toBe(NEW_PUBKEY);
+    expect(updated.revokedAt).toBeNull();
+    expect(repo.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws ConflictException AGENT_CREDENTIAL_REVOKED on a revoked row', async () => {
+    const repo = makeRepo();
+    const row = AgentCredential.create({
+      organizationId: ORG_A,
+      agentName: 'hermes',
+      publicKey: SAMPLE_PUBKEY,
+      role: 'OWNER',
+    });
+    row.revoke();
+    repo.findOneBy.mockResolvedValue(row);
+    const svc = new AgentCredentialsService(repo);
+
+    await expect(svc.rotate(row.id, ORG_A, NEW_PUBKEY)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(repo.save).not.toHaveBeenCalled();
+    // Original key untouched on the in-memory row.
+    expect(row.publicKey).toBe(SAMPLE_PUBKEY);
+  });
+
+  it('throws NotFoundException on missing id (per-org-scoped)', async () => {
+    const repo = makeRepo();
+    repo.findOneBy.mockResolvedValue(null);
+    const svc = new AgentCredentialsService(repo);
+
+    await expect(svc.rotate('missing-id', ORG_A, NEW_PUBKEY)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(repo.save).not.toHaveBeenCalled();
+  });
+
+  it('rotation across org boundaries returns NotFound (no existence leak)', async () => {
+    const repo = makeRepo();
+    repo.findOneBy.mockResolvedValue(null); // queried with ORG_B but row is in ORG_A
+    const svc = new AgentCredentialsService(repo);
+
+    await expect(svc.rotate('some-id', ORG_B, NEW_PUBKEY)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+});
+
 describe('AgentCredential entity', () => {
   it('isActive() returns true when revokedAt is null', () => {
     const row = AgentCredential.create({
