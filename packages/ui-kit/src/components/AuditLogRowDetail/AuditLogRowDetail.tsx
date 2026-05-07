@@ -69,7 +69,6 @@ function PayloadPanel({ title, value }: { title: string; value: unknown }) {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // Browser refused (HTTP non-localhost / permission denied). Fail soft.
-      // eslint-disable-next-line no-console
       console.warn('No se pudo copiar al portapapeles');
     }
   };
