@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AgentChatModule } from './agent-chat/agent-chat.module';
+import { AgentCredentialsModule } from './agent-credentials/agent-credentials.module';
 import { AiSuggestionsModule } from './ai-suggestions/ai-suggestions.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { CostModule } from './cost/cost.module';
@@ -61,6 +62,12 @@ import { SharedModule } from './shared/shared.module';
     // m2-mcp-agent-chat-widget (Wave 1.13 [3b]): SSE relay to Hermes' web_via_http_sse platform.
     // Feature-flagged on OPENTRATTOS_AGENT_ENABLED — endpoint returns 404 when off.
     AgentChatModule,
+
+    // m2-mcp-agent-registry-bench (Wave 1.13 [3c]): per-org Ed25519 agent
+    // credential registry. Owner-only REST surface for create/list/revoke
+    // /delete; the AgentSignatureMiddleware (also wired in this slice via
+    // SharedModule) verifies signatures against rows from this table.
+    AgentCredentialsModule,
 
     // Future Bounded Contexts:
     // HaccpModule,       // M3 — HACCP / APPCC
