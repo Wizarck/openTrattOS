@@ -5,7 +5,9 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Observable } from 'rxjs';
+import { AuditEventType, AuditEventEnvelope } from '../../audit-log/application/types';
 import { OrganizationRepository } from '../../iam/infrastructure/organization.repository';
 import { ChatRequestDto, ChatSseEvent } from '../interface/dto/agent-chat.dto';
 
@@ -34,18 +36,24 @@ interface HermesPostBody {
  *  - Map transport / Hermes-side errors to `event: error` frames so the
  *    client can render them coherently with happy-path output.
  *
- * Idempotency, audit, and capability gating are handled by the existing
- * Wave 1.13 middleware/interceptor stack:
- *  - `IdempotencyMiddleware` caches the assembled final text (see
- *    `cacheableTextForIdempotency`) so retries replay deterministically.
- *  - `BeforeAfterAuditInterceptor` writes one `AGENT_ACTION_EXECUTED` row
- *    per turn keyed on `aggregate_type='chat_session'`, `agent_name='hermes-web'`.
+ * Audit emission: this service emits one `AGENT_ACTION_EXECUTED` row per
+ * completed turn from the Observable's terminal path. The Wave 1.13 [3a]
+ * `BeforeAfterAuditInterceptor` is bypassed because its `mergeMap`
+ * semantics would emit one row per SSE event (token, tool-calling, done)
+ * instead of one row per turn.
+ *
+ * Idempotency replay for SSE is deferred to slice 3c
+ * (`m2-mcp-agent-registry-bench`); `cacheableTextForIdempotency()` is the
+ * helper that 3c will plug into the cache layer.
  */
 @Injectable()
 export class AgentChatService {
   private readonly logger = new Logger(AgentChatService.name);
 
-  constructor(private readonly organizations: OrganizationRepository) {}
+  constructor(
+    private readonly organizations: OrganizationRepository,
+    private readonly events: EventEmitter2,
+  ) {}
 
   isEnabled(): boolean {
     return readBoolEnv(FLAG_ENV);
@@ -100,52 +108,117 @@ export class AgentChatService {
       });
     }
 
+    const sessionId = body.sessionId ?? deterministicSessionId(user.userId, user.organizationId);
+    const collected: ChatSseEvent[] = [];
+
     return new Observable<ChatSseEvent>((subscriber) => {
       const controller = new AbortController();
       let cancelled = false;
+      let auditEmitted = false;
+      const emitAuditOnce = (): Promise<void> => {
+        if (auditEmitted) return Promise.resolve();
+        auditEmitted = true;
+        return this.emitTurnAudit(user, sessionId, collected, body);
+      };
       subscriber.add(() => {
         cancelled = true;
         controller.abort();
+        // Stream cancelled / unsubscribed before completion: still emit
+        // one audit row so partial turns are forensically visible.
+        void emitAuditOnce();
       });
 
       void this.invokeHermes(body, user, baseUrl, authSecret, controller.signal)
         .then(async (response) => {
           if (cancelled) return;
           if (!response.ok || !response.body) {
-            subscriber.next({
+            const errEvent: ChatSseEvent = {
               event: 'error',
               data: {
                 code: 'HERMES_HTTP_ERROR',
                 message: `hermes returned ${response.status}`,
               },
-            });
+            };
+            collected.push(errEvent);
+            subscriber.next(errEvent);
+            await emitAuditOnce();
             subscriber.complete();
             return;
           }
           for await (const event of parseSseStream(response.body)) {
             if (cancelled) return;
+            collected.push(event);
             subscriber.next(event);
             if (event.event === 'done' || event.event === 'error') {
               break;
             }
           }
+          await emitAuditOnce();
           subscriber.complete();
         })
-        .catch((err: unknown) => {
+        .catch(async (err: unknown) => {
           if (cancelled) {
             subscriber.complete();
             return;
           }
-          subscriber.next({
+          const errEvent: ChatSseEvent = {
             event: 'error',
             data: {
               code: 'HERMES_TRANSPORT_ERROR',
               message: (err as Error).message ?? 'unknown',
             },
-          });
+          };
+          collected.push(errEvent);
+          subscriber.next(errEvent);
+          await emitAuditOnce();
           subscriber.complete();
         });
     });
+  }
+
+  /**
+   * Emit the per-turn forensic audit row. Awaits subscribers (via
+   * `emitAsync`) so callers that read the audit table immediately after
+   * receiving the SSE response see the row — without `emitAsync` the
+   * INT specs see an empty table due to the read-after-write hazard
+   * across the event bus.
+   */
+  private async emitTurnAudit(
+    user: { userId: string; organizationId: string },
+    sessionId: string,
+    events: ChatSseEvent[],
+    body: ChatRequestDto,
+  ): Promise<void> {
+    const summary = this.cacheableTextForIdempotency(events);
+    const errored = events.find((e) => e.event === 'error');
+    const messageDigest = createHash('sha256')
+      .update(JSON.stringify(body.message))
+      .digest('hex');
+
+    const envelope: AuditEventEnvelope = {
+      organizationId: user.organizationId,
+      aggregateType: 'chat_session',
+      aggregateId: sessionId,
+      actorUserId: user.userId,
+      actorKind: 'agent',
+      agentName: 'hermes-web',
+      payloadBefore: null,
+      payloadAfter: {
+        finishReason: summary.finishReason,
+        replyChars: summary.text.length,
+        messageType: body.message.type,
+        messageDigest,
+        ...(errored ? { errorCode: errored.data.code } : {}),
+      },
+      reason: 'chat.message',
+    };
+    try {
+      await this.events.emitAsync(AuditEventType.AGENT_ACTION_EXECUTED, envelope);
+    } catch (err) {
+      this.logger.warn(
+        `agent-chat.audit.emit_failed: ${(err as Error).message ?? 'unknown'}`,
+      );
+    }
   }
 
   /**

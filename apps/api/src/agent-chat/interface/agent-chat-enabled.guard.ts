@@ -9,6 +9,12 @@ import { AgentChatService } from '../application/agent-chat.service';
  * before the exception filter runs. Guards run *before* route activation,
  * so this is the right place to enforce the flag and return a clean 404
  * to clients when the chat surface is off.
+ *
+ * Chat audit emission lives in `AgentChatService.stream()` (one row per
+ * completed turn, emitted from the Observable's `finalize()` callback).
+ * The Wave 1.13 [3a] `BeforeAfterAuditInterceptor` is bypassed for chat
+ * because its `mergeMap` semantics would emit one audit row PER SSE event
+ * (token, tool-calling, done) instead of one per turn.
  */
 @Injectable()
 export class AgentChatEnabledGuard implements CanActivate {

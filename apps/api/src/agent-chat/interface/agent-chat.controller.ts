@@ -12,7 +12,6 @@ import type { Request } from 'express';
 import { Observable, map } from 'rxjs';
 import { AgentChatService } from '../application/agent-chat.service';
 import { Roles } from '../../shared/decorators/roles.decorator';
-import { AuditAggregate } from '../../shared/decorators/audit-aggregate.decorator';
 import { AuthenticatedUserPayload } from '../../shared/guards/roles.guard';
 import { ChatRequestDto, ChatSseEvent } from './dto/agent-chat.dto';
 import { AgentChatEnabledGuard } from './agent-chat-enabled.guard';
@@ -20,15 +19,18 @@ import { AgentChatEnabledGuard } from './agent-chat-enabled.guard';
 /**
  * Wave 1.13 [3b] — first-party web-chat surface.
  *
- * `OPENTRATTOS_AGENT_ENABLED=false` → 404 (defence in depth: the service
- * also throws 404 internally). Authenticated users of any role can chat;
- * tool-call authorisation is handled per-capability by the existing
- * AgentCapabilityGuard (Wave 1.13 [3a]) once Hermes invokes a write.
+ * `OPENTRATTOS_AGENT_ENABLED=false` → 404 (enforced by `AgentChatEnabledGuard`,
+ * which runs before the `@Sse()` handler opens the stream). Authenticated
+ * users of any role can chat; tool-call authorisation is handled per-capability
+ * by the existing AgentCapabilityGuard (Wave 1.13 [3a]) once Hermes invokes
+ * a write.
  *
- * The controller injects `req.agentContext` server-side so the
- * BeforeAfterAuditInterceptor (Wave 1.13 [3a]) attributes audit rows to
- * `agentName='hermes-web'` + `capability='chat.message'` without trusting
- * client-supplied `X-Agent-*` headers (which we deliberately ignore here).
+ * Audit emission lives in `AgentChatService.stream()` rather than via the
+ * shared `BeforeAfterAuditInterceptor`. The interceptor's `mergeMap` would
+ * fire one audit row per SSE event (token, tool-calling, done) — incorrect
+ * for chat, where we want exactly one row per turn. Browser-supplied
+ * `X-Agent-*` headers are deliberately ignored: the agentName='hermes-web'
+ * attribution is hardcoded server-side.
  */
 @ApiTags('agent-chat')
 @Controller('agent-chat')
@@ -39,10 +41,6 @@ export class AgentChatController {
   @UseGuards(AgentChatEnabledGuard)
   @Sse()
   @Roles('OWNER', 'MANAGER', 'STAFF')
-  @AuditAggregate('chat_session', (req) => {
-    const body = req.body as { sessionId?: string } | undefined;
-    return body?.sessionId ?? null;
-  })
   @ApiOperation({
     summary: 'Open an SSE chat stream with the openTrattOS agent (feature-flagged)',
   })
@@ -56,15 +54,6 @@ export class AgentChatController {
       // net so a misconfigured pipeline can't leak chat to anonymous callers.
       throw new NotFoundException();
     }
-
-    // Inject the agent context server-side. The BeforeAfterAuditInterceptor
-    // reads this AFTER the controller returns; setting it here ensures
-    // the audit row carries `agentName='hermes-web'` + the chat capability.
-    req.agentContext = {
-      viaAgent: true,
-      agentName: 'hermes-web',
-      capabilityName: 'chat.message',
-    };
 
     // Map ChatSseEvent → NestJS MessageEvent shape so @Sse() emits proper
     // SSE frames with `event: <type>` lines (instead of folding the event
