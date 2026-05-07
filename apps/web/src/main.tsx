@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import '@opentrattos/ui-kit/globals.css';
 import { App } from './App';
+import { AuditLogScreen } from './screens/AuditLogScreen';
 import { OwnerDashboardScreen } from './screens/OwnerDashboardScreen';
 import { OwnerOrgSettingsScreen } from './screens/OwnerOrgSettingsScreen';
 import { RecipeBuilderJ1Screen } from './screens/RecipeBuilderJ1Screen';
@@ -31,6 +32,10 @@ const router = createBrowserRouter([
       {
         path: 'owner-settings',
         element: <OwnerOrgSettingsScreen />,
+      },
+      {
+        path: 'audit-log',
+        element: <AuditLogScreen />,
       },
       {
         path: 'poc/recipe-builder-j1',
