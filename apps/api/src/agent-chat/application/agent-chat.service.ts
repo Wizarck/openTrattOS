@@ -231,21 +231,41 @@ export class AgentChatService {
   /**
    * Internal — used by tests + by the controller-level idempotency cache to
    * record a deterministic body for the cached replay path. Returns
-   * `{ kind: 'sse-replay', text, finishReason }` consumable by the
-   * IdempotencyMiddleware on retry.
+   * `{ kind: 'sse-replay', text, finishReason, images? }` consumable by the
+   * Wave 1.13 [3c] `IdempotencyMiddleware` SSE branch.
+   *
+   * Wave 1.13 [3b] shipped this helper text-only; [3c] extends it to also
+   * collect `event: image` payloads into the optional `images` array, so
+   * a chef who retries a turn that included image generation gets the
+   * images replayed too. Tool-calling intermediates remain dropped — they
+   * are only meaningful in the live stream.
    */
   cacheableTextForIdempotency(events: ChatSseEvent[]): {
     kind: 'sse-replay';
     text: string;
     finishReason: string;
+    images?: { url: string; caption?: string }[];
   } {
     let text = '';
     let finish = 'stop';
+    const images: { url: string; caption?: string }[] = [];
     for (const e of events) {
       if (e.event === 'token') text += e.data.chunk;
-      if (e.event === 'done') finish = e.data.finishReason ?? 'stop';
+      else if (e.event === 'image') {
+        const obj = e.data as { url: string; caption?: string };
+        images.push(obj.caption ? { url: obj.url, caption: obj.caption } : { url: obj.url });
+      } else if (e.event === 'done') {
+        finish = e.data.finishReason ?? 'stop';
+      }
     }
-    return { kind: 'sse-replay', text, finishReason: finish };
+    const out: {
+      kind: 'sse-replay';
+      text: string;
+      finishReason: string;
+      images?: { url: string; caption?: string }[];
+    } = { kind: 'sse-replay', text, finishReason: finish };
+    if (images.length > 0) out.images = images;
+    return out;
   }
 
   /**

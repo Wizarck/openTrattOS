@@ -278,15 +278,11 @@ describe('agent-chat — flag-enabled (integration)', () => {
     expect(rows[0].payload_after.sessionId).toBe('sess-1');
   });
 
-  it('repeated turns each call Hermes (idempotency replay for SSE deferred to slice 3c)', async () => {
-    // Wave 1.13 [3a] IdempotencyMiddleware caches JSON write responses;
-    // it does NOT wrap streaming SSE responses. Replaying a chat turn
-    // therefore re-calls Hermes today. Slice 3c
-    // (m2-mcp-agent-registry-bench) extends the cache layer to capture
-    // the concatenated text + finishReason via
-    // `AgentChatService.cacheableTextForIdempotency`. This spec asserts
-    // current behaviour so a future change that wires the cache will
-    // break the test and force a deliberate update.
+  it('repeated turn with same Idempotency-Key replays cached SSE without recalling Hermes', async () => {
+    // Wave 1.13 [3c]: the extended IdempotencyMiddleware now wraps
+    // text/event-stream responses, captures `event: token` + `event: done`
+    // frames into the {kind:'sse-replay', text, finishReason} envelope, and
+    // emits a synthetic stream on retry without invoking Hermes again.
     const headers = {
       'x-test-user-id': userId,
       'x-test-org-id': org.id,
@@ -301,7 +297,39 @@ describe('agent-chat — flag-enabled (integration)', () => {
 
     const second = await postJson(baseUrl, '/agent-chat/stream', body, headers);
     expect(second.status).toBe(200);
-    expect(fakeHermes.received.bodies).toHaveLength(2);
+    // Replay path: Hermes call count stays at 1.
+    expect(fakeHermes.received.bodies).toHaveLength(1);
+    // Replayed body: full text in one frame + done with replayed=true.
+    expect(second.body).toContain('event: token');
+    expect(second.body).toContain('"chunk":"Hola Lourdes"');
+    expect(second.body).toContain('event: done');
+    expect(second.body).toContain('"replayed":true');
+  });
+
+  it('Idempotency-Key with mismatched body returns HTTP 409', async () => {
+    const headers = {
+      'x-test-user-id': userId,
+      'x-test-org-id': org.id,
+      'x-test-user-role': 'OWNER',
+      'idempotency-key': 'chat-key-mismatch',
+    };
+
+    const first = await postJson(
+      baseUrl,
+      '/agent-chat/stream',
+      { message: { type: 'text', content: 'hi' }, sessionId: 'sess-3' },
+      headers,
+    );
+    expect(first.status).toBe(200);
+
+    const second = await postJson(
+      baseUrl,
+      '/agent-chat/stream',
+      { message: { type: 'text', content: 'DIFFERENT' }, sessionId: 'sess-3' },
+      headers,
+    );
+    expect(second.status).toBe(409);
+    expect(second.body).toContain('IDEMPOTENCY_KEY_REQUEST_MISMATCH');
   });
 });
 
