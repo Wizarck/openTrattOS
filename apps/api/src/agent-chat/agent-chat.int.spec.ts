@@ -247,7 +247,10 @@ describe('agent-chat — flag-enabled (integration)', () => {
     expect(res.status).toBe(200);
     expect(res.contentType).toContain('text/event-stream');
     expect(res.body).toContain('event: token');
-    expect(res.body).toContain('Hola Lourdes');
+    // Each chunk arrives in its own SSE frame, so the assertion checks the
+    // tokens individually rather than asserting a concatenated string.
+    expect(res.body).toContain('"chunk":"Hola "');
+    expect(res.body).toContain('"chunk":"Lourdes"');
     expect(res.body).toContain('event: done');
 
     // Assert relay forwarded auth + bank_id correctly to fake Hermes.
