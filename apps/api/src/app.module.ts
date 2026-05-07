@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { AgentChatModule } from './agent-chat/agent-chat.module';
 import { AiSuggestionsModule } from './ai-suggestions/ai-suggestions.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { CostModule } from './cost/cost.module';
@@ -56,6 +57,10 @@ import { SharedModule } from './shared/shared.module';
 
     // M2 canonical audit log (m2-audit-log — single audit_log table; @OnEvent subscriber across BCs).
     AuditLogModule,
+
+    // m2-mcp-agent-chat-widget (Wave 1.13 [3b]): SSE relay to Hermes' web_via_http_sse platform.
+    // Feature-flagged on OPENTRATTOS_AGENT_ENABLED — endpoint returns 404 when off.
+    AgentChatModule,
 
     // Future Bounded Contexts:
     // HaccpModule,       // M3 — HACCP / APPCC

@@ -1,6 +1,15 @@
 import { Link, Outlet } from 'react-router-dom';
+import { AgentChatWidget } from '@opentrattos/ui-kit';
+import { useAgentChat } from './hooks/useAgentChat';
+
+const AGENT_ENABLED = String(import.meta.env.VITE_OPENTRATTOS_AGENT_ENABLED ?? '')
+  .trim()
+  .toLowerCase() === 'true';
+
+const ORG_ID = String(import.meta.env.VITE_DEMO_ORG_ID ?? '');
 
 export function App() {
+  const { send } = useAgentChat();
   return (
     <div className="min-h-full">
       <header className="border-b border-border-strong bg-surface px-6 py-3">
@@ -16,6 +25,12 @@ export function App() {
       <main>
         <Outlet />
       </main>
+      <AgentChatWidget
+        agentEnabled={AGENT_ENABLED}
+        organizationId={ORG_ID}
+        userId=""
+        onSend={send}
+      />
     </div>
   );
 }

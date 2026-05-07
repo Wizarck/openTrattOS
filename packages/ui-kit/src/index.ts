@@ -50,3 +50,12 @@ export type {
 } from './components/YieldEditor';
 export { WasteFactorEditor } from './components/WasteFactorEditor';
 export type { WasteFactorEditorProps } from './components/WasteFactorEditor';
+export { AgentChatWidget } from './components/AgentChatWidget';
+export type {
+  AgentChatWidgetProps,
+  ChatBubble,
+  ChatBubbleAttachment,
+  ChatRole,
+  ChatSseEvent as AgentChatSseEvent,
+  SendRequest as AgentChatSendRequest,
+} from './components/AgentChatWidget';
