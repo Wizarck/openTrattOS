@@ -369,3 +369,11 @@ reviewers know the boundary of what this slice ships.
   MCP-client end-to-end benchmark. **This is the IMMEDIATE next slice** in
   the m2-mcp-extras sub-saga and is the prerequisite for exposing the MCP
   server beyond the trusted internal network.
+
+## See also (Wave 1.13 [3c] update)
+
+- `docs/operations/m2-mcp-agent-registry-bench-runbook.md` — per-agent
+  Ed25519 signing replaces the `X-Agent-Name` trust posture. The
+  signing flag (`OPENTRATTOS_AGENT_SIGNATURE_REQUIRED`) sits ahead of
+  the per-capability flags documented above; once enabled per-org,
+  unsigned agent requests 401 before reaching the capability gate.

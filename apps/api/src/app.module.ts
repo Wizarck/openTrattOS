@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AgentChatModule } from './agent-chat/agent-chat.module';
+import { AgentCredentialsModule } from './agent-credentials/agent-credentials.module';
 import { AiSuggestionsModule } from './ai-suggestions/ai-suggestions.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
 import { CostModule } from './cost/cost.module';
@@ -18,6 +19,7 @@ import { RolesGuard } from './shared/guards/roles.guard';
 import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
 import { BeforeAfterAuditInterceptor } from './shared/interceptors/before-after-audit.interceptor';
 import { AgentAuditMiddleware } from './shared/middleware/agent-audit.middleware';
+import { AgentSignatureMiddleware } from './shared/middleware/agent-signature.middleware';
 import { IdempotencyMiddleware } from './shared/middleware/idempotency.middleware';
 import { SharedModule } from './shared/shared.module';
 
@@ -62,6 +64,12 @@ import { SharedModule } from './shared/shared.module';
     // Feature-flagged on OPENTRATTOS_AGENT_ENABLED — endpoint returns 404 when off.
     AgentChatModule,
 
+    // m2-mcp-agent-registry-bench (Wave 1.13 [3c]): per-org Ed25519 agent
+    // credential registry. Owner-only REST surface for create/list/revoke
+    // /delete; the AgentSignatureMiddleware (also wired in this slice via
+    // SharedModule) verifies signatures against rows from this table.
+    AgentCredentialsModule,
+
     // Future Bounded Contexts:
     // HaccpModule,       // M3 — HACCP / APPCC
     // OperationsModule,  // M4 — Inventory & Orders
@@ -90,6 +98,12 @@ export class AppModule implements NestModule {
   // populates user before NestJS middleware chain — the order between these
   // two middleware is not load-bearing as long as auth has populated user).
   configure(consumer: MiddlewareConsumer): void {
-    consumer.apply(AgentAuditMiddleware, IdempotencyMiddleware).forRoutes('*');
+    // m2-mcp-agent-registry-bench (Wave 1.13 [3c]): AgentSignatureMiddleware
+    // runs FIRST so a verified signature stamps `req.agentContext` before
+    // AgentAuditMiddleware reads it. AgentAuditMiddleware is idempotent —
+    // it leaves a context with `signatureVerified=true` untouched.
+    consumer
+      .apply(AgentSignatureMiddleware, AgentAuditMiddleware, IdempotencyMiddleware)
+      .forRoutes('*');
   }
 }

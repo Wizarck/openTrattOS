@@ -63,16 +63,17 @@ The system SHALL expose `POST /agent-chat/stream` in `apps/api`. The endpoint SH
 - **WHEN** a user successfully completes one chat turn (one POST + one full SSE stream)
 - **THEN** exactly one `audit_log` row exists with `event_type='AGENT_ACTION_EXECUTED'`, `agent_name='hermes-web'`, `aggregate_type='chat_session'`, `actor_kind='agent'`, `payload_after.messageDigest` set, `payload_before` null
 
-#### Scenario: idempotency replay cached SSE response (deferred to slice 3c)
+#### Scenario: idempotency replay cached SSE response (resolved in slice 3c)
 
 - **WHEN** a client retries `POST /agent-chat/stream` with the same `Idempotency-Key` and the same body within 24 hours
-- **THEN** in 3b, Hermes is re-called and a fresh stream is returned; the cached-replay path is wired in slice 3c (`m2-mcp-agent-registry-bench`) using `AgentChatService.cacheableTextForIdempotency()` against an extended `IdempotencyMiddleware` that handles streaming responses
-- **NOTE** the helper exists today and unit-tested; only the middleware glue is deferred. The 3b INT spec asserts current behaviour (Hermes called twice) so a future change that wires the cache will deliberately break the test
+- **THEN** Hermes is NOT called; the response is HTTP 200 `text/event-stream` carrying one `event: token` frame with the full cached `text` + zero or more `event: image` frames + one `event: done` frame with `replayed: true`
+- **STATUS** Wired in slice 3c (`m2-mcp-agent-registry-bench`) via the extended `IdempotencyMiddleware` that detects `text/event-stream` Content-Type and parses captured frames into the `{kind:'sse-replay', text, finishReason, images?}` envelope persisted to `agent_idempotency_keys.response_body`
 
-#### Scenario: idempotency mismatch returns 409 (deferred to slice 3c)
+#### Scenario: idempotency mismatch returns 409 (resolved in slice 3c)
 
 - **WHEN** a client retries with the same `Idempotency-Key` and a DIFFERENT body
-- **THEN** mismatch detection lands together with the SSE replay path in slice 3c
+- **THEN** the response is HTTP 409 `code: IDEMPOTENCY_KEY_REQUEST_MISMATCH`; the new request is NOT executed
+- **STATUS** Wired in slice 3c via the same middleware extension. Mismatch detection reuses the 3a hash-comparison path; the SSE branch only added a parallel capture/replay code path
 
 #### Scenario: agent context injected server-side
 

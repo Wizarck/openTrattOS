@@ -1,0 +1,27 @@
+{
+  "name": "@opentrattos/mcp-bench",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP-client benchmark harness — drives a fixed read-only capability matrix against Hermes / Claude Desktop / OpenCode and emits a markdown report. Wave 1.13 [3c].",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "vitest run",
+    "bench": "tsx src/run.ts"
+  },
+  "dependencies": {
+    "tsx": "^4.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0",
+    "eslint": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

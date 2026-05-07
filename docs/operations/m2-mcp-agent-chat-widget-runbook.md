@@ -185,3 +185,12 @@ user; subsequent retries succeed once both ends carry the new value.
   (`m2-mcp-agent-registry-bench`). Until then, do NOT expose
   `/agent-chat/stream` to the public internet without an additional auth
   layer.
+
+## See also (Wave 1.13 [3c] update)
+
+- `docs/operations/m2-mcp-agent-registry-bench-runbook.md`:
+  - Per-agent Ed25519 signing replaces the Hermes shared-secret trust
+    posture for production rollout.
+  - SSE idempotency replay is now automatic. A retry with the same
+    `Idempotency-Key` and same body returns the cached final reply
+    without re-invoking Hermes.
