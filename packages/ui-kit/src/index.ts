@@ -77,3 +77,21 @@ export type {
   LabelPageSize,
   PrintAdapterId,
 } from './components/LabelFieldsForm';
+export { AuditLogTable } from './components/AuditLogTable';
+export type { AuditLogRow, AuditLogTableProps } from './components/AuditLogTable';
+export { AuditLogRowDetail } from './components/AuditLogRowDetail';
+export type { AuditLogRowDetailProps } from './components/AuditLogRowDetail';
+export {
+  AuditLogFilters,
+  KNOWN_AUDIT_EVENT_TYPES,
+  KNOWN_AUDIT_AGGREGATE_TYPES,
+  AUDIT_ACTOR_KINDS,
+  EMPTY_AUDIT_FILTER_VALUES,
+} from './components/AuditLogFilters';
+export type {
+  AuditLogFiltersProps,
+  AuditLogFilterValues,
+  AuditActorKind,
+  KnownAuditEventType,
+  KnownAuditAggregateType,
+} from './components/AuditLogFilters';

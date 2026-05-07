@@ -26,6 +26,11 @@ export function App() {
                 Configuración
               </Link>
             </RoleGuard>
+            <RoleGuard role={['OWNER', 'MANAGER']} currentRole={currentRole}>
+              <Link to="/audit-log" className="hover:text-ink">
+                Auditoría
+              </Link>
+            </RoleGuard>
           </nav>
         </div>
       </header>
