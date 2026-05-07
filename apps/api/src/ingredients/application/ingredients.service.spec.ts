@@ -187,10 +187,12 @@ describe('IngredientsService', () => {
       expect(events.emit).toHaveBeenCalledWith(
         'cost.ingredient-override-changed',
         expect.objectContaining({
-          ingredientId,
           organizationId: orgId,
-          field: 'allergens',
-          appliedBy: actorId,
+          aggregateType: 'ingredient',
+          aggregateId: ingredientId,
+          actorUserId: actorId,
+          actorKind: 'user',
+          payloadAfter: { field: 'allergens' },
           reason,
         }),
       );

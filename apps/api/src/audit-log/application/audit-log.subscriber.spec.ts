@@ -3,14 +3,7 @@ import { AuditLogService } from './audit-log.service';
 import { AuditLogSubscriber } from './audit-log.subscriber';
 import { AuditEventTypeName } from './types';
 import type { AuditEventEnvelope } from './types';
-import type {
-  AgentActionExecutedEvent,
-  IngredientOverrideChangedEvent,
-  RecipeAllergensOverrideChangedEvent,
-  RecipeIngredientUpdatedEvent,
-  RecipeSourceOverrideChangedEvent,
-  SupplierPriceUpdatedEvent,
-} from '../../cost/application/cost.events';
+import type { AgentActionExecutedEvent } from '../../cost/application/cost.events';
 
 const ORG = '00000000-0000-4000-8000-00000000aaaa';
 
@@ -29,51 +22,46 @@ describe('AuditLogSubscriber', () => {
     subscriber = module.get(AuditLogSubscriber);
   });
 
-  describe('legacy event translation', () => {
-    it('translates IngredientOverrideChangedEvent to envelope', async () => {
-      const event: IngredientOverrideChangedEvent = {
-        ingredientId: 'ing-1',
+  describe('cost-domain channels (envelope shape post-Wave-1.18)', () => {
+    it('persists INGREDIENT_OVERRIDE_CHANGED envelope as-is', async () => {
+      const event: AuditEventEnvelope = {
         organizationId: ORG,
-        field: 'allergens',
-        appliedBy: 'user-1',
+        aggregateType: 'ingredient',
+        aggregateId: 'ing-1',
+        actorUserId: 'user-1',
+        actorKind: 'user',
+        payloadAfter: { field: 'allergens' },
         reason: 'manager override',
       };
       await subscriber.onIngredientOverrideChanged(event);
       expect(recordSpy).toHaveBeenCalledTimes(1);
       const [eventType, envelope] = recordSpy.mock.calls[0];
       expect(eventType).toBe(AuditEventTypeName['cost.ingredient-override-changed']);
-      expect(envelope).toMatchObject({
-        organizationId: ORG,
-        aggregateType: 'ingredient',
-        aggregateId: 'ing-1',
-        actorUserId: 'user-1',
-        actorKind: 'user',
-        reason: 'manager override',
-      });
+      expect(envelope).toEqual(event);
     });
 
-    it('translates RecipeAllergensOverrideChangedEvent', async () => {
-      const event: RecipeAllergensOverrideChangedEvent = {
-        recipeId: 'rec-1',
+    it('persists RECIPE_ALLERGENS_OVERRIDE_CHANGED envelope as-is', async () => {
+      const event: AuditEventEnvelope = {
         organizationId: ORG,
-        kind: 'allergens-override',
-        appliedBy: 'user-2',
+        aggregateType: 'recipe',
+        aggregateId: 'rec-1',
+        actorUserId: 'user-2',
+        actorKind: 'user',
+        payloadAfter: { kind: 'allergens-override' },
       };
       await subscriber.onRecipeAllergensOverrideChanged(event);
       expect(recordSpy).toHaveBeenCalledTimes(1);
-      const [, envelope] = recordSpy.mock.calls[0];
-      expect(envelope.aggregateType).toBe('recipe');
-      expect(envelope.aggregateId).toBe('rec-1');
-      expect(envelope.actorUserId).toBe('user-2');
-      expect(envelope.payloadAfter).toEqual({ kind: 'allergens-override' });
+      expect(recordSpy.mock.calls[0][1]).toEqual(event);
     });
 
-    it('translates RecipeSourceOverrideChangedEvent (system actor)', async () => {
-      const event: RecipeSourceOverrideChangedEvent = {
-        recipeId: 'rec-1',
+    it('persists RECIPE_SOURCE_OVERRIDE_CHANGED envelope as-is (system actor)', async () => {
+      const event: AuditEventEnvelope = {
         organizationId: ORG,
-        recipeIngredientId: 'rl-1',
-        sourceOverrideRef: 'sup-1',
+        aggregateType: 'recipe',
+        aggregateId: 'rec-1',
+        actorUserId: null,
+        actorKind: 'system',
+        payloadAfter: { recipeIngredientId: 'rl-1', sourceOverrideRef: 'sup-1' },
       };
       await subscriber.onRecipeSourceOverrideChanged(event);
       const [, envelope] = recordSpy.mock.calls[0];
@@ -81,22 +69,28 @@ describe('AuditLogSubscriber', () => {
       expect(envelope.actorUserId).toBeNull();
     });
 
-    it('translates RecipeIngredientUpdatedEvent', async () => {
-      const event: RecipeIngredientUpdatedEvent = {
-        recipeId: 'rec-1',
+    it('persists RECIPE_INGREDIENT_UPDATED envelope as-is', async () => {
+      const event: AuditEventEnvelope = {
         organizationId: ORG,
-        recipeIngredientId: 'rl-2',
+        aggregateType: 'recipe',
+        aggregateId: 'rec-1',
+        actorUserId: null,
+        actorKind: 'system',
+        payloadAfter: { recipeIngredientId: 'rl-2' },
       };
       await subscriber.onRecipeIngredientUpdated(event);
       expect(recordSpy).toHaveBeenCalledTimes(1);
       expect(recordSpy.mock.calls[0][1].payloadAfter).toEqual({ recipeIngredientId: 'rl-2' });
     });
 
-    it('translates SupplierPriceUpdatedEvent', async () => {
-      const event: SupplierPriceUpdatedEvent = {
-        supplierItemId: 'si-1',
-        ingredientId: 'ing-1',
+    it('persists SUPPLIER_PRICE_UPDATED envelope as-is', async () => {
+      const event: AuditEventEnvelope = {
         organizationId: ORG,
+        aggregateType: 'supplier_item',
+        aggregateId: 'si-1',
+        actorUserId: null,
+        actorKind: 'system',
+        payloadAfter: { ingredientId: 'ing-1' },
       };
       await subscriber.onSupplierPriceUpdated(event);
       const [, envelope] = recordSpy.mock.calls[0];
@@ -105,7 +99,7 @@ describe('AuditLogSubscriber', () => {
       expect(envelope.actorKind).toBe('system');
     });
 
-    it('translates AgentActionExecutedEvent (with org)', async () => {
+    it('translates AgentActionExecutedEvent (with org) — lean channel still uses translator', async () => {
       const event: AgentActionExecutedEvent = {
         executedBy: 'user-3',
         viaAgent: true,
@@ -228,20 +222,22 @@ describe('AuditLogSubscriber', () => {
   describe('error handling', () => {
     it('catches record() errors without re-throwing', async () => {
       recordSpy.mockRejectedValueOnce(new Error('db down'));
-      const event: IngredientOverrideChangedEvent = {
-        ingredientId: 'ing-1',
+      const event: AuditEventEnvelope = {
         organizationId: ORG,
-        field: 'allergens',
-        appliedBy: 'user-1',
+        aggregateType: 'ingredient',
+        aggregateId: 'ing-1',
+        actorUserId: 'user-1',
+        actorKind: 'user',
+        payloadAfter: { field: 'allergens' },
         reason: 'x',
       };
       // Should NOT throw — the emitter must never see DB failures.
       await expect(subscriber.onIngredientOverrideChanged(event)).resolves.toBeUndefined();
     });
 
-    it('translator exception is logged but never thrown', async () => {
-      // Pass a deliberately broken event so translation throws inside persistTranslated.
-      const broken = null as unknown as IngredientOverrideChangedEvent;
+    it('skips a broken envelope payload without throwing', async () => {
+      // Payload missing required envelope fields — validateEnvelope rejects.
+      const broken = null as unknown as AuditEventEnvelope;
       await expect(subscriber.onIngredientOverrideChanged(broken)).resolves.toBeUndefined();
       expect(recordSpy).not.toHaveBeenCalled();
     });

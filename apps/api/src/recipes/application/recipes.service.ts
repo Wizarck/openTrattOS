@@ -5,9 +5,8 @@ import { DataSource, EntityManager, In, IsNull, Not } from 'typeorm';
 import {
   RECIPE_INGREDIENT_UPDATED,
   RECIPE_SOURCE_OVERRIDE_CHANGED,
-  RecipeIngredientUpdatedEvent,
-  RecipeSourceOverrideChangedEvent,
 } from '../../cost/application/cost.events';
+import type { AuditEventEnvelope } from '../../audit-log/application/types';
 import { MenuItem } from '../../menus/domain/menu-item.entity';
 import { Recipe } from '../domain/recipe.entity';
 import { RecipeIngredient } from '../domain/recipe-ingredient.entity';
@@ -219,12 +218,21 @@ export class RecipesService {
       if (actorUserId) line.updatedBy = actorUserId;
       const saved = await lineRepo.save(line);
 
-      this.events.emit(RECIPE_SOURCE_OVERRIDE_CHANGED, {
-        recipeId,
+      const sourceEvent: AuditEventEnvelope<
+        unknown,
+        { recipeIngredientId: string; sourceOverrideRef: string | null }
+      > = {
         organizationId,
-        recipeIngredientId: saved.id,
-        sourceOverrideRef: saved.sourceOverrideRef,
-      } satisfies RecipeSourceOverrideChangedEvent);
+        aggregateType: 'recipe',
+        aggregateId: recipeId,
+        actorUserId: null,
+        actorKind: 'system',
+        payloadAfter: {
+          recipeIngredientId: saved.id,
+          sourceOverrideRef: saved.sourceOverrideRef,
+        },
+      };
+      this.events.emit(RECIPE_SOURCE_OVERRIDE_CHANGED, sourceEvent);
 
       return saved;
     });
@@ -254,11 +262,16 @@ export class RecipesService {
   // ------------------------------ helpers ------------------------------
 
   private emitIngredientUpdated(recipeId: string, organizationId: string): void {
-    this.events.emit(RECIPE_INGREDIENT_UPDATED, {
-      recipeId,
+    const event: AuditEventEnvelope<unknown, { recipeIngredientId: string }> = {
       organizationId,
-      recipeIngredientId: recipeId, // line-level granularity is not needed for full-recipe recompute
-    } satisfies RecipeIngredientUpdatedEvent);
+      aggregateType: 'recipe',
+      aggregateId: recipeId,
+      actorUserId: null,
+      actorKind: 'system',
+      // line-level granularity is not needed for full-recipe recompute
+      payloadAfter: { recipeIngredientId: recipeId },
+    };
+    this.events.emit(RECIPE_INGREDIENT_UPDATED, event);
   }
 
   private label(recipe: Recipe): string {

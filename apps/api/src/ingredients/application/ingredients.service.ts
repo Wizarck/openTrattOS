@@ -2,10 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import {
-  INGREDIENT_OVERRIDE_CHANGED,
-  IngredientOverrideChangedEvent,
-} from '../../cost/application/cost.events';
+import { INGREDIENT_OVERRIDE_CHANGED } from '../../cost/application/cost.events';
+import type { AuditEventEnvelope } from '../../audit-log/application/types';
 import { ExternalCatalogService } from '../../external-catalog/application/external-catalog.service';
 import { ExternalFoodCatalog } from '../../external-catalog/domain/external-food-catalog.entity';
 import {
@@ -154,11 +152,13 @@ export class IngredientsService {
       return repo.save(ing);
     });
 
-    const event: IngredientOverrideChangedEvent = {
-      ingredientId: input.ingredientId,
+    const event: AuditEventEnvelope<unknown, { field: typeof input.field }> = {
       organizationId: input.organizationId,
-      field: input.field,
-      appliedBy: input.actorUserId,
+      aggregateType: 'ingredient',
+      aggregateId: input.ingredientId,
+      actorUserId: input.actorUserId,
+      actorKind: 'user',
+      payloadAfter: { field: input.field },
       reason: input.reason.trim(),
     };
     this.events.emit(INGREDIENT_OVERRIDE_CHANGED, event);
