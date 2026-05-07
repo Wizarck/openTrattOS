@@ -5,6 +5,7 @@ import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import '@opentrattos/ui-kit/globals.css';
 import { App } from './App';
 import { OwnerDashboardScreen } from './screens/OwnerDashboardScreen';
+import { OwnerOrgSettingsScreen } from './screens/OwnerOrgSettingsScreen';
 import { RecipeBuilderJ1Screen } from './screens/RecipeBuilderJ1Screen';
 import { CostInvestigationJ2Screen } from './screens/CostInvestigationJ2Screen';
 
@@ -26,6 +27,10 @@ const router = createBrowserRouter([
       {
         path: 'owner-dashboard',
         element: <OwnerDashboardScreen />,
+      },
+      {
+        path: 'owner-settings',
+        element: <OwnerOrgSettingsScreen />,
       },
       {
         path: 'poc/recipe-builder-j1',
