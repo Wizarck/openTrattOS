@@ -31,10 +31,11 @@ import {
  * `agent_credentials` table. Owner-only.
  *
  * Audit emission is via the existing 3a `BeforeAfterAuditInterceptor`
- * (writes one `AGENT_ACTION_EXECUTED` row per CRUD operation, anchored
- * to `aggregate_type='agent_credential'`). The signature middleware
- * itself is wired separately in `SharedModule`; this controller does
- * NOT consume signed requests — humans (Owners) curl/POST it.
+ * (writes one `AGENT_ACTION_FORENSIC` row per CRUD operation per ADR-026,
+ * anchored to `aggregate_type='agent_credential'`). The signature
+ * middleware itself is wired separately in `SharedModule`; this
+ * controller does NOT consume signed requests — humans (Owners)
+ * curl/POST it.
  */
 @ApiTags('Agent Credentials')
 @Controller('agent-credentials')

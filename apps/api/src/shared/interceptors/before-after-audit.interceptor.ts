@@ -29,9 +29,12 @@ import { WriteResponseDto } from '../dto/write-response.dto';
  *   - Skips when the handler lacks `@AuditAggregate(...)` metadata.
  *   - Resolves "before" state via `AuditResolverRegistry` (each BC registers
  *     its `findById` at module bootstrap). Failures fall back to `null`.
- *   - On response success (`tap`), emits `AGENT_ACTION_EXECUTED` with the
+ *   - On response success, emits `AGENT_ACTION_FORENSIC` with the
  *     full envelope `{organizationId, aggregateType, aggregateId,
  *     actorUserId, actorKind:'agent', agentName, payloadBefore, payloadAfter}`.
+ *     Per ADR-026 (Wave 1.14 m2-audit-log-forensic-split) rich aggregate-anchored
+ *     emissions live on this dedicated channel; the lean `AGENT_ACTION_EXECUTED`
+ *     channel stays request-anchored from `AgentAuditMiddleware`.
  *   - For create operations (idExtractor=null), `before` is null and
  *     `aggregateId` is extracted from the response payload (`data.id`).
  *   - For delete operations (HTTP 204 / null response), `after` is null.
@@ -117,7 +120,7 @@ export class BeforeAfterAuditInterceptor implements NestInterceptor {
       this.logger.debug('audit.skipped: no organizationId on req.user');
       return;
     }
-    await this.events.emitAsync(AuditEventType.AGENT_ACTION_EXECUTED, {
+    await this.events.emitAsync(AuditEventType.AGENT_ACTION_FORENSIC, {
       organizationId,
       aggregateType: meta.aggregateType,
       aggregateId,

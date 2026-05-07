@@ -78,7 +78,7 @@ describe('BeforeAfterAuditInterceptor', () => {
 
     expect(events.emitAsync).toHaveBeenCalledTimes(1);
     const [channel, payload] = events.emitAsync.mock.calls[0];
-    expect(channel).toBe(AuditEventType.AGENT_ACTION_EXECUTED);
+    expect(channel).toBe(AuditEventType.AGENT_ACTION_FORENSIC);
     expect(payload).toMatchObject({
       organizationId: ORG,
       aggregateType: 'recipe',

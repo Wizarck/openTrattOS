@@ -546,3 +546,107 @@ If the LLM's response cannot be parsed as JSON after one retry (with a stricter 
 - **Patch LightRAG for structured outputs (response_format)**: rejected for this slice; filed as `m2-ai-yield-structured-outputs` follow-up.
 - **Train a fine-tuned model on the schema**: rejected — operational complexity dwarfs the marginal reliability gain at this scale.
 
+---
+
+# Audit-log subsystem ADRs (added 2026-05-07 post-Wave-1.13 saga)
+
+Three ADRs codify the audit-log architecture that emerged across Waves 1.9–1.13. Prior slices' `design.md` files carried slice-local ADRs (`ADR-AUDIT-SCHEMA`, `ADR-AUDIT-WRITER`, etc.); these promote the cross-slice patterns to canonical project-level ADRs. The forensic-split decision (ADR-026) ships alongside the slice that implements it (`m2-audit-log-forensic-split`).
+
+## ADR-025: audit_log canonical architecture (single subscriber + envelope + polymorphic FK)
+
+**Decision:** The `audit_log` table (introduced in Wave 1.9 `m2-audit-log`, migration `0017_audit_log.ts`) is the **single canonical source of truth** for cross-BC event-history persistence. Bounded contexts emit typed events on `EventEmitter2` channels; a single `AuditLogSubscriber` (`apps/api/src/audit-log/application/audit-log.subscriber.ts`) listens on every channel and persists one `audit_log` row per event. Services do not import `AuditLogService` directly; they emit, the subscriber writes.
+
+The persistence shape is governed by the `AuditEventEnvelope<TBefore, TAfter>` interface. The envelope is the same shape for envelope-shaped channels (AI suggestions, cost rebuild, agent forensic) and the translation target for legacy ad-hoc payload channels (`cost.*` + `agent.action-executed` lean).
+
+**Rules enforced:**
+
+- **Two-name pattern** — bus channel name preserves module ownership for routing (`cost.ingredient-override-changed`, `agent.action-executed`); persisted `event_type` is the public, module-agnostic enum (`INGREDIENT_OVERRIDE_CHANGED`, `AGENT_ACTION_EXECUTED`). The bridge lives in `audit-log/application/types.ts::AuditEventTypeName`. New event types follow this pattern: bus channel = `<bc>.<verb>` kebab-case, persisted = `UPPER_SNAKE_CASE`.
+- **Open-enum `event_type` text column** — Postgres `text NOT NULL CHECK (length 1..100)` rather than an enum. Adding a new event type is `+1 constant + 1 @OnEvent handler`; zero migrations. Trade-off: typo resistance is app-side only (TypeScript constants), not DB-enforced.
+- **Polymorphic `aggregate_id` (UUID-typed)** — references entities across multiple tables (recipes, ingredients, ai_suggestions, supplier_items, organizations, agent_chat_session). No foreign-key constraint because the column spans tables. App-level guarantee: emitter only fires AFTER the entity exists. The column is **UUID-typed at the DB level** — non-UUID identifiers (free-form session ids, composite keys) MUST be UUID-shaped at emission (use `randomUUID()`) and stored opaquely in `payload_after`. Streaming endpoints with opaque session ids hit this constraint; ADR-027 codifies the workaround.
+- **Hybrid translation** — new event types publish the canonical `AuditEventEnvelope` shape directly (`AI_SUGGESTION_ACCEPTED`, `RECIPE_COST_REBUILT`, `AGENT_ACTION_FORENSIC` per ADR-026); legacy ad-hoc payload events (`INGREDIENT_OVERRIDE_CHANGED`, `RECIPE_ALLERGENS_OVERRIDE_CHANGED`, `RECIPE_SOURCE_OVERRIDE_CHANGED`, `RECIPE_INGREDIENT_UPDATED`, `SUPPLIER_PRICE_UPDATED`, `AGENT_ACTION_EXECUTED` lean) get translated per-type inside the subscriber's handler before persistence. New code MUST emit the envelope shape; legacy translators are scoped to remain until `m2-audit-log-emitter-migration` ships.
+- **Subscriber failure mode** — every handler is wrapped in try/catch. A DB or translation failure is logged + dropped; the emitter is never notified. Fire-and-forget bus semantics: services finish their writes regardless of audit success. Worst case is one missing audit row, surfaced for ops via structured-JSON log line. DLQ (`m2-audit-log-dlq`) is filed but volume-driven.
+- **`hasTable` / `hasColumn` guards on backfill** — every audit-log-related migration's backfill SELECTs are guarded for fresh-schema safety so `0017` + `0018` + `0019` + `0022` (and any future addition) run cleanly on empty databases.
+
+**Rationale:** Wave 1.9 demonstrated that funnelling 9 event channels into one subscriber decouples audit from business logic. Adding a new event type is a 1-line `@OnEvent` + a constants entry — zero migrations, zero service-code changes. The polymorphic `aggregate_id` keeps the table single rather than per-aggregate; the cost is the loss of a real FK, paid for by an app-level invariant. Wave 1.10 reinforced the pattern by retiring `recipe_cost_history` (a per-BC audit table); Wave 1.11 layered FTS over the same table; Wave 1.12 layered streaming CSV export; Wave 1.13 added 3 emit sites (write capabilities, chat, forensic). The architecture absorbed each addition without schema churn.
+
+**Consequence:**
+
+- New audit event types in M3+ HACCP, inventory, batches add a 1-line constant + 1-line handler. The table shape is fixed.
+- Reverse engineering "what changed" for any aggregate is one query: `SELECT * FROM audit_log WHERE aggregate_type = $1 AND aggregate_id = $2 ORDER BY created_at DESC`.
+- Querying across BCs by event_type or actor is one query. RBAC at the controller (`Owner+Manager`) gates per-org scope.
+- The `m2-audit-log-emitter-migration` follow-up (move 5 cost.* legacy translators to envelope-shape emitters) is real M3+ tech-debt; deferred because it touches 5 BCs + several `@OnEvent` consumers.
+
+**Alternatives considered:**
+
+- Per-BC audit tables — rejected; the Wave 1.9 backfill from 5 prior BCs (ai_suggestions / recipe_cost_history / ingredients.overrides / recipes.aggregated_allergens_override) demonstrated the pattern was already drifting; consolidation was overdue.
+- Postgres enum for `event_type` — rejected; M3+ adds many event types; each enum extension is a migration.
+- Per-aggregate-type audit tables — rejected; queries spanning aggregates would need UNION ALL across N tables.
+- Real foreign-key constraint on `aggregate_id` — rejected; would require N tables × N FKs and break the polymorphic pattern.
+
+---
+
+## ADR-026: Forensic agent-event split (`AGENT_ACTION_EXECUTED` vs `AGENT_ACTION_FORENSIC`)
+
+**Decision:** Split the `AGENT_ACTION_EXECUTED` channel into two distinct event types:
+
+- **`AGENT_ACTION_EXECUTED`** (channel name unchanged: `agent.action-executed`) carries the **lean, request-anchored** attribution row emitted by `AgentAuditMiddleware` (`apps/api/src/shared/middleware/agent-audit.middleware.ts`) for every agent-flagged HTTP request. `aggregate_type = 'organization'`. `payload_after = {capabilityName, timestamp}`.
+- **`AGENT_ACTION_FORENSIC`** (NEW channel name `agent.action-forensic`, NEW persisted event_type `AGENT_ACTION_FORENSIC`) carries the **rich, aggregate-anchored** mutation row emitted by `BeforeAfterAuditInterceptor` (`apps/api/src/shared/interceptors/before-after-audit.interceptor.ts`) for REST writes and by `AgentChatService` (`apps/api/src/agent-chat/application/agent-chat.service.ts`) for chat turns. `aggregate_type ∈ {recipe, menu_item, ingredient, supplier, supplier_item, agent_chat_session, ...}`. Payload: full `AuditEventEnvelope` with `payload_before` + `payload_after`.
+
+The runtime-shape discrimination via `isRichAuditEnvelope()` in `AuditLogSubscriber.onAgentActionExecuted()` is **deleted**. The subscriber gains a new `@OnEvent(AGENT_ACTION_FORENSIC)` handler that calls `persistEnvelope()` directly. Type-system-level enforcement replaces runtime-shape sniffing.
+
+A backfill migration (`0022_audit_log_forensic_split`) reassigns historical rich rows: `UPDATE audit_log SET event_type = 'AGENT_ACTION_FORENSIC' WHERE event_type = 'AGENT_ACTION_EXECUTED' AND aggregate_type != 'organization'`. The `down()` migration reverses. No schema change is required (the column is open-enum text per ADR-025).
+
+**Rationale:**
+
+- Three call sites — `AgentAuditMiddleware` (lean), `BeforeAfterAuditInterceptor` (rich), `AgentChatService` (rich) — were emitting on one channel. The subscriber's `isRichAuditEnvelope()` discrimination kept things working but obscured the contract: a TypeScript reader staring at `EventEmitter2.emit(AGENT_ACTION_EXECUTED, payload)` cannot tell whether the payload is the lean shape or the rich envelope without reading the subscriber. Compile-time clarity beats runtime sniffing.
+- The 3a + 3b retros both filed the split as M3+ tech-debt. Three call sites is the right pressure point to act.
+- Open-enum text column means zero schema cost; the only DB-side work is the backfill UPDATE.
+
+**Consequence:**
+
+- Operators with existing dashboards/queries on `event_type='AGENT_ACTION_EXECUTED'` see only lean rows after the migration runs. To recover the previous (mixed) result set, they add `OR event_type='AGENT_ACTION_FORENSIC'`. Documented in `docs/operations/audit-log-runbook.md`.
+- `BeforeAfterAuditInterceptor` and `AgentChatService` emit on the new channel; the audit envelope shape is unchanged.
+- `AuditLogSubscriber` gains one handler, loses one helper (`isRichAuditEnvelope`).
+- Future agent emit sites in M3+ (e.g. agent-issued bulk imports) emit on `AGENT_ACTION_FORENSIC` for any aggregate-anchored mutation, on `AGENT_ACTION_EXECUTED` for request-attribution rows.
+
+**Alternatives considered:**
+
+- Rename `AGENT_ACTION_EXECUTED` → `AGENT_REQUEST_RECEIVED` for cleaner semantics on the lean channel — rejected because it would break any historical operator query/dashboard. The lean event keeps its identity; only the rich emissions move.
+- Keep the dual-shape channel and harden `isRichAuditEnvelope()` — rejected; type-system clarity is the whole point.
+- Backfill optional, leave historical rows mixed — rejected; the runbook would have to document a "consider both event_type values when querying historical agent rows" caveat in perpetuity.
+
+---
+
+## ADR-027: Streaming-handler audit pattern (`@Sse()` and `Readable.from(asyncIterable)` handlers)
+
+**Decision:** Streaming endpoints (NestJS `@Sse()` handlers, `Readable.from(asyncIterable)` HTTP responses, any handler that returns an `Observable` whose downstream consumer emits multiple events) **do not use `BeforeAfterAuditInterceptor`**. Instead the service emits its own audit row from the Observable's terminal callback (success / 5xx / transport error / unsubscribe), guarded by an `auditEmitted` flag so re-entrant termination paths can't double-emit.
+
+The shared `BeforeAfterAuditInterceptor` is a **write-RPC primitive** — it expects exactly one terminal value from the handler's Observable, unwraps the `WriteResponseDto<T>` envelope to capture `payload_after`, and emits the audit event once. For an `@Sse()` handler, `mergeMap`-over-events would emit one audit row per token frame; that is wrong by intent (one row per turn is the correct semantic). For a `Readable.from(asyncIterable)` CSV export, the same incompatibility applies.
+
+Streaming-handler audit emissions follow these rules:
+
+1. **Emit the rich envelope on `AGENT_ACTION_FORENSIC`** (post-ADR-026) when the handler's terminal callback fires.
+2. **Use `randomUUID()` for `aggregate_id`** — the audit_log column is UUID-typed (per ADR-025); opaque/free-form session ids stored unmodified will fail the schema constraint silently in unit tests (mocks accept strings) and explosively in INT against real Postgres.
+3. **Store the opaque session id in `payload_after.sessionId`** (or analogous opaque key) for forensic linkage. Operators can search FTS or filter `payload_after->>'sessionId'` to recover the streaming turn from an audit row.
+4. **Set `auditEmitted = true` in a closure-captured local before persistence**, so any subsequent terminal callback (e.g. unsubscribe after success) cannot double-emit.
+5. **Emit via `EventEmitter2.emitAsync`** (not `emit`) when an INT spec immediately reads `audit_log` after the response — the `@OnEvent` handler is async and the synchronous `emit()` returns before the DB INSERT. The emit-vs-emitAsync read-after-write hazard has been hit twice (Wave 1.11 FTS + Wave 1.13 [3a]) and is a recurring footgun; the pattern must use `emitAsync` for INT-spec correctness.
+
+Reference implementation: `apps/api/src/agent-chat/application/agent-chat.service.ts` (Wave 1.13 [3b]).
+
+**Rationale:**
+
+- The Wave 1.13 [3b] retro discovered all five rules in succession through CI failures. The interceptor's `mergeMap` model assumes one terminal value; SSE handlers emit many events with one terminal *event* (the `done` frame). Streaming endpoints are conceptually closer to long-running RPCs whose audit row is "the whole turn happened" rather than "one event happened".
+- The UUID-typed `aggregate_id` constraint is the second-most-frequent footgun across the audit-log saga (after emit-vs-emitAsync). Codifying it here avoids a third repeat.
+
+**Consequence:**
+
+- Future streaming endpoints (e.g. CSV export with audit emission, batched CSV import streaming a per-row audit row, agent-issued bulk imports) follow this pattern. They do **not** add `@AuditAggregate` decorators; they wire emission into the Observable / async-iterable terminal path themselves.
+- The `BeforeAfterAuditInterceptor` is unchanged. It remains the canonical primitive for write-RPC handlers (POST/PUT/PATCH/DELETE).
+- The `auditEmitted` flag pattern is ~5 LOC per streaming service. Replicate from `agent-chat.service.ts` rather than abstract; the per-service shape varies (chat has session id; CSV export has filename; future BCs may differ).
+
+**Alternatives considered:**
+
+- A streaming-aware variant `StreamingAuditInterceptor` — considered; rejected for now because the per-service shape varies enough that a one-size-fits-all interceptor would either be too generic to be useful or too specific to chat. Revisit if a third streaming endpoint adopts the pattern in M3+.
+- Use the lean `AGENT_ACTION_EXECUTED` for chat audit — rejected; chat is a multi-turn mutation, not a single REST request, and forensic linkage to the session id matters for compliance.
+- Synchronous `emit()` even in INT specs — rejected; the read-after-write hazard re-emerges every time.
+

@@ -36,11 +36,12 @@ interface HermesPostBody {
  *  - Map transport / Hermes-side errors to `event: error` frames so the
  *    client can render them coherently with happy-path output.
  *
- * Audit emission: this service emits one `AGENT_ACTION_EXECUTED` row per
- * completed turn from the Observable's terminal path. The Wave 1.13 [3a]
- * `BeforeAfterAuditInterceptor` is bypassed because its `mergeMap`
- * semantics would emit one row per SSE event (token, tool-calling, done)
- * instead of one row per turn.
+ * Audit emission: this service emits one `AGENT_ACTION_FORENSIC` row per
+ * completed turn from the Observable's terminal path (per ADR-026 Wave 1.14).
+ * The Wave 1.13 [3a] `BeforeAfterAuditInterceptor` is bypassed because its
+ * `mergeMap` semantics would emit one row per SSE event (token, tool-calling,
+ * done) instead of one row per turn — see ADR-027 streaming-handler audit
+ * pattern.
  *
  * Idempotency replay for SSE is deferred to slice 3c
  * (`m2-mcp-agent-registry-bench`); `cacheableTextForIdempotency()` is the
@@ -220,7 +221,7 @@ export class AgentChatService {
       reason: 'chat.message',
     };
     try {
-      await this.events.emitAsync(AuditEventType.AGENT_ACTION_EXECUTED, envelope);
+      await this.events.emitAsync(AuditEventType.AGENT_ACTION_FORENSIC, envelope);
     } catch (err) {
       this.logger.warn(
         `agent-chat.audit.emit_failed: ${(err as Error).message ?? 'unknown'}`,

@@ -113,3 +113,20 @@ export interface AgentActionExecutedEvent {
   organizationId: string | null;
   timestamp: string;
 }
+
+/**
+ * Emitted by `BeforeAfterAuditInterceptor` (Wave 1.13 [3a]) for every
+ * agent-flagged write RPC and by `AgentChatService` (Wave 1.13 [3b]) from
+ * the SSE Observable's terminal callback for every chat turn. Carries the
+ * canonical `AuditEventEnvelope` shape with `aggregate_type` ≠ 'organization'
+ * and `payload_before`/`payload_after` populated.
+ *
+ * Per ADR-026 (Wave 1.14 `m2-audit-log-forensic-split`), this channel
+ * separates the rich, aggregate-anchored mutation row from the lean,
+ * request-anchored attribution row carried by `AGENT_ACTION_EXECUTED`. The
+ * subscriber persists envelopes as-is via `persistEnvelope()` — no per-type
+ * translation. Compile-time clarity replaced the runtime `isRichAuditEnvelope`
+ * discrimination that originally co-tenanted both shapes on
+ * `AGENT_ACTION_EXECUTED`.
+ */
+export const AGENT_ACTION_FORENSIC = 'agent.action-forensic';
