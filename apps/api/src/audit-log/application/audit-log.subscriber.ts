@@ -1,13 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import type {
-  AgentActionExecutedEvent,
-  IngredientOverrideChangedEvent,
-  RecipeAllergensOverrideChangedEvent,
-  RecipeIngredientUpdatedEvent,
-  RecipeSourceOverrideChangedEvent,
-  SupplierPriceUpdatedEvent,
-} from '../../cost/application/cost.events';
+import type { AgentActionExecutedEvent } from '../../cost/application/cost.events';
 import { AuditLogService } from './audit-log.service';
 import {
   AuditEventEnvelope,
@@ -52,74 +45,37 @@ export class AuditLogSubscriber {
     return this.persistEnvelope(AuditEventType.RECIPE_COST_REBUILT, payload);
   }
 
-  // ------------- Legacy events (translate per-type) -------------
+  // ------------- Cost-domain channels (post-Wave-1.18 envelope shape) -------------
+  //
+  // Per ADR (m2-audit-log-emitter-migration Wave 1.18), the 5 cost.* channels
+  // now publish AuditEventEnvelope directly from their source services. The
+  // subscriber persists each as-is; per-type translation has been removed.
+  // Channel-name documentation is preserved by keeping one @OnEvent per
+  // channel rather than collapsing into a generic handler.
 
   @OnEvent(AuditEventType.INGREDIENT_OVERRIDE_CHANGED)
-  onIngredientOverrideChanged(event: IngredientOverrideChangedEvent): Promise<void> {
-    return this.persistTranslated(AuditEventType.INGREDIENT_OVERRIDE_CHANGED, () => ({
-      organizationId: event.organizationId,
-      aggregateType: 'ingredient',
-      aggregateId: event.ingredientId,
-      actorUserId: event.appliedBy ?? null,
-      actorKind: 'user',
-      payloadAfter: { field: event.field },
-      reason: event.reason,
-    }));
+  onIngredientOverrideChanged(payload: AuditEventEnvelope): Promise<void> {
+    return this.persistEnvelope(AuditEventType.INGREDIENT_OVERRIDE_CHANGED, payload);
   }
 
   @OnEvent(AuditEventType.RECIPE_ALLERGENS_OVERRIDE_CHANGED)
-  onRecipeAllergensOverrideChanged(
-    event: RecipeAllergensOverrideChangedEvent,
-  ): Promise<void> {
-    return this.persistTranslated(AuditEventType.RECIPE_ALLERGENS_OVERRIDE_CHANGED, () => ({
-      organizationId: event.organizationId,
-      aggregateType: 'recipe',
-      aggregateId: event.recipeId,
-      actorUserId: event.appliedBy ?? null,
-      actorKind: 'user',
-      payloadAfter: { kind: event.kind },
-    }));
+  onRecipeAllergensOverrideChanged(payload: AuditEventEnvelope): Promise<void> {
+    return this.persistEnvelope(AuditEventType.RECIPE_ALLERGENS_OVERRIDE_CHANGED, payload);
   }
 
   @OnEvent(AuditEventType.RECIPE_SOURCE_OVERRIDE_CHANGED)
-  onRecipeSourceOverrideChanged(
-    event: RecipeSourceOverrideChangedEvent,
-  ): Promise<void> {
-    return this.persistTranslated(AuditEventType.RECIPE_SOURCE_OVERRIDE_CHANGED, () => ({
-      organizationId: event.organizationId,
-      aggregateType: 'recipe',
-      aggregateId: event.recipeId,
-      actorUserId: null,
-      actorKind: 'system',
-      payloadAfter: {
-        recipeIngredientId: event.recipeIngredientId,
-        sourceOverrideRef: event.sourceOverrideRef,
-      },
-    }));
+  onRecipeSourceOverrideChanged(payload: AuditEventEnvelope): Promise<void> {
+    return this.persistEnvelope(AuditEventType.RECIPE_SOURCE_OVERRIDE_CHANGED, payload);
   }
 
   @OnEvent(AuditEventType.RECIPE_INGREDIENT_UPDATED)
-  onRecipeIngredientUpdated(event: RecipeIngredientUpdatedEvent): Promise<void> {
-    return this.persistTranslated(AuditEventType.RECIPE_INGREDIENT_UPDATED, () => ({
-      organizationId: event.organizationId,
-      aggregateType: 'recipe',
-      aggregateId: event.recipeId,
-      actorUserId: null,
-      actorKind: 'system',
-      payloadAfter: { recipeIngredientId: event.recipeIngredientId },
-    }));
+  onRecipeIngredientUpdated(payload: AuditEventEnvelope): Promise<void> {
+    return this.persistEnvelope(AuditEventType.RECIPE_INGREDIENT_UPDATED, payload);
   }
 
   @OnEvent(AuditEventType.SUPPLIER_PRICE_UPDATED)
-  onSupplierPriceUpdated(event: SupplierPriceUpdatedEvent): Promise<void> {
-    return this.persistTranslated(AuditEventType.SUPPLIER_PRICE_UPDATED, () => ({
-      organizationId: event.organizationId,
-      aggregateType: 'supplier_item',
-      aggregateId: event.supplierItemId,
-      actorUserId: null,
-      actorKind: 'system',
-      payloadAfter: { ingredientId: event.ingredientId },
-    }));
+  onSupplierPriceUpdated(payload: AuditEventEnvelope): Promise<void> {
+    return this.persistEnvelope(AuditEventType.SUPPLIER_PRICE_UPDATED, payload);
   }
 
   @OnEvent(AuditEventType.AGENT_ACTION_EXECUTED)

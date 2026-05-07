@@ -206,9 +206,12 @@ describe('DashboardService', () => {
       await service.getTopBottomMenuItems(orgId, 'bottom', 7, 5);
       expect(menuItems.findAll).toHaveBeenCalledTimes(2);
       service.handleSupplierPriceUpdated({
-        supplierItemId: 'si-1',
-        ingredientId: 'i-1',
         organizationId: orgId,
+        aggregateType: 'supplier_item',
+        aggregateId: 'si-1',
+        actorUserId: null,
+        actorKind: 'system',
+        payloadAfter: { ingredientId: 'i-1' },
       });
       await service.getTopBottomMenuItems(orgId, 'top', 7, 5);
       expect(menuItems.findAll).toHaveBeenCalledTimes(3);
@@ -218,9 +221,12 @@ describe('DashboardService', () => {
       seedOne();
       await service.getTopBottomMenuItems(orgId, 'top', 7, 5);
       service.handleSupplierPriceUpdated({
-        supplierItemId: 'si-1',
-        ingredientId: 'i-1',
         organizationId: '99999999-9999-4999-8999-999999999999',
+        aggregateType: 'supplier_item',
+        aggregateId: 'si-1',
+        actorUserId: null,
+        actorKind: 'system',
+        payloadAfter: { ingredientId: 'i-1' },
       });
       await service.getTopBottomMenuItems(orgId, 'top', 7, 5);
       expect(menuItems.findAll).toHaveBeenCalledTimes(1);

@@ -3,10 +3,8 @@ import { DataSource, In } from 'typeorm';
 import { Ingredient } from '../../ingredients/domain/ingredient.entity';
 import { Recipe } from '../../recipes/domain/recipe.entity';
 import { RecipeIngredient } from '../../recipes/domain/recipe-ingredient.entity';
-import {
-  RECIPE_ALLERGENS_OVERRIDE_CHANGED,
-  RecipeAllergensOverrideChangedEvent,
-} from '../../cost/application/cost.events';
+import { RECIPE_ALLERGENS_OVERRIDE_CHANGED } from '../../cost/application/cost.events';
+import type { AuditEventEnvelope } from '../../audit-log/application/types';
 import {
   CrossContaminationMissingTagsError,
   OverrideMissingReasonError,
@@ -400,11 +398,11 @@ describe('RecipesAllergensService.applyCrossContamination — both note + tags r
 // ----------------------------- event emission -----------------------------
 
 describe('RecipesAllergensService — apply* methods emit RECIPE_ALLERGENS_OVERRIDE_CHANGED', () => {
-  it('7.1 applyAllergensOverride emits with kind=allergens-override', async () => {
+  it('7.1 applyAllergensOverride emits envelope with payloadAfter.kind=allergens-override', async () => {
     const recipe = makeRecipe();
     const { service, events } = buildService({ recipes: [recipe], lines: [], ingredients: [] });
-    const captured: RecipeAllergensOverrideChangedEvent[] = [];
-    events.on(RECIPE_ALLERGENS_OVERRIDE_CHANGED, (e: RecipeAllergensOverrideChangedEvent) => {
+    const captured: AuditEventEnvelope[] = [];
+    events.on(RECIPE_ALLERGENS_OVERRIDE_CHANGED, (e: AuditEventEnvelope) => {
       captured.push(e);
     });
 
@@ -414,16 +412,18 @@ describe('RecipesAllergensService — apply* methods emit RECIPE_ALLERGENS_OVERR
       reason: 'audit',
     });
     expect(captured).toHaveLength(1);
-    expect(captured[0].kind).toBe('allergens-override');
-    expect(captured[0].recipeId).toBe(recipe.id);
-    expect(captured[0].appliedBy).toBe(actorId);
+    expect((captured[0].payloadAfter as { kind: string }).kind).toBe('allergens-override');
+    expect(captured[0].aggregateType).toBe('recipe');
+    expect(captured[0].aggregateId).toBe(recipe.id);
+    expect(captured[0].actorUserId).toBe(actorId);
+    expect(captured[0].actorKind).toBe('user');
   });
 
-  it('7.2 applyDietFlagsOverride emits with kind=diet-flags-override', async () => {
+  it('7.2 applyDietFlagsOverride emits envelope with payloadAfter.kind=diet-flags-override', async () => {
     const recipe = makeRecipe();
     const { service, events } = buildService({ recipes: [recipe], lines: [], ingredients: [] });
-    const captured: RecipeAllergensOverrideChangedEvent[] = [];
-    events.on(RECIPE_ALLERGENS_OVERRIDE_CHANGED, (e: RecipeAllergensOverrideChangedEvent) => {
+    const captured: AuditEventEnvelope[] = [];
+    events.on(RECIPE_ALLERGENS_OVERRIDE_CHANGED, (e: AuditEventEnvelope) => {
       captured.push(e);
     });
 
@@ -432,14 +432,14 @@ describe('RecipesAllergensService — apply* methods emit RECIPE_ALLERGENS_OVERR
       reason: 'certified vegan supplier',
     });
     expect(captured).toHaveLength(1);
-    expect(captured[0].kind).toBe('diet-flags-override');
+    expect((captured[0].payloadAfter as { kind: string }).kind).toBe('diet-flags-override');
   });
 
-  it('7.3 applyCrossContamination emits with kind=cross-contamination', async () => {
+  it('7.3 applyCrossContamination emits envelope with payloadAfter.kind=cross-contamination', async () => {
     const recipe = makeRecipe();
     const { service, events } = buildService({ recipes: [recipe], lines: [], ingredients: [] });
-    const captured: RecipeAllergensOverrideChangedEvent[] = [];
-    events.on(RECIPE_ALLERGENS_OVERRIDE_CHANGED, (e: RecipeAllergensOverrideChangedEvent) => {
+    const captured: AuditEventEnvelope[] = [];
+    events.on(RECIPE_ALLERGENS_OVERRIDE_CHANGED, (e: AuditEventEnvelope) => {
       captured.push(e);
     });
 
@@ -448,7 +448,7 @@ describe('RecipesAllergensService — apply* methods emit RECIPE_ALLERGENS_OVERR
       allergens: ['peanuts'],
     });
     expect(captured).toHaveLength(1);
-    expect(captured[0].kind).toBe('cross-contamination');
+    expect((captured[0].payloadAfter as { kind: string }).kind).toBe('cross-contamination');
   });
 });
 

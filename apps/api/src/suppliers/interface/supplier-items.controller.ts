@@ -20,10 +20,8 @@ import {
   WriteResponseDto,
   toWriteResponse,
 } from '../../shared/dto/write-response.dto';
-import {
-  SUPPLIER_PRICE_UPDATED,
-  SupplierPriceUpdatedEvent,
-} from '../../cost/application/cost.events';
+import { SUPPLIER_PRICE_UPDATED } from '../../cost/application/cost.events';
+import type { AuditEventEnvelope } from '../../audit-log/application/types';
 import { IngredientRepository } from '../../ingredients/infrastructure/ingredient.repository';
 import { SupplierItem } from '../domain/supplier-item.entity';
 import { SupplierItemRepository } from '../infrastructure/supplier-item.repository';
@@ -79,11 +77,10 @@ export class SupplierItemsController {
 
     try {
       const saved = await this.supplierItems.save(si);
-      this.events.emit(SUPPLIER_PRICE_UPDATED, {
-        supplierItemId: saved.id,
-        ingredientId: saved.ingredientId,
-        organizationId: ingredient.organizationId,
-      } satisfies SupplierPriceUpdatedEvent);
+      this.events.emit(
+        SUPPLIER_PRICE_UPDATED,
+        buildSupplierPriceEnvelope(ingredient.organizationId, saved.id, saved.ingredientId),
+      );
       return toWriteResponse(SupplierItemResponseDto.fromEntity(saved));
     } catch (err) {
       if (
@@ -113,11 +110,10 @@ export class SupplierItemsController {
     }
     const saved = await this.supplierItems.save(si);
     if (ingredient) {
-      this.events.emit(SUPPLIER_PRICE_UPDATED, {
-        supplierItemId: saved.id,
-        ingredientId: saved.ingredientId,
-        organizationId: ingredient.organizationId,
-      } satisfies SupplierPriceUpdatedEvent);
+      this.events.emit(
+        SUPPLIER_PRICE_UPDATED,
+        buildSupplierPriceEnvelope(ingredient.organizationId, saved.id, saved.ingredientId),
+      );
     }
     return toWriteResponse(SupplierItemResponseDto.fromEntity(saved));
   }
@@ -134,11 +130,10 @@ export class SupplierItemsController {
     const si = await this.supplierItems.promoteToPreferred(id);
     const ingredient = await this.ingredients.findOneBy({ id: si.ingredientId });
     if (ingredient) {
-      this.events.emit(SUPPLIER_PRICE_UPDATED, {
-        supplierItemId: si.id,
-        ingredientId: si.ingredientId,
-        organizationId: ingredient.organizationId,
-      } satisfies SupplierPriceUpdatedEvent);
+      this.events.emit(
+        SUPPLIER_PRICE_UPDATED,
+        buildSupplierPriceEnvelope(ingredient.organizationId, si.id, si.ingredientId),
+      );
     }
     return toWriteResponse(SupplierItemResponseDto.fromEntity(si));
   }
@@ -156,4 +151,25 @@ export class SupplierItemsController {
     }
     return toWriteResponse({ id });
   }
+}
+
+/**
+ * Wave 1.18 — m2-audit-log-emitter-migration. Construct the canonical
+ * envelope for SUPPLIER_PRICE_UPDATED. Aggregate is the supplier_item;
+ * ingredientId rides along in payloadAfter (cost.service + dashboard.service
+ * both read it for cascading invalidation).
+ */
+function buildSupplierPriceEnvelope(
+  organizationId: string,
+  supplierItemId: string,
+  ingredientId: string,
+): AuditEventEnvelope<unknown, { ingredientId: string }> {
+  return {
+    organizationId,
+    aggregateType: 'supplier_item',
+    aggregateId: supplierItemId,
+    actorUserId: null,
+    actorKind: 'system',
+    payloadAfter: { ingredientId },
+  };
 }

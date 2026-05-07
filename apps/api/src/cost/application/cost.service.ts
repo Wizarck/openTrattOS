@@ -30,12 +30,9 @@ import {
 import {
   RECIPE_INGREDIENT_UPDATED,
   RECIPE_SOURCE_OVERRIDE_CHANGED,
-  RecipeIngredientUpdatedEvent,
-  RecipeSourceOverrideChangedEvent,
   SUB_RECIPE_COST_CHANGED,
   SUPPLIER_PRICE_UPDATED,
   SubRecipeCostChangedEvent,
-  SupplierPriceUpdatedEvent,
 } from './cost.events';
 
 /**
@@ -525,8 +522,12 @@ export class CostService {
   // ----------------------------- event handlers -----------------------------
 
   @OnEvent(SUPPLIER_PRICE_UPDATED)
-  async onSupplierPriceUpdated(evt: SupplierPriceUpdatedEvent): Promise<void> {
-    const recipeIds = await this.recipesUsingIngredient(evt.organizationId, evt.ingredientId);
+  async onSupplierPriceUpdated(
+    evt: AuditEventEnvelope<unknown, { ingredientId: string }>,
+  ): Promise<void> {
+    const ingredientId = evt.payloadAfter?.ingredientId ?? '';
+    if (!ingredientId) return;
+    const recipeIds = await this.recipesUsingIngredient(evt.organizationId, ingredientId);
     for (const id of recipeIds) {
       try {
         await this.recordSnapshot(evt.organizationId, id, 'SUPPLIER_PRICE_CHANGE');
@@ -537,20 +538,20 @@ export class CostService {
   }
 
   @OnEvent(RECIPE_INGREDIENT_UPDATED)
-  async onRecipeIngredientUpdated(evt: RecipeIngredientUpdatedEvent): Promise<void> {
+  async onRecipeIngredientUpdated(evt: AuditEventEnvelope): Promise<void> {
     try {
-      await this.recordSnapshot(evt.organizationId, evt.recipeId, 'LINE_EDIT');
+      await this.recordSnapshot(evt.organizationId, evt.aggregateId, 'LINE_EDIT');
     } catch (err) {
-      this.logger.warn(`Recompute failed for recipe ${evt.recipeId} after line edit: ${err}`);
+      this.logger.warn(`Recompute failed for recipe ${evt.aggregateId} after line edit: ${err}`);
     }
   }
 
   @OnEvent(RECIPE_SOURCE_OVERRIDE_CHANGED)
-  async onRecipeSourceOverrideChanged(evt: RecipeSourceOverrideChangedEvent): Promise<void> {
+  async onRecipeSourceOverrideChanged(evt: AuditEventEnvelope): Promise<void> {
     try {
-      await this.recordSnapshot(evt.organizationId, evt.recipeId, 'SOURCE_OVERRIDE');
+      await this.recordSnapshot(evt.organizationId, evt.aggregateId, 'SOURCE_OVERRIDE');
     } catch (err) {
-      this.logger.warn(`Recompute failed for recipe ${evt.recipeId} after source override: ${err}`);
+      this.logger.warn(`Recompute failed for recipe ${evt.aggregateId} after source override: ${err}`);
     }
   }
 

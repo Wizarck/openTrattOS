@@ -1,9 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
-import {
-  SUPPLIER_PRICE_UPDATED,
-  SupplierPriceUpdatedEvent,
-} from '../../cost/application/cost.events';
+import { SUPPLIER_PRICE_UPDATED } from '../../cost/application/cost.events';
+import type { AuditEventEnvelope } from '../../audit-log/application/types';
 import { MarginReport, MenuItemsService } from '../../menus/application/menu-items.service';
 
 export type RankingDirection = 'top' | 'bottom';
@@ -120,7 +118,7 @@ export class DashboardService {
    * conservatively drop the org's entries.
    */
   @OnEvent(SUPPLIER_PRICE_UPDATED)
-  handleSupplierPriceUpdated(event: SupplierPriceUpdatedEvent): void {
+  handleSupplierPriceUpdated(event: AuditEventEnvelope): void {
     let invalidated = 0;
     for (const [key, entry] of this.cache) {
       if (key.startsWith(`${event.organizationId}|`)) {
@@ -131,7 +129,7 @@ export class DashboardService {
     }
     if (invalidated > 0) {
       this.logger.debug(
-        `dashboard cache invalidated ${invalidated} entries for org ${event.organizationId} (supplier ${event.supplierItemId})`,
+        `dashboard cache invalidated ${invalidated} entries for org ${event.organizationId} (supplier ${event.aggregateId})`,
       );
     }
   }

@@ -2,6 +2,16 @@
  * Domain events emitted to drive cost recompute + history append. Anyone who
  * mutates a cost-affecting field (SupplierItem price, RecipeIngredient line,
  * sub-recipe composition, override) MUST emit one of these.
+ *
+ * **Wave 1.18 — `m2-audit-log-emitter-migration`**: the 5 cost.* channels
+ * below now publish the canonical `AuditEventEnvelope` shape directly (per
+ * ADR-025 ADR for audit_log canonical architecture). The legacy per-event
+ * payload interfaces (SupplierPriceUpdatedEvent, RecipeIngredientUpdatedEvent,
+ * RecipeSourceOverrideChangedEvent, RecipeAllergensOverrideChangedEvent,
+ * IngredientOverrideChangedEvent) have been deleted. Emit sites construct
+ * an `AuditEventEnvelope<TBefore, TAfter>` inline; consumers read fields off
+ * the envelope (organizationId at root, aggregateId for the primary
+ * identifier, payloadAfter for BC-specific fields).
  */
 
 export const SUPPLIER_PRICE_UPDATED = 'cost.supplier-price-updated';
@@ -19,25 +29,12 @@ export const SUB_RECIPE_COST_CHANGED = 'cost.sub-recipe-cost-changed';
  */
 export const RECIPE_ALLERGENS_OVERRIDE_CHANGED = 'cost.recipe-allergens-override-changed';
 
-export interface SupplierPriceUpdatedEvent {
-  supplierItemId: string;
-  ingredientId: string;
-  organizationId: string;
-}
-
-export interface RecipeIngredientUpdatedEvent {
-  recipeId: string;
-  organizationId: string;
-  recipeIngredientId: string;
-}
-
-export interface RecipeSourceOverrideChangedEvent {
-  recipeId: string;
-  organizationId: string;
-  recipeIngredientId: string;
-  sourceOverrideRef: string | null;
-}
-
+/**
+ * Internal cost-domain cascade event (sub-recipe cost change → walk parents
+ * for recompute). NOT a canonical audit channel — never persisted to
+ * audit_log; the cost rollup logic is the only consumer. Keeps its dedicated
+ * payload shape because there's no audit envelope semantics to align with.
+ */
 export interface SubRecipeCostChangedEvent {
   /** The sub-recipe whose cost just shifted; the listener walks parents. */
   subRecipeId: string;
@@ -45,35 +42,11 @@ export interface SubRecipeCostChangedEvent {
 }
 
 /**
- * Payload for `RECIPE_ALLERGENS_OVERRIDE_CHANGED`. `kind` lets a listener
- * route on what actually changed; the event itself is fire-and-forget — the
- * authoritative source of truth is always the Recipe row.
- */
-export interface RecipeAllergensOverrideChangedEvent {
-  recipeId: string;
-  organizationId: string;
-  kind: 'allergens-override' | 'diet-flags-override' | 'cross-contamination';
-  /** UUID of the Manager+ actor who applied the change. */
-  appliedBy: string;
-}
-
-/**
  * Emitted by IngredientsService whenever a Manager+ override is applied to
  * an Ingredient field (allergens / dietFlags / nutrition / brandName) per
- * `m2-ingredients-extension`. Reserved channel; the future audit-log listener
- * will subscribe when audit_log lands.
+ * `m2-ingredients-extension`.
  */
 export const INGREDIENT_OVERRIDE_CHANGED = 'cost.ingredient-override-changed';
-
-export interface IngredientOverrideChangedEvent {
-  ingredientId: string;
-  organizationId: string;
-  field: 'allergens' | 'dietFlags' | 'nutrition' | 'brandName';
-  /** UUID of the Manager+ actor who applied the change. */
-  appliedBy: string;
-  /** Auditable reason; mirrors the override entry's `reason`. */
-  reason: string;
-}
 
 /**
  * Emitted by `AgentAuditMiddleware` whenever an HTTP request carries the

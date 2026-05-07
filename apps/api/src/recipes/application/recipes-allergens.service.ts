@@ -2,10 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, EntityManager, In } from 'typeorm';
-import {
-  RECIPE_ALLERGENS_OVERRIDE_CHANGED,
-  RecipeAllergensOverrideChangedEvent,
-} from '../../cost/application/cost.events';
+import { RECIPE_ALLERGENS_OVERRIDE_CHANGED } from '../../cost/application/cost.events';
+import type { AuditEventEnvelope } from '../../audit-log/application/types';
+
+type RecipeAllergensOverrideKind =
+  | 'allergens-override'
+  | 'diet-flags-override'
+  | 'cross-contamination';
 import { Ingredient } from '../../ingredients/domain/ingredient.entity';
 import { AllergensOverride, DietFlagsOverride, Recipe } from '../domain/recipe.entity';
 import { walkRecipeTreeLeaves } from './recipe-tree-walker';
@@ -353,15 +356,18 @@ export class RecipesAllergensService {
 
   private emitOverrideChanged(
     recipe: Recipe,
-    kind: RecipeAllergensOverrideChangedEvent['kind'],
+    kind: RecipeAllergensOverrideKind,
     appliedBy: string,
   ): void {
-    this.events.emit(RECIPE_ALLERGENS_OVERRIDE_CHANGED, {
-      recipeId: recipe.id,
+    const event: AuditEventEnvelope<unknown, { kind: RecipeAllergensOverrideKind }> = {
       organizationId: recipe.organizationId,
-      kind,
-      appliedBy,
-    } satisfies RecipeAllergensOverrideChangedEvent);
+      aggregateType: 'recipe',
+      aggregateId: recipe.id,
+      actorUserId: appliedBy,
+      actorKind: 'user',
+      payloadAfter: { kind },
+    };
+    this.events.emit(RECIPE_ALLERGENS_OVERRIDE_CHANGED, event);
   }
 }
 
