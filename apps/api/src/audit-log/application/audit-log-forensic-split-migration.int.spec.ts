@@ -100,10 +100,12 @@ describe('audit_log forensic split migration (integration)', () => {
          WHERE event_type IN ('AGENT_ACTION_EXECUTED', 'AGENT_ACTION_FORENSIC')
          GROUP BY 1, 2`,
     );
+    // Multiple aggregate_type values (recipe, menu_item, ingredient, ...)
+    // collapse into the same lean/rich bucket; accumulate, never overwrite.
     const map: Record<string, number> = {};
     for (const row of rows) {
-      map[`${row.event_type}/${row.aggregate_type === 'organization' ? 'lean' : 'rich'}`] =
-        Number(row.count);
+      const key = `${row.event_type}/${row.aggregate_type === 'organization' ? 'lean' : 'rich'}`;
+      map[key] = (map[key] ?? 0) + Number(row.count);
     }
     return {
       leanExecuted: map['AGENT_ACTION_EXECUTED/lean'] ?? 0,
