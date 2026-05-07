@@ -6,9 +6,10 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "lint": "eslint \"src/**/*.ts\"",
+    "lint": "eslint \"src/**/*.ts\" \"scripts/**/*.ts\"",
     "test": "vitest run",
-    "bench": "tsx src/run.ts"
+    "bench": "tsx src/run.ts",
+    "regression-check": "tsx scripts/regression-check.ts"
   },
   "dependencies": {
     "tsx": "^4.20.0"
