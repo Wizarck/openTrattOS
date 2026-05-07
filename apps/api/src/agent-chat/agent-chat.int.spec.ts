@@ -260,15 +260,16 @@ describe('agent-chat — flag-enabled (integration)', () => {
     expect(sent.bank_id).toBe('opentrattos-acme-trattoria');
     expect(sent.user_attribution.user_id).toBe(userId);
 
-    // Assert exactly one AGENT_ACTION_EXECUTED audit row was written, scoped
-    // to chat_session aggregate, agent_name=hermes-web. The aggregate_id is
-    // a fresh UUID per turn (chat sessionIds are free-form strings; the
-    // aggregate_id column is UUID-typed). The chat sessionId itself is
+    // Assert exactly one AGENT_ACTION_FORENSIC audit row was written (per
+    // ADR-026 m2-audit-log-forensic-split), scoped to chat_session aggregate,
+    // agent_name=hermes-web. The aggregate_id is a fresh UUID per turn (chat
+    // sessionIds are free-form strings; the aggregate_id column is
+    // UUID-typed; per ADR-027 streaming pattern). The chat sessionId itself is
     // carried in `payload_after.sessionId` for forensic linkage.
     const rows = await dataSource.query(
       `SELECT event_type, agent_name, aggregate_type, aggregate_id, actor_kind, payload_after
          FROM "audit_log"
-         WHERE event_type = 'AGENT_ACTION_EXECUTED'
+         WHERE event_type = 'AGENT_ACTION_FORENSIC'
            AND agent_name = 'hermes-web'`,
     );
     expect(rows).toHaveLength(1);
@@ -394,7 +395,7 @@ describe('agent-chat — flag-disabled (integration)', () => {
     const rows = await dataSource.query(
       `SELECT count(*)::text AS count
          FROM "audit_log"
-         WHERE event_type = 'AGENT_ACTION_EXECUTED'
+         WHERE event_type = 'AGENT_ACTION_FORENSIC'
            AND agent_name = 'hermes-web'`,
     );
     expect(Number(rows[0]?.count ?? '0')).toBe(0);

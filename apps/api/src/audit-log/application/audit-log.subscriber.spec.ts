@@ -186,6 +186,43 @@ describe('AuditLogSubscriber', () => {
       await subscriber.onRecipeCostRebuilt(envelope);
       expect(recordSpy).toHaveBeenCalledTimes(1);
     });
+
+    it('persists AGENT_ACTION_FORENSIC envelope as-is (rich aggregate-anchored)', async () => {
+      const envelope: AuditEventEnvelope = {
+        organizationId: ORG,
+        aggregateType: 'recipe',
+        aggregateId: '00000000-0000-4000-8000-00000000bbbb',
+        actorUserId: 'user-9',
+        actorKind: 'agent',
+        agentName: 'claude-desktop',
+        payloadBefore: { name: 'before' },
+        payloadAfter: { name: 'after' },
+        reason: 'recipes.update',
+      };
+      await subscriber.onAgentActionForensic(envelope);
+      expect(recordSpy).toHaveBeenCalledTimes(1);
+      const [eventType, persisted] = recordSpy.mock.calls[0];
+      expect(eventType).toBe('AGENT_ACTION_FORENSIC');
+      expect(persisted).toEqual(envelope);
+    });
+
+    it('skips AGENT_ACTION_FORENSIC payload missing envelope shape', async () => {
+      const bad = { organizationId: ORG } as unknown as AuditEventEnvelope;
+      await subscriber.onAgentActionForensic(bad);
+      expect(recordSpy).not.toHaveBeenCalled();
+    });
+
+    it('AGENT_ACTION_FORENSIC swallows record() failure without re-throw', async () => {
+      recordSpy.mockRejectedValueOnce(new Error('db down'));
+      const envelope: AuditEventEnvelope = {
+        organizationId: ORG,
+        aggregateType: 'menu_item',
+        aggregateId: '00000000-0000-4000-8000-00000000cccc',
+        actorUserId: null,
+        actorKind: 'agent',
+      };
+      await expect(subscriber.onAgentActionForensic(envelope)).resolves.toBeUndefined();
+    });
   });
 
   describe('error handling', () => {

@@ -272,7 +272,7 @@ describe('AgentChatService — turn audit emission', () => {
     return new Response(body, { status: 200, headers: { 'content-type': 'text/event-stream' } });
   }
 
-  it('emits exactly one AGENT_ACTION_EXECUTED row at stream completion', async () => {
+  it('emits exactly one AGENT_ACTION_FORENSIC row at stream completion', async () => {
     global.fetch = jest.fn().mockResolvedValue(
       fakeSseResponse([
         'event: token\ndata: {"chunk":"Hola "}\n\n',
@@ -294,7 +294,7 @@ describe('AgentChatService — turn audit emission', () => {
 
     expect((events.emitAsync as jest.Mock)).toHaveBeenCalledTimes(1);
     const [eventName, envelope] = (events.emitAsync as jest.Mock).mock.calls[0];
-    expect(eventName).toBe('agent.action-executed');
+    expect(eventName).toBe('agent.action-forensic');
     expect(envelope).toMatchObject({
       organizationId: ORG_ID,
       aggregateType: 'chat_session',

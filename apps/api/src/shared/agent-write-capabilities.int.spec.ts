@@ -425,15 +425,14 @@ describe('Agent write capabilities — end-to-end (integration)', () => {
       }>
     > {
       // Filter to rows the BeforeAfterAuditInterceptor emits — they carry
-      // a domain aggregate_type (`recipe`, `menu_item`, ...) rather than the
-      // legacy translator's `'organization'` shape.
+      // a domain aggregate_type (`recipe`, `menu_item`, ...) on the dedicated
+      // AGENT_ACTION_FORENSIC channel (per ADR-026 m2-audit-log-forensic-split).
       const rows = await dataSource.query(
         `SELECT event_type, actor_kind, agent_name, aggregate_type, aggregate_id,
                 payload_before, payload_after
          FROM "audit_log"
-         WHERE event_type = 'AGENT_ACTION_EXECUTED'
+         WHERE event_type = 'AGENT_ACTION_FORENSIC'
            AND actor_kind = 'agent'
-           AND aggregate_type <> 'organization'
            ${aggregateId ? 'AND aggregate_id = $1' : ''}
          ORDER BY created_at DESC`,
         aggregateId ? [aggregateId] : [],
@@ -441,7 +440,7 @@ describe('Agent write capabilities — end-to-end (integration)', () => {
       return rows;
     }
 
-    it('PUT /recipes/:id with X-Via-Agent emits an AGENT_ACTION_EXECUTED row with payload_before + payload_after + agent_name + capability', async () => {
+    it('PUT /recipes/:id with X-Via-Agent emits an AGENT_ACTION_FORENSIC row with payload_before + payload_after + agent_name + capability', async () => {
       process.env.OPENTRATTOS_AGENT_RECIPES_UPDATE_ENABLED = 'true';
       const seeded = await seedRecipe('Bolognesa');
 
@@ -459,7 +458,7 @@ describe('Agent write capabilities — end-to-end (integration)', () => {
       const rows = await richAgentRows(seeded.id);
       expect(rows.length).toBeGreaterThanOrEqual(1);
       const row = rows[0];
-      expect(row.event_type).toBe('AGENT_ACTION_EXECUTED');
+      expect(row.event_type).toBe('AGENT_ACTION_FORENSIC');
       expect(row.actor_kind).toBe('agent');
       expect(row.agent_name).toBe('test-agent');
       expect(row.aggregate_type).toBe('recipe');
@@ -476,12 +475,13 @@ describe('Agent write capabilities — end-to-end (integration)', () => {
       expect(after?.name).toBe('Bolognesa renamed');
     });
 
-    it('direct REST PUT (no X-Via-Agent) does NOT emit a forensic row from the interceptor — the legacy lean-shape AgentAuditMiddleware row is also absent', async () => {
-      // Observed behaviour (Wave 1.5 + this slice):
+    it('direct REST PUT (no X-Via-Agent) does NOT emit on either agent channel', async () => {
+      // Observed behaviour (Wave 1.5 + Wave 1.13 [3a] + this slice):
       //   - AgentAuditMiddleware only emits AGENT_ACTION_EXECUTED when X-Via-Agent
-      //     truthy headers are present; direct REST is silent on this channel.
-      //   - BeforeAfterAuditInterceptor short-circuits when viaAgent !== true.
-      // → audit_log carries 0 AGENT_ACTION_EXECUTED rows for plain REST.
+      //     truthy headers are present; direct REST is silent on the lean channel.
+      //   - BeforeAfterAuditInterceptor short-circuits when viaAgent !== true,
+      //     so no AGENT_ACTION_FORENSIC row either.
+      // → audit_log carries 0 AGENT_ACTION_* rows for plain REST.
       const seeded = await seedRecipe('Bolognesa');
       const res = await sendRequest(
         baseUrl,
@@ -495,7 +495,8 @@ describe('Agent write capabilities — end-to-end (integration)', () => {
       expect(res.status).toBe(200);
 
       const rows = await dataSource.query(
-        `SELECT count(*)::text AS count FROM "audit_log" WHERE event_type = 'AGENT_ACTION_EXECUTED'`,
+        `SELECT count(*)::text AS count FROM "audit_log"
+           WHERE event_type IN ('AGENT_ACTION_EXECUTED', 'AGENT_ACTION_FORENSIC')`,
       );
       expect(Number(rows[0]?.count ?? '0')).toBe(0);
     });
