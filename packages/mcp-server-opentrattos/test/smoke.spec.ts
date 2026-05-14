@@ -57,8 +57,9 @@ describe('m2-mcp-server smoke', () => {
       server as unknown as { _registeredTools: Record<string, unknown> }
     )._registeredTools;
     const registeredKeys = Object.keys(registered).sort();
-    // 6 read capabilities (Wave 1.5) + 43 write capabilities (Wave 1.13) = 49.
-    expect(registeredKeys).toHaveLength(49);
+    // 6 read capabilities (Wave 1.5) + 43 write capabilities (Wave 1.13)
+    // + 1 m3 recall capability (Wave 2.5 slice #11) = 50.
+    expect(registeredKeys).toHaveLength(50);
     // Spot-check that the read surface is present alongside the writes.
     for (const expected of [
       'ingredients.read',
