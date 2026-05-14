@@ -21,6 +21,7 @@ import { MenusModule } from './menus/menus.module';
 import { PhotoStorageModule } from './photo-storage/photo-storage.module';
 import { ProcurementModule } from './procurement/procurement.module';
 import { HaccpModule } from './haccp/haccp.module';
+import { I18nM3ExportModule } from './i18n/m3-export/i18n.module';
 import { RecallModule } from './recall/recall.module';
 import { RecipesModule } from './recipes/recipes.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
@@ -170,13 +171,20 @@ import { SharedModule } from './shared/shared.module';
     // 2.7, slice #14): bundle generator producing PDF + CSV pair sealed by
     // SHA-256 over the concatenated bytes. Chapter 0 = raw audit_log
     // unedited (FR25 trust principle); 5 derivative chapters per requested
-    // scope (HACCP / Lot / Procurement / Photo / AI-obs). Two new audit
-    // envelopes (EXPORT_BUNDLE_GENERATED, EXPORT_BUNDLE_DISPATCHED) both
-    // `retention_class='regulatory'`. One MCP capability
-    // `compliance.generate-export`. Email dispatch via slice #22
-    // EmailDispatchService per ADR-039. The j9 UI surface lives in slice
-    // #15 (parallel sibling — meets at the URL contract).
+    // scope. Two new audit envelopes (EXPORT_BUNDLE_GENERATED,
+    // EXPORT_BUNDLE_DISPATCHED) both `retention_class='regulatory'`. One
+    // MCP capability `compliance.generate-export`. Email dispatch via slice
+    // #22 EmailDispatchService per ADR-039.
     ComplianceExportModule,
+
+    // M3 APPCC export i18n infrastructure (m3-appcc-i18n-ui, Wave 2.7,
+    // slice #15): four-locale ICU MessageFormat template seed (es-ES
+    // default + ca-ES + eu-ES + gl-ES), EU 1169 Annex II allergen
+    // vocabulary lookup table (14 codes × 4 locales = 56 entries), and
+    // the `TranslatorService` with the contractual `locale → es-ES →
+    // «key»` fallback chain per ADR-035. Consumed by slice #14's bundle
+    // generator at integration time to render locale-bound strings.
+    I18nM3ExportModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: RolesGuard },

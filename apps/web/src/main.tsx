@@ -13,6 +13,7 @@ import { AiObsDashboardScreen } from './m3/ai-obs/AiObsDashboardScreen';
 import { IncidentSearchFieldScreen } from './screens/j6/IncidentSearchFieldScreen';
 import { RecallInvestigateJ6Route, RecallDossierJ7Route } from './m3/recall/recall-routes';
 import { HaccpRecordScreen } from './screens/j10/HaccpRecordScreen';
+import { AppccExportScreen } from './screens/j9/AppccExportScreen';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,6 +61,10 @@ const router = createBrowserRouter([
       {
         path: 'haccp/record',
         element: <HaccpRecordScreen />,
+      },
+      {
+        path: 'compliance/export',
+        element: <AppccExportScreen />,
       },
       // J7 recall dossier surface uses the standard AppLayout per j7.md.
       {

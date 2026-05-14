@@ -197,3 +197,50 @@ export type {
 } from './components/RecentReadingsStrip';
 export { OutOfSpecStickyWarning } from './components/OutOfSpecStickyWarning';
 export type { OutOfSpecStickyWarningProps } from './components/OutOfSpecStickyWarning';
+
+// ---- APPCC export primitives (slice #15 m3-appcc-i18n-ui, Wave 2.7) ----
+export {
+  TransparencyBanner,
+  TRANSPARENCY_BANNER_TEXT,
+} from './components/TransparencyBanner';
+export type { TransparencyBannerProps } from './components/TransparencyBanner';
+export {
+  LocaleChipGroup,
+  DEFAULT_LOCALE_OPTIONS,
+} from './components/LocaleChipGroup';
+export type {
+  Locale as AppccLocale,
+  LocaleOption as AppccLocaleOption,
+  LocaleChipGroupProps,
+} from './components/LocaleChipGroup';
+export {
+  ScopeCheckboxList,
+  DEFAULT_SCOPE_ROWS,
+} from './components/ScopeCheckboxList';
+export type {
+  Scope as AppccScope,
+  ScopeKey as AppccScopeKey,
+  ScopeRowDefinition as AppccScopeRowDefinition,
+  ScopeCheckboxListProps,
+} from './components/ScopeCheckboxList';
+export { RecipientPicker } from './components/RecipientPicker';
+export type {
+  RecipientOption,
+  RecipientPickerProps,
+} from './components/RecipientPicker';
+export { ExportProgressStrip } from './components/ExportProgressStrip';
+export type {
+  ProgressStep,
+  ExportProgressStatus,
+  ExportProgressStripProps,
+} from './components/ExportProgressStrip';
+export { BundleDownloadRow } from './components/BundleDownloadRow';
+export type {
+  BundleDownloadRowProps,
+  BundleDownloadSummary,
+} from './components/BundleDownloadRow';
+export { BundleArchiveTable } from './components/BundleArchiveTable';
+export type {
+  BundleArchiveRow,
+  BundleArchiveTableProps,
+} from './components/BundleArchiveTable';
