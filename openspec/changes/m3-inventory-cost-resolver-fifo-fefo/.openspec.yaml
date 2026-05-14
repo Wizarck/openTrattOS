@@ -1,0 +1,6 @@
+change: m3-inventory-cost-resolver-fifo-fefo
+wave: 2.2
+block: 2
+slice_index: 4
+depends_on: [m3-lot-aggregate]
+blocks: [m3-cost-snapshot-persistence]
