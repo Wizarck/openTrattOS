@@ -19,7 +19,7 @@ import { AiUsageRollup } from './domain/ai-usage-rollup.entity';
  *  - `BudgetTierService` (pure threshold evaluator)
  *  - `BurnRateCalculator` (forecast emission gate)
  *  - `LruRollupCache` (process-local outage fallback)
- *  - `RollupSchedulerService` (`@Cron('*/5 * * * *')` aggregator + emitter)
+ *  - `RollupSchedulerService` (5-minute cron aggregator + emitter)
  *  - `PlaceholderSpanAggregator` (placeholder bound to
  *    `SPAN_AGGREGATOR_PORT`; slice #20 rebinds to the real OTel-source
  *    adapter — same pattern as slice #5's `INVENTORY_COST_RESOLVER`)
