@@ -53,6 +53,10 @@ export const AuditEventType = {
   RECALL_DOSSIER_GENERATED: 'recall.dossier-generated',
   RECALL_DOSSIER_REDISPATCHED: 'recall.dossier-redispatched',
   RECALL_ADDENDUM_ATTACHED: 'recall.addendum-attached',
+  // ---- Slice #9 m3-ccp-reading-aggregate (Wave 2.6) ----
+  CCP_READING_RECORDED: 'haccp.ccp-reading-recorded',
+  CCP_CORRECTIVE_ACTION_RECORDED: 'haccp.corrective-action-recorded',
+  FSMS_STANDARD_CONFIGURED: 'haccp.fsms-standard-configured',
 } as const;
 
 /**
@@ -101,6 +105,10 @@ export const AuditEventTypeName: Record<AuditEventType, string> = {
   'recall.dossier-generated': 'RECALL_DOSSIER_GENERATED',
   'recall.dossier-redispatched': 'RECALL_DOSSIER_REDISPATCHED',
   'recall.addendum-attached': 'RECALL_ADDENDUM_ATTACHED',
+  // ---- Slice #9 m3-ccp-reading-aggregate ----
+  'haccp.ccp-reading-recorded': 'CCP_READING_RECORDED',
+  'haccp.corrective-action-recorded': 'CCP_CORRECTIVE_ACTION_RECORDED',
+  'haccp.fsms-standard-configured': 'FSMS_STANDARD_CONFIGURED',
 };
 
 /**
@@ -158,6 +166,10 @@ const RETENTION_BY_EVENT_NAME: Record<string, RetentionClass> = {
   RECALL_DOSSIER_GENERATED: 'regulatory',
   RECALL_DOSSIER_REDISPATCHED: 'regulatory',
   RECALL_ADDENDUM_ATTACHED: 'regulatory',
+  // HACCP envelopes — EU 852/2004 + national APPCC chain of custody.
+  CCP_READING_RECORDED: 'regulatory',
+  CCP_CORRECTIVE_ACTION_RECORDED: 'regulatory',
+  FSMS_STANDARD_CONFIGURED: 'regulatory',
   // Ephemeral — lean per-request log; 90-day rolling
   AGENT_ACTION_EXECUTED: 'ephemeral',
 };

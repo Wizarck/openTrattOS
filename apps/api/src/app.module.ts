@@ -19,6 +19,7 @@ import { LabelsModule } from './labels/labels.module';
 import { MenusModule } from './menus/menus.module';
 import { PhotoStorageModule } from './photo-storage/photo-storage.module';
 import { ProcurementModule } from './procurement/procurement.module';
+import { HaccpModule } from './haccp/haccp.module';
 import { RecallModule } from './recall/recall.module';
 import { RecipesModule } from './recipes/recipes.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
@@ -151,8 +152,18 @@ import { SharedModule } from './shared/shared.module';
     // 86-flag dispatch via slice #22 email + slice #21 hash chain validation.
     RecallModule,
 
-    // Future Bounded Contexts:
-    // HaccpModule,       // M3 — HACCP / APPCC (slices #9-10)
+    // M3 HACCP backend BC (m3-ccp-reading-aggregate, Wave 2.6, slice #9):
+    // CCP reading capture + in-spec validation + corrective-action linkage +
+    // FSMS standard versioning. Three audit-log envelopes
+    // (CCP_READING_RECORDED, CCP_CORRECTIVE_ACTION_RECORDED,
+    // FSMS_STANDARD_CONFIGURED), three MCP write capabilities (read-ccp-
+    // reading, record-corrective-action, configure-fsms-standards), all
+    // pinned to `aggregate_type='haccp_record'` per design.md Decision E.
+    // The j10 UI surface (RecentReadingsStrip, SpecRangeReadback,
+    // OutOfSpecStickyWarning, CorrectiveActionPicker) lives in slice #10
+    // (`m3-haccp-ui`, parallel sibling). This BC is consumed by the future
+    // APPCC export bundle (slice #15) via aggregate-type filter.
+    HaccpModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: RolesGuard },
