@@ -43,7 +43,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * starts populated by the next scheduler tick; no `INSERT INTO ai_usage_rollup
  * SELECT ...` from the audit_log).
  */
-export class CreateAiUsageRollup1700000032000 implements MigrationInterface {
+export class CreateAiUsageRollup1700000033000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // ai_usage_rollup — append/upsert ledger
     await queryRunner.query(`
