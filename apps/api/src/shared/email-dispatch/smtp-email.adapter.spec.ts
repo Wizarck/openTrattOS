@@ -13,7 +13,7 @@ function makeFakeTransporter(
   behaviour:
     | { kind: 'success' }
     | { kind: 'fail-once-then-success' }
-    | { kind: 'always-fail-5xx' }
+    | { kind: 'always-fail-transient-4xx' }
     | { kind: 'always-fail-535' }
     | { kind: 'always-econnrefused' },
 ): Transporter<SMTPTransport.SentMessageInfo, SMTPTransport.Options> {
@@ -28,15 +28,17 @@ function makeFakeTransporter(
       }
       if (behaviour.kind === 'fail-once-then-success') {
         if (attempt === 1) {
-          throw Object.assign(new Error('Service Unavailable'), {
-            responseCode: 503,
+          // SMTP 421 = Service not available (transient, retryable per RFC 5321 §4.5.3.2.2)
+          throw Object.assign(new Error('Service not available'), {
+            responseCode: 421,
           });
         }
         return makeSentInfo();
       }
-      if (behaviour.kind === 'always-fail-5xx') {
-        throw Object.assign(new Error('Service Unavailable'), {
-          responseCode: 503,
+      if (behaviour.kind === 'always-fail-transient-4xx') {
+        // SMTP 4xx = transient failure → retry until exhaustion
+        throw Object.assign(new Error('Service not available'), {
+          responseCode: 421,
         });
       }
       if (behaviour.kind === 'always-fail-535') {
@@ -131,7 +133,7 @@ describe('SmtpEmailAdapter.dispatch (unit)', () => {
     expect(state.sendCalls).toBe(1);
   });
 
-  it('retries on 5xx and succeeds on attempt 2', async () => {
+  it('retries on transient 4xx and succeeds on attempt 2', async () => {
     const state: FakeTransporterCalls = { sendCalls: 0, verifyCalls: 0 };
     const adapter = makeAdapter(state, { kind: 'fail-once-then-success' });
     const r = await adapter.dispatch(validInput);
@@ -139,9 +141,9 @@ describe('SmtpEmailAdapter.dispatch (unit)', () => {
     expect(state.sendCalls).toBe(2);
   });
 
-  it('exhausts retries on persistent 5xx and returns RETRYABLE_TRANSIENT failure', async () => {
+  it('exhausts retries on persistent 4xx and returns RETRYABLE_TRANSIENT failure', async () => {
     const state: FakeTransporterCalls = { sendCalls: 0, verifyCalls: 0 };
-    const adapter = makeAdapter(state, { kind: 'always-fail-5xx' });
+    const adapter = makeAdapter(state, { kind: 'always-fail-transient-4xx' });
     const r = await adapter.dispatch(validInput);
     expect(r.status).toBe('failure');
     if (r.status === 'failure') {
