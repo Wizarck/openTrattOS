@@ -1,4 +1,4 @@
-import type { Repository } from 'typeorm';
+import type { ObjectLiteral, Repository } from 'typeorm';
 import { AuditLog } from '../../audit-log/domain/audit-log.entity';
 import { Ingredient } from '../../ingredients/domain/ingredient.entity';
 import { Lot } from '../../inventory/lot/domain/lot.entity';
@@ -50,7 +50,7 @@ function makeFakeQb<T>(rowsByCall: T[]) {
   return qb;
 }
 
-function makeFakeRepo<T>(rows: T[]) {
+function makeFakeRepo<T extends ObjectLiteral>(rows: T[]) {
   const fake = makeFakeQb<T>(rows);
   const repo = {
     createQueryBuilder: jest.fn(() => fake),

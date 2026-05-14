@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { IncidentSearchField } from './IncidentSearchField';
 import type { IncidentSearchHit } from './IncidentSearchField.types';
 
-const NOW = new Date('2026-05-14T12:00:00Z').toISOString();
 const YESTERDAY = new Date('2026-05-13T10:00:00Z').toISOString();
 const LAST_WEEK = new Date('2026-05-07T09:00:00Z').toISOString();
 
