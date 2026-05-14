@@ -22,6 +22,8 @@ describe('computeRetentionClass', () => {
     'CCP_READING_RECORDED',
     'CCP_CORRECTIVE_ACTION_RECORDED',
     'FSMS_STANDARD_CONFIGURED',
+    'EXPORT_BUNDLE_GENERATED',
+    'EXPORT_BUNDLE_DISPATCHED',
   ])('classifies %s as regulatory (HACCP / EU 178/2002 footprint)', (eventType) => {
     expect(computeRetentionClass(eventType)).toBe('regulatory');
   });

@@ -7,6 +7,7 @@ import { AgentCredentialsModule } from './agent-credentials/agent-credentials.mo
 import { AiObservabilityModule } from './ai-observability/ai-observability.module';
 import { AiSuggestionsModule } from './ai-suggestions/ai-suggestions.module';
 import { AuditLogModule } from './audit-log/audit-log.module';
+import { ComplianceExportModule } from './compliance-export/compliance-export.module';
 import { CostModule } from './cost/cost.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { EmailDispatchModule } from './shared/email-dispatch/email-dispatch.module';
@@ -162,8 +163,20 @@ import { SharedModule } from './shared/shared.module';
     // The j10 UI surface (RecentReadingsStrip, SpecRangeReadback,
     // OutOfSpecStickyWarning, CorrectiveActionPicker) lives in slice #10
     // (`m3-haccp-ui`, parallel sibling). This BC is consumed by the future
-    // APPCC export bundle (slice #15) via aggregate-type filter.
+    // APPCC export bundle (slice #14) via aggregate-type filter.
     HaccpModule,
+
+    // M3 APPCC compliance-export BC (m3-appcc-export-bundle-service, Wave
+    // 2.7, slice #14): bundle generator producing PDF + CSV pair sealed by
+    // SHA-256 over the concatenated bytes. Chapter 0 = raw audit_log
+    // unedited (FR25 trust principle); 5 derivative chapters per requested
+    // scope (HACCP / Lot / Procurement / Photo / AI-obs). Two new audit
+    // envelopes (EXPORT_BUNDLE_GENERATED, EXPORT_BUNDLE_DISPATCHED) both
+    // `retention_class='regulatory'`. One MCP capability
+    // `compliance.generate-export`. Email dispatch via slice #22
+    // EmailDispatchService per ADR-039. The j9 UI surface lives in slice
+    // #15 (parallel sibling — meets at the URL contract).
+    ComplianceExportModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: RolesGuard },

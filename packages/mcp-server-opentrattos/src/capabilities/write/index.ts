@@ -26,6 +26,7 @@ import { IAM_LOCATIONS_WRITE_CAPABILITIES } from './iam-locations.js';
 import { IAM_ORGANIZATIONS_WRITE_CAPABILITIES } from './iam-organizations.js';
 import { RECALL_WRITE_CAPABILITIES } from './recall.js';
 import { HACCP_WRITE_CAPABILITIES } from './haccp.js';
+import { COMPLIANCE_WRITE_CAPABILITIES } from './compliance.js';
 
 import type { WriteCapability } from './types.js';
 
@@ -44,6 +45,7 @@ export {
   IAM_ORGANIZATIONS_WRITE_CAPABILITIES,
   RECALL_WRITE_CAPABILITIES,
   HACCP_WRITE_CAPABILITIES,
+  COMPLIANCE_WRITE_CAPABILITIES,
 };
 
 export const WRITE_CAPABILITIES: ReadonlyArray<WriteCapability> = [
@@ -61,6 +63,7 @@ export const WRITE_CAPABILITIES: ReadonlyArray<WriteCapability> = [
   ...IAM_ORGANIZATIONS_WRITE_CAPABILITIES,
   ...RECALL_WRITE_CAPABILITIES,
   ...HACCP_WRITE_CAPABILITIES,
+  ...COMPLIANCE_WRITE_CAPABILITIES,
 ];
 
 /**

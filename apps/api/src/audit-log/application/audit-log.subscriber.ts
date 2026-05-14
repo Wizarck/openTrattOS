@@ -345,6 +345,26 @@ export class AuditLogSubscriber {
     );
   }
 
+  // ---- Slice #14 m3-appcc-export-bundle-service (Wave 2.7) ----
+  //
+  // Two envelope-shaped channels emitted by BundleGeneratorService:
+  //  - EXPORT_BUNDLE_GENERATED — one envelope per generated bundle
+  //  - EXPORT_BUNDLE_DISPATCHED — one envelope per recipient
+  // Both carry `aggregate_type='compliance_export'` + `aggregate_id=bundleId`
+  // so the existing `ix_audit_log_aggregate` index drives chronology
+  // projections. Retention class is `regulatory` (regulator-facing
+  // dossier of the chain of custody).
+
+  @OnEvent(AuditEventType.EXPORT_BUNDLE_GENERATED)
+  onExportBundleGenerated(payload: AuditEventEnvelope): Promise<void> {
+    return this.persistEnvelope(AuditEventType.EXPORT_BUNDLE_GENERATED, payload);
+  }
+
+  @OnEvent(AuditEventType.EXPORT_BUNDLE_DISPATCHED)
+  onExportBundleDispatched(payload: AuditEventEnvelope): Promise<void> {
+    return this.persistEnvelope(AuditEventType.EXPORT_BUNDLE_DISPATCHED, payload);
+  }
+
   // ------------- Internals -------------
 
   /**
