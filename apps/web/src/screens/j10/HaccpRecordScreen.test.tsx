@@ -14,8 +14,7 @@ const fetchMock = vi.fn();
 
 beforeEach(() => {
   fetchMock.mockReset();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  global.fetch = fetchMock as any;
+  global.fetch = fetchMock as unknown as typeof fetch;
   window.localStorage.clear();
 });
 

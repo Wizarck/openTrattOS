@@ -127,7 +127,10 @@ function toRecentRow(reading: CcpReading): RecentReadingRow {
 
 function Inner({ orgId, actorUserId }: { orgId: string; actorUserId: string }) {
   const ccpsQuery = useCcps(orgId);
-  const ccpSummaries = ccpsQuery.data ?? [];
+  const ccpSummaries = useMemo(
+    () => ccpsQuery.data ?? [],
+    [ccpsQuery.data],
+  );
   const ccps: Ccp[] = useMemo(
     () => ccpSummaries.map(toComponentCcp),
     [ccpSummaries],
@@ -212,7 +215,6 @@ function RecordingPanel({
       setDraftLoadedAt(null);
     }
     setSubmittedReading(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
   // Persist on every change (idle and active values both keep the draft alive).
