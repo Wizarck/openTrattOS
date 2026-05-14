@@ -13,6 +13,12 @@ const STOCK_MOVE_TYPES: readonly StockMoveType[] = [
 const UUID_RX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+const numericTransformer = {
+  to: (value: number): number => value,
+  from: (value: string | null): number =>
+    value === null ? 0 : Number.parseFloat(value),
+};
+
 export interface StockMoveCreateProps {
   organizationId: string;
   locationId: string;
@@ -136,9 +142,3 @@ export class StockMove {
     // 'adjustment' accepts either sign (non-zero already validated above).
   }
 }
-
-const numericTransformer = {
-  to: (value: number): number => value,
-  from: (value: string | null): number =>
-    value === null ? 0 : Number.parseFloat(value),
-};

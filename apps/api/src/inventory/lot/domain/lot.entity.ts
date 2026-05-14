@@ -20,6 +20,18 @@ const UUID_RX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
+ * TypeORM returns numeric columns as strings (postgres protocol); convert
+ * to JS number for application code while accepting number-typed values on
+ * the way back to the DB. This loses precision beyond ~15 significant digits
+ * but numeric(18,4) tops out at ~10^14 — well within JS Number range.
+ */
+const numericTransformer = {
+  to: (value: number): number => value,
+  from: (value: string | null): number =>
+    value === null ? 0 : Number.parseFloat(value),
+};
+
+/**
  * Inputs for {@link Lot.create}. `quantityRemaining` defaults to
  * `quantityReceived` — outbound flow lives in `StockMove` (slice #2).
  */
@@ -167,15 +179,3 @@ export class Lot {
     }
   }
 }
-
-/**
- * TypeORM returns numeric columns as strings (postgres protocol); convert
- * to JS number for application code while accepting number-typed values on
- * the way back to the DB. This loses precision beyond ~15 significant digits
- * but numeric(18,4) tops out at ~10^14 — well within JS Number range.
- */
-const numericTransformer = {
-  to: (value: number): number => value,
-  from: (value: string | null): number =>
-    value === null ? 0 : Number.parseFloat(value),
-};
