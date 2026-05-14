@@ -1,4 +1,4 @@
-import type { VisionLlmInputValue, VisionLlmOutputValue } from '@opentrattos/contracts';
+import type { VisionLlmInputValue, VisionLlmOutputValue } from './types';
 
 /**
  * Vision-LLM provider DI contract per ADR-038.

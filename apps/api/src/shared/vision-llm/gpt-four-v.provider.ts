@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { VisionLlmInputValue, VisionLlmOutputValue } from '@opentrattos/contracts';
+import type { VisionLlmInputValue, VisionLlmOutputValue } from './types';
 import { NotImplementedError } from './errors';
 import type { VisionLlmProvider } from './vision-llm-provider.interface';
 
