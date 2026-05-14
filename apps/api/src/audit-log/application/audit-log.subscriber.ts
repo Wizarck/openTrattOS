@@ -316,6 +316,35 @@ export class AuditLogSubscriber {
     return this.persistEnvelope(AuditEventType.RECALL_ADDENDUM_ATTACHED, payload);
   }
 
+  // ---- Slice #9 m3-ccp-reading-aggregate (Wave 2.6) ----
+  //
+  // HACCP BC emits 3 envelope-shaped channels per slice #9 design.md
+  // Decision E. All carry `aggregate_type='haccp_record'` so the
+  // existing `ix_audit_log_aggregate` index drives per-aggregate
+  // chronology projections. Retention class is `regulatory` (EU 852/2004
+  // + national APPCC chain of custody).
+
+  @OnEvent(AuditEventType.CCP_READING_RECORDED)
+  onCcpReadingRecorded(payload: AuditEventEnvelope): Promise<void> {
+    return this.persistEnvelope(AuditEventType.CCP_READING_RECORDED, payload);
+  }
+
+  @OnEvent(AuditEventType.CCP_CORRECTIVE_ACTION_RECORDED)
+  onCcpCorrectiveActionRecorded(payload: AuditEventEnvelope): Promise<void> {
+    return this.persistEnvelope(
+      AuditEventType.CCP_CORRECTIVE_ACTION_RECORDED,
+      payload,
+    );
+  }
+
+  @OnEvent(AuditEventType.FSMS_STANDARD_CONFIGURED)
+  onFsmsStandardConfigured(payload: AuditEventEnvelope): Promise<void> {
+    return this.persistEnvelope(
+      AuditEventType.FSMS_STANDARD_CONFIGURED,
+      payload,
+    );
+  }
+
   // ------------- Internals -------------
 
   /**

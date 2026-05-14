@@ -19,6 +19,9 @@ describe('computeRetentionClass', () => {
     'RECALL_DOSSIER_GENERATED',
     'RECALL_DOSSIER_REDISPATCHED',
     'RECALL_ADDENDUM_ATTACHED',
+    'CCP_READING_RECORDED',
+    'CCP_CORRECTIVE_ACTION_RECORDED',
+    'FSMS_STANDARD_CONFIGURED',
   ])('classifies %s as regulatory (HACCP / EU 178/2002 footprint)', (eventType) => {
     expect(computeRetentionClass(eventType)).toBe('regulatory');
   });
