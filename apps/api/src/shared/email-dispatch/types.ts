@@ -39,7 +39,7 @@ const EmailAddressSchema = z.string().min(3).max(320);
 
 export const EmailDispatchInputSchema = z
   .object({
-    to: z.array(EmailAddressSchema).nonempty('to must be a non-empty array'),
+    to: z.array(EmailAddressSchema).min(1, 'to must be a non-empty array'),
     cc: z.array(EmailAddressSchema).optional(),
     bcc: z.array(EmailAddressSchema).optional(),
     subject: z.string().min(1).max(998), // RFC 5322 §2.1.1 line-length limit
@@ -144,7 +144,7 @@ export const EMAIL_DISPATCHED_EVENT_TYPE = 'EMAIL_DISPATCHED' as const;
 export const EMAIL_DISPATCH_AGGREGATE_TYPE = 'email_dispatch' as const;
 
 export const EmailDispatchedEventPayloadSchema = z.object({
-  to: z.array(EmailAddressSchema).nonempty(),
+  to: z.array(EmailAddressSchema).min(1, ),
   cc: z.array(EmailAddressSchema).optional(),
   subject: z.string(),
   provider: z.nativeEnum(EmailProvider),

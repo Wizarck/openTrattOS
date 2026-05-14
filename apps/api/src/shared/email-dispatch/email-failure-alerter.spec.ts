@@ -11,7 +11,7 @@ const validInput = {
 };
 
 const sampleError = {
-  code: EmailDispatchErrorCode.RETRYABLE_TRANSIENT as const,
+  code: EmailDispatchErrorCode.RETRYABLE_TRANSIENT,
   message: 'all retries exhausted',
   attempts: 3,
   providerError: 'SMTP 503',
