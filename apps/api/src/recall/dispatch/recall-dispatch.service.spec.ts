@@ -35,11 +35,11 @@ describe('RecallDispatchService', () => {
     emitter = new EventEmitter2();
     dossierService = {
       generate: jest.fn(async () => buildDossier()),
-    } as jest.Mocked<Pick<DossierService, 'generate'>>;
+    } as unknown as jest.Mocked<Pick<DossierService, 'generate'>>;
     emailDispatch = {
       dispatch: jest.fn(),
       verifyConnection: jest.fn(async () => true),
-    } as jest.Mocked<Pick<EmailDispatchService, 'dispatch' | 'verifyConnection'>>;
+    } as unknown as jest.Mocked<Pick<EmailDispatchService, 'dispatch' | 'verifyConnection'>>;
     svc = new RecallDispatchService(
       emitter,
       dossierService as unknown as DossierService,

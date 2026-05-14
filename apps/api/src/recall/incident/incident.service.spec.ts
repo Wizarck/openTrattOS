@@ -37,10 +37,10 @@ describe('IncidentService', () => {
   beforeEach(() => {
     auditLog = {
       query: jest.fn(),
-    } as jest.Mocked<Pick<AuditLogService, 'query'>>;
+    } as unknown as jest.Mocked<Pick<AuditLogService, 'query'>>;
     codeGen = {
       nextCode: jest.fn().mockResolvedValue('IR-2026-0007'),
-    } as jest.Mocked<Pick<IncidentCodeGenerator, 'nextCode'>>;
+    } as unknown as jest.Mocked<Pick<IncidentCodeGenerator, 'nextCode'>>;
     emitter = new EventEmitter2();
     svc = new IncidentService(
       auditLog as unknown as AuditLogService,

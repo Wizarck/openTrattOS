@@ -3,11 +3,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
   renderRecallDossierToPdf,
   type RecallDossierData,
+  type RecallDossierTraceNode,
 } from '@opentrattos/label-renderer';
 import { AuditLogService } from '../../audit-log/application/audit-log.service';
 import { validateChainIntegrity } from '../../audit-log/application/audit-log-hash-chain';
 import { RECALL_INCIDENT_AGGREGATE_TYPE } from '../domain/constants';
-import type { ChronologyEntry, TraceNode } from '../types';
+import type { ChronologyEntry } from '../types';
 
 export interface RecallDossierInput {
   readonly organizationId: string;
@@ -16,8 +17,8 @@ export interface RecallDossierInput {
   readonly openedAt: string;
   readonly legalDeadline: string;
   readonly openedByUserName?: string | null;
-  readonly lotProvenance: TraceNode | null;
-  readonly consumptionChain: TraceNode | null;
+  readonly lotProvenance: RecallDossierTraceNode | null;
+  readonly consumptionChain: RecallDossierTraceNode | null;
 }
 
 export interface DossierSignatureBlock {
@@ -33,8 +34,8 @@ export interface RecallDossier {
   readonly openedAt: string;
   readonly legalDeadline: string;
   readonly chronology: ReadonlyArray<ChronologyEntry>;
-  readonly lotProvenance: TraceNode | null;
-  readonly consumptionChain: TraceNode | null;
+  readonly lotProvenance: RecallDossierTraceNode | null;
+  readonly consumptionChain: RecallDossierTraceNode | null;
   readonly signatureBlock: DossierSignatureBlock;
   readonly pdfBytes: Buffer;
   readonly metadata: {

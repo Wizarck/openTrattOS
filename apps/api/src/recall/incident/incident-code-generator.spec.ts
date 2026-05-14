@@ -10,7 +10,7 @@ describe('IncidentCodeGenerator', () => {
         limit: 1,
         offset: 0,
       })),
-    } as jest.Mocked<Pick<AuditLogService, 'query'>>;
+    } as unknown as jest.Mocked<Pick<AuditLogService, 'query'>>;
   }
 
   it('produces IR-YYYY-0001 for the first incident of the year', async () => {

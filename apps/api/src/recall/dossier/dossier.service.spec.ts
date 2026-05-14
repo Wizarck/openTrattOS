@@ -56,7 +56,7 @@ describe('DossierService', () => {
         limit: 200,
         offset: 0,
       })),
-    } as jest.Mocked<Pick<AuditLogService, 'query'>>;
+    } as unknown as jest.Mocked<Pick<AuditLogService, 'query'>>;
     svc = new DossierService(audit as unknown as AuditLogService);
   });
 

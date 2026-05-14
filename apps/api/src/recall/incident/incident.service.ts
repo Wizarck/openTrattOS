@@ -16,7 +16,6 @@ import type {
   AddendumAttachedPayload,
   DossierGeneratedPayload,
   DossierRedispatchedPayload,
-  FlagDispatchedPayload,
   Incident,
   IncidentOpenedPayload,
   IncidentProjection,
@@ -265,7 +264,11 @@ export class IncidentService {
         `Addendum text exceeds ${RECALL_ADDENDUM_TEXT_MAX} chars`,
       );
     }
-    const attachmentMetadata: AddendumAttachedPayload['attachmentMetadata'] = [];
+    const attachmentMetadata: Array<{
+      filename: string;
+      contentType: string;
+      byteSize: number;
+    }> = [];
     for (const att of input.attachments ?? []) {
       const byteSize = approxBase64Bytes(att.contentBase64);
       if (byteSize > RECALL_ADDENDUM_ATTACHMENT_MAX_BYTES) {
