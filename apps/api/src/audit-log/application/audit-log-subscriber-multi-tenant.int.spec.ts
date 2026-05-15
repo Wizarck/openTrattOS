@@ -13,11 +13,9 @@ import { AuditEventEnvelope, AuditEventType } from './types';
  * B, even when concurrent emits fire on the same channel with
  * overlapping aggregate UUIDs.
  */
-/**
- * SKIP: see audit-log-subscriber-idempotency.int.spec.ts head comment.
- * Followup `m3.x-audit-log-int-harness-wiring`.
- */
-describe.skip('AuditLogSubscriber multi-tenant isolation (integration)', () => {
+const USER_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const USER_B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+describe('AuditLogSubscriber multi-tenant isolation (integration)', () => {
   let harness: AuditLogIntHarness;
 
   beforeAll(async () => {
@@ -41,7 +39,7 @@ describe.skip('AuditLogSubscriber multi-tenant isolation (integration)', () => {
         organizationId: orgA,
         aggregateType: 'recipe',
         aggregateId: randomUUID(),
-        actorUserId: 'user-A',
+        actorUserId: USER_A,
         actorKind: 'user',
         payloadAfter: { side: 'A' },
       };
@@ -49,7 +47,7 @@ describe.skip('AuditLogSubscriber multi-tenant isolation (integration)', () => {
         organizationId: orgB,
         aggregateType: 'recipe',
         aggregateId: randomUUID(),
-        actorUserId: 'user-B',
+        actorUserId: USER_B,
         actorKind: 'user',
         payloadAfter: { side: 'B' },
       };

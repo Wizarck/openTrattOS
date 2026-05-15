@@ -16,16 +16,14 @@ import { AuditEventEnvelope, AuditEventType } from './types';
  * a > 10K-emit smoke run.
  */
 /**
- * SKIP: AuditLogSubscriber @OnEvent handlers do not appear to fire under
- * the test harness — every test sees 0 persisted rows after emit, even
- * with seedOrg() in beforeEach. Root cause TBD: likely either the
- * subscriber provider isn't auto-registering its decorators in the
- * isolated TestingModule, or AuditLogService.record swallows a transient
- * FK / hash-chain error per ADR-AUDIT-WRITER making the failure invisible.
- * Followup `m3.x-audit-log-int-harness-wiring` to diagnose and revive the
- * 4 suites in this slice.
+ * Root cause of the original H2a skip: actor_user_id is a UUID-typed
+ * column; the test fixture passed `'user-1'` (a non-UUID string) which
+ * Postgres rejects, and the subscriber's try/catch silently swallowed the
+ * error per ADR-AUDIT-WRITER, producing 0 persisted rows. Fixed by using
+ * UUID literals for all actor identifiers.
  */
-describe.skip('AuditLogSubscriber idempotency LRU dedup (integration)', () => {
+const TEST_USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+describe('AuditLogSubscriber idempotency LRU dedup (integration)', () => {
   let harness: AuditLogIntHarness;
   let orgId: string;
 
@@ -50,7 +48,7 @@ describe.skip('AuditLogSubscriber idempotency LRU dedup (integration)', () => {
         organizationId: orgId,
         aggregateType: 'recipe',
         aggregateId,
-        actorUserId: 'user-1',
+        actorUserId: TEST_USER_ID,
         actorKind: 'user',
         payloadAfter: { allergens: ['gluten'], correlation_id: 'fixed-corr-1' },
       };
@@ -76,7 +74,7 @@ describe.skip('AuditLogSubscriber idempotency LRU dedup (integration)', () => {
         organizationId: orgId,
         aggregateType: 'recipe',
         aggregateId,
-        actorUserId: 'user-1',
+        actorUserId: TEST_USER_ID,
         actorKind: 'user',
         payloadAfter: { allergens: ['gluten'] },
       };
@@ -84,7 +82,7 @@ describe.skip('AuditLogSubscriber idempotency LRU dedup (integration)', () => {
         organizationId: orgId,
         aggregateType: 'recipe',
         aggregateId,
-        actorUserId: 'user-1',
+        actorUserId: TEST_USER_ID,
         actorKind: 'user',
         payloadAfter: { allergens: ['lactose'] },
       };
@@ -111,7 +109,7 @@ describe.skip('AuditLogSubscriber idempotency LRU dedup (integration)', () => {
         organizationId: orgId,
         aggregateType: 'recipe',
         aggregateId,
-        actorUserId: 'user-1',
+        actorUserId: TEST_USER_ID,
         actorKind: 'user',
         payloadAfter: { ...basePayload, correlation_id: 'corr-A' },
       };
@@ -119,7 +117,7 @@ describe.skip('AuditLogSubscriber idempotency LRU dedup (integration)', () => {
         organizationId: orgId,
         aggregateType: 'recipe',
         aggregateId,
-        actorUserId: 'user-1',
+        actorUserId: TEST_USER_ID,
         actorKind: 'user',
         payloadAfter: { ...basePayload, correlation_id: 'corr-B' },
       };
