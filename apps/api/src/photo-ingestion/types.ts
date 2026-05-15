@@ -139,3 +139,38 @@ export interface IngestionItemDetail extends IngestionQueueRow {
   signedAt: string | null;
   signedByUserId: string | null;
 }
+
+/**
+ * Append-only history entry for a retroactive correction. The previous
+ * `operatorCorrection` snapshot is preserved verbatim per
+ * ADR-APPEND-ONLY-CORRECTIONS-HISTORY (EU AI Act Article 13 forensic
+ * foundation). Stored as JSONB on the row's `corrections_history` column.
+ */
+export interface CorrectionsHistoryEntry {
+  correctionId: string;
+  correctedAt: string;
+  correctedByUserId: string;
+  reason: string | null;
+  previousCorrection: PhotoIngestionExtraction;
+  contentHash: string;
+}
+
+/** Input for `RetroactiveCorrectionService.apply`. */
+export interface RetroactiveCorrectionInput {
+  fieldCorrections: PhotoIngestionField[];
+  correctedByUserId: string;
+  reason?: string;
+}
+
+/** Result returned by `RetroactiveCorrectionService.apply`. */
+export interface RetroactiveCorrectionResult {
+  itemId: string;
+  status: 'signed';
+  correctionsHistoryLength: number;
+  /**
+   * When `true`, the input matched the latest history entry's content hash;
+   * no row write or envelope emission occurred. Caller idempotent retries
+   * MUST observe this signal rather than relying on response equality.
+   */
+  idempotent: boolean;
+}
