@@ -122,7 +122,7 @@ describe('WRITE_CAPABILITIES registry', () => {
       COMPLIANCE_WRITE_CAPABILITIES.length +
       INVENTORY_WRITE_CAPABILITIES.length;
     expect(sum).toBe(WRITE_CAPABILITIES.length);
-    expect(sum).toBe(52);
+    expect(sum).toBe(53);
   });
 
   it('every capability with :param tokens defines restPathParams', () => {
