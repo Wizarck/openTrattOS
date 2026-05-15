@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import { CorrectionsHistoryList } from './CorrectionsHistoryList';
 import type { CorrectionsHistoryEntry } from './CorrectionsHistoryList.types';
 
@@ -69,5 +69,39 @@ describe('CorrectionsHistoryList', () => {
     const item = screen.getByTestId('corrections-history-entry');
     expect(item).toHaveTextContent('1 campo');
     expect(item).not.toHaveTextContent('1 campos');
+  });
+
+  it('renders entries as non-interactive <li> when onSelect is absent', () => {
+    render(<CorrectionsHistoryList entries={[ENTRY_OLD]} />);
+    const item = screen.getByTestId('corrections-history-entry');
+    expect(item.querySelector('button')).toBeNull();
+  });
+
+  it('wraps each entry in a <button> when onSelect is provided', () => {
+    render(
+      <CorrectionsHistoryList entries={[ENTRY_OLD]} onSelect={() => {}} />,
+    );
+    const item = screen.getByTestId('corrections-history-entry');
+    const button = item.querySelector('button');
+    expect(button).not.toBeNull();
+    expect(button?.getAttribute('type')).toBe('button');
+  });
+
+  it('invokes onSelect with the clicked entry', () => {
+    const onSelect = vi.fn();
+    render(
+      <CorrectionsHistoryList
+        entries={[ENTRY_OLD, ENTRY_NEWER]}
+        onSelect={onSelect}
+      />,
+    );
+    // List renders newest-first, so the first <button> corresponds to ENTRY_NEWER.
+    const buttons = screen.getAllByRole('button');
+    fireEvent.click(buttons[0]);
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith(ENTRY_NEWER);
+    fireEvent.click(buttons[1]);
+    expect(onSelect).toHaveBeenCalledTimes(2);
+    expect(onSelect).toHaveBeenLastCalledWith(ENTRY_OLD);
   });
 });

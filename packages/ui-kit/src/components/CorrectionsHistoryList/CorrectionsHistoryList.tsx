@@ -23,6 +23,7 @@ const USER_ID_DISPLAY_CHARS = 8;
 export function CorrectionsHistoryList({
   entries,
   locale = 'es-ES',
+  onSelect,
   className,
 }: CorrectionsHistoryListProps) {
   if (entries.length === 0) {
@@ -62,7 +63,12 @@ export function CorrectionsHistoryList({
       aria-label="Historial de correcciones"
     >
       {ordered.map((entry) => (
-        <Entry key={entry.correctionId} entry={entry} fmt={fmt} />
+        <Entry
+          key={entry.correctionId}
+          entry={entry}
+          fmt={fmt}
+          onSelect={onSelect}
+        />
       ))}
     </ol>
   );
@@ -71,9 +77,11 @@ export function CorrectionsHistoryList({
 function Entry({
   entry,
   fmt,
+  onSelect,
 }: {
   entry: CorrectionsHistoryEntry;
   fmt: Intl.DateTimeFormat;
+  onSelect?: (entry: CorrectionsHistoryEntry) => void;
 }) {
   const ts = (() => {
     const d = new Date(entry.correctedAt);
@@ -87,18 +95,8 @@ function Entry({
     entry.reason && entry.reason.length > REASON_MAX_CHARS
       ? `${entry.reason.slice(0, REASON_MAX_CHARS)}…`
       : entry.reason;
-  return (
-    <li
-      className="rounded p-2"
-      style={{
-        backgroundColor: 'var(--color-surface-2)',
-        borderColor: 'var(--color-border)',
-        borderWidth: '1px',
-        borderStyle: 'solid',
-      }}
-      data-testid="corrections-history-entry"
-      data-correction-id={entry.correctionId}
-    >
+  const body = (
+    <>
       <div className="flex items-center justify-between gap-2">
         <time
           className="text-xs"
@@ -143,6 +141,46 @@ function Entry({
           {reasonTruncated}
         </p>
       )}
+    </>
+  );
+
+  if (onSelect) {
+    return (
+      <li
+        data-testid="corrections-history-entry"
+        data-correction-id={entry.correctionId}
+      >
+        <button
+          type="button"
+          onClick={() => onSelect(entry)}
+          className="block w-full rounded p-2 text-left"
+          style={{
+            backgroundColor: 'var(--color-surface-2)',
+            borderColor: 'var(--color-border)',
+            borderWidth: '1px',
+            borderStyle: 'solid',
+          }}
+          aria-label={`Ver detalle de la corrección del ${ts}`}
+        >
+          {body}
+        </button>
+      </li>
+    );
+  }
+
+  return (
+    <li
+      className="rounded p-2"
+      style={{
+        backgroundColor: 'var(--color-surface-2)',
+        borderColor: 'var(--color-border)',
+        borderWidth: '1px',
+        borderStyle: 'solid',
+      }}
+      data-testid="corrections-history-entry"
+      data-correction-id={entry.correctionId}
+    >
+      {body}
     </li>
   );
 }

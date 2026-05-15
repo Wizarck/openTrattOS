@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AiProvenanceChip,
+  CorrectionsHistoryDiffModal,
   CorrectionsHistoryList,
   ExtractedFieldList,
   HitlQueueList,
   PhotoViewer,
   TransparencyBanner,
   type CorrectionsHistoryEntry,
+  type CorrectionsHistoryFieldDiff,
   type ExtractedField,
   type HitlQueueRow,
 } from '@opentrattos/ui-kit';
@@ -558,6 +560,9 @@ function SignedItemPane({
   const [reason, setReason] = useState<string>('');
   const [idempotentNotice, setIdempotentNotice] = useState(false);
   const [highlightedField, setHighlightedField] = useState<string | null>(null);
+  const [selectedHistoryEntryId, setSelectedHistoryEntryId] = useState<
+    string | null
+  >(null);
 
   // Reset retro state on item change.
   useEffect(() => {
@@ -565,6 +570,7 @@ function SignedItemPane({
     setRetroFieldValues({});
     setReason('');
     setIdempotentNotice(false);
+    setSelectedHistoryEntryId(null);
   }, [itemId]);
 
   const fields = useMemo<ReadonlyArray<ExtractedField>>(
@@ -579,6 +585,26 @@ function SignedItemPane({
     () => deriveHistoryEntries(item.correctionsHistory, item.fields),
     [item.correctionsHistory, item.fields],
   );
+
+  const selectedHistoryEntry = useMemo<CorrectionsHistoryEntry | null>(() => {
+    if (selectedHistoryEntryId === null) return null;
+    return (
+      historyEntries.find(
+        (e) => e.correctionId === selectedHistoryEntryId,
+      ) ?? null
+    );
+  }, [selectedHistoryEntryId, historyEntries]);
+
+  const selectedHistoryDiffs = useMemo<
+    ReadonlyArray<CorrectionsHistoryFieldDiff>
+  >(() => {
+    if (selectedHistoryEntryId === null) return [];
+    return deriveDiffsForEntry(
+      item.correctionsHistory,
+      item.fields,
+      selectedHistoryEntryId,
+    );
+  }, [selectedHistoryEntryId, item.correctionsHistory, item.fields]);
 
   const submitDisabled = retro.isPending;
 
@@ -779,10 +805,20 @@ function SignedItemPane({
             Historial de correcciones
           </h3>
           <div className="mt-2">
-            <CorrectionsHistoryList entries={historyEntries} />
+            <CorrectionsHistoryList
+              entries={historyEntries}
+              onSelect={(e) => setSelectedHistoryEntryId(e.correctionId)}
+            />
           </div>
         </div>
       </section>
+      {selectedHistoryEntry && (
+        <CorrectionsHistoryDiffModal
+          entry={selectedHistoryEntry}
+          diffs={selectedHistoryDiffs}
+          onClose={() => setSelectedHistoryEntryId(null)}
+        />
+      )}
     </div>
   );
 }
@@ -828,6 +864,49 @@ function deriveHistoryEntries(
       fieldsChanged: changed,
     };
   });
+}
+
+/**
+ * Derive per-field old → new diffs for a single corrections-history entry,
+ * comparing the entry's `previousCorrection.fields` snapshot against the
+ * baseline (the next-newer entry's snapshot, or — for the most recent
+ * entry — the current item state). Only fields whose value differs between
+ * the two sides are returned. The diff modal renders each row as-is.
+ */
+function deriveDiffsForEntry(
+  entries: ReadonlyArray<CorrectionsHistoryEntryDto>,
+  currentFields: ReadonlyArray<IngestionField>,
+  correctionId: string,
+): ReadonlyArray<CorrectionsHistoryFieldDiff> {
+  const idx = entries.findIndex((e) => e.correctionId === correctionId);
+  if (idx < 0) return [];
+  const entry = entries[idx];
+  const next = entries[idx + 1];
+  const baselineByName = next
+    ? new Map(
+        next.previousCorrection.fields.map(
+          (f) => [f.fieldName, f.operatorValue] as const,
+        ),
+      )
+    : new Map(currentFields.map((f) => [f.fieldName, f.operatorValue]));
+  const prevByName = new Map(
+    entry.previousCorrection.fields.map(
+      (f) => [f.fieldName, f.operatorValue] as const,
+    ),
+  );
+  const fieldNames = new Set<string>([
+    ...baselineByName.keys(),
+    ...prevByName.keys(),
+  ]);
+  const out: CorrectionsHistoryFieldDiff[] = [];
+  for (const fieldName of fieldNames) {
+    const oldValue = prevByName.get(fieldName) ?? null;
+    const newValue = baselineByName.get(fieldName) ?? null;
+    if (oldValue !== newValue) {
+      out.push({ fieldName, oldValue, newValue });
+    }
+  }
+  return out;
 }
 
 function SuccessStrip({

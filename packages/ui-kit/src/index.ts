@@ -283,3 +283,8 @@ export type {
   CorrectionsHistoryEntry,
   CorrectionsHistoryListProps,
 } from './components/CorrectionsHistoryList';
+export { CorrectionsHistoryDiffModal } from './components/CorrectionsHistoryDiffModal';
+export type {
+  CorrectionsHistoryDiffModalProps,
+  CorrectionsHistoryFieldDiff,
+} from './components/CorrectionsHistoryDiffModal';
