@@ -30,3 +30,30 @@ export class HashChainBrokenError extends Error {
     );
   }
 }
+
+/**
+ * Thrown by `AuditLogService.record()` when an inbound envelope carries an
+ * `idempotencyKey` that matches an existing `audit_log` row for the same
+ * `organizationId` written within the sliding 24-hour detection window.
+ *
+ * Per the m3.x-audit-log-idempotency-required-mode design picks:
+ *  - Enforcement mode: REJECT + log on duplicate.
+ *  - Detection: app-side SELECT scoped to `created_at > NOW() - INTERVAL
+ *    '24 hours'` (no DB UNIQUE constraint; the window slides).
+ *
+ * `AuditLogSubscriber.handleRecordError` swallows this error regardless of
+ * retention class — rejection is by design, not a regulatory loss.
+ */
+export class IdempotencyConflictError extends Error {
+  readonly code = 'AUDIT_IDEMPOTENCY_CONFLICT';
+  constructor(
+    readonly existingId: string,
+    readonly idempotencyKey: string,
+    readonly organizationId: string,
+  ) {
+    super(
+      `audit_log idempotency conflict: key=${idempotencyKey} org=${organizationId} matched_id=${existingId}`,
+    );
+    this.name = 'IdempotencyConflictError';
+  }
+}

@@ -285,6 +285,8 @@ export interface AuditEventEnvelope<TBefore = unknown, TAfter = unknown> {
   reason?: string;
   citationUrl?: string;
   snippet?: string;
+  /** Sliding-24h dedup key per m3.x-audit-log-idempotency-required-mode; producers opt in per call site. */
+  idempotencyKey?: string;
 }
 
 /** Filter shape consumed by `AuditLogService.query`. */

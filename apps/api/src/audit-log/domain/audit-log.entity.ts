@@ -107,4 +107,22 @@ export class AuditLog {
    */
   @Column({ name: 'retention_class', type: 'text', nullable: true })
   retentionClass: string | null = null;
+
+  /**
+   * Per m3.x-audit-log-idempotency-required-mode, optional opt-in dedup
+   * key. When set on an inbound envelope, `AuditLogService.record()`
+   * SELECTs `audit_log` for a matching `(organization_id, idempotency_key)`
+   * row within the sliding 24h window and throws
+   * `IdempotencyConflictError` on hit. NULL on rows whose producers do
+   * not opt in.
+   *
+   * The DB column is `text NULL` (migration 0042) with a partial btree
+   * `ix_audit_log_idempotency` keyed on
+   * `(organization_id, idempotency_key, created_at DESC)
+   *  WHERE idempotency_key IS NOT NULL` so the dedup SELECT stays
+   * O(log n) without inflating index size on the (much larger) set of
+   * rows whose producers don't opt in.
+   */
+  @Column({ name: 'idempotency_key', type: 'text', nullable: true })
+  idempotencyKey: string | null = null;
 }
