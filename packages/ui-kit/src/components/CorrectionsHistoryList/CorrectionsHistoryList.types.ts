@@ -21,5 +21,12 @@ export interface CorrectionsHistoryListProps {
   entries: ReadonlyArray<CorrectionsHistoryEntry>;
   /** Optional locale for `Intl.DateTimeFormat` — defaults to `'es-ES'`. */
   locale?: string;
+  /**
+   * When provided, each entry becomes a button that fires this handler on
+   * click. Used to open the {@link CorrectionsHistoryDiffModal} for the
+   * selected entry. When absent, entries render as plain non-interactive
+   * list items (backward-compatible with the original presentational shape).
+   */
+  onSelect?: (entry: CorrectionsHistoryEntry) => void;
   className?: string;
 }

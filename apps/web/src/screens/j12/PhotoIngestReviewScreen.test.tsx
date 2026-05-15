@@ -403,6 +403,44 @@ describe('PhotoIngestReviewScreen', () => {
       expect(qty.getAttribute('aria-readonly')).toBe('true');
     });
 
+    it('clicking a history entry opens the diff modal with old → new per-field rows; closing dismisses it', async () => {
+      vi.mocked(useCurrentRole).mockReturnValue('MANAGER');
+      vi.mocked(useCurrentOrgId).mockReturnValue('org-demo');
+      fetchMock.mockImplementation((input: RequestInfo | URL, init?: RequestInit) =>
+        Promise.resolve(signedRouteMock(String(input), init)),
+      );
+
+      renderWithClient();
+      fireEvent.click(await screen.findByRole('button', { name: 'Firmadas' }));
+
+      await waitFor(() =>
+        expect(screen.getByText('Historial de correcciones')).toBeInTheDocument(),
+      );
+
+      // Click the single history entry button.
+      const entry = screen.getByTestId('corrections-history-entry');
+      const button = entry.querySelector('button');
+      expect(button).not.toBeNull();
+      fireEvent.click(button!);
+
+      // Modal opens with one diff row for `qty` (snapshot '12' → current '18').
+      const modal = await screen.findByTestId('corrections-history-diff-modal');
+      expect(modal).toHaveAttribute('aria-modal', 'true');
+      const rows = screen.getAllByTestId('corrections-history-diff-row');
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toHaveAttribute('data-field-name', 'qty');
+      expect(rows[0]).toHaveTextContent('12');
+      expect(rows[0]).toHaveTextContent('18');
+
+      // ESC closes.
+      fireEvent.keyDown(modal, { key: 'Escape' });
+      await waitFor(() =>
+        expect(
+          screen.queryByTestId('corrections-history-diff-modal'),
+        ).not.toBeInTheDocument(),
+      );
+    });
+
     it('clicking "Corregir retroactivamente" switches the right column to editable retro mode', async () => {
       vi.mocked(useCurrentRole).mockReturnValue('MANAGER');
       vi.mocked(useCurrentOrgId).mockReturnValue('org-demo');
