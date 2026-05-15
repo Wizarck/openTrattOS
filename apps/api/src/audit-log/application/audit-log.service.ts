@@ -97,31 +97,15 @@ export class AuditLogService {
    *  6. Persists via `repo.save()`.
    */
   async record(eventType: string, envelope: AuditEventEnvelope): Promise<AuditLog> {
-    // Idempotency dedup — optional / no-op when cache isn't wired.
-    if (this.idempotencyCache !== null) {
-      const correlationId = this.extractCorrelationId(envelope);
-      const dedupKey =
-        correlationId ?? this.idempotencyCache.payloadHash(envelope.payloadAfter);
-      if (
-        this.idempotencyCache.shouldDedup(eventType, envelope.aggregateId, dedupKey)
-      ) {
-        this.logger.debug(
-          `audit-log.subscriber.duplicate: ${eventType} aggregate=${envelope.aggregateId} ` +
-            `key=${dedupKey.slice(0, 16)}…`,
-        );
-        // Return a non-persisted marker row so callers that destructure
-        // the result still receive a well-typed value. The marker carries
-        // a fresh UUID + the envelope shape; it is NOT in the DB.
-        return this.buildMarkerRow(eventType, envelope);
-      }
-    }
-
-    // Per m3.x-audit-log-idempotency-required-mode: when the envelope opts
-    // into dedup by carrying `idempotencyKey`, SELECT the audit_log for a
-    // matching (org, key) row within the sliding 24h detection window.
-    // On hit, log a WARN line and throw `IdempotencyConflictError` so
-    // producers receive a deterministic rejection rather than a
-    // silently-inserted duplicate row.
+    // Explicit-key path (m3.x-audit-log-idempotency-required-mode):
+    // when the envelope opts in by carrying `idempotencyKey`, SELECT the
+    // audit_log for a matching (org, key) row within the sliding 24h
+    // detection window. On hit, log a WARN and throw
+    // `IdempotencyConflictError` so producers receive a deterministic
+    // rejection rather than a silently-inserted duplicate row. Runs
+    // BEFORE the legacy implicit cache so the stronger explicit contract
+    // takes precedence — and skip the legacy cache entirely when an
+    // explicit key is set so the cache cannot short-circuit the throw.
     if (envelope.idempotencyKey) {
       const existing: Array<{ id: string }> = await this.dataSource.query(
         `SELECT id FROM audit_log
@@ -141,6 +125,23 @@ export class AuditLogService {
           envelope.idempotencyKey,
           envelope.organizationId,
         );
+      }
+    } else if (this.idempotencyCache !== null) {
+      // Legacy implicit dedup — only runs when no explicit key is set.
+      const correlationId = this.extractCorrelationId(envelope);
+      const dedupKey =
+        correlationId ?? this.idempotencyCache.payloadHash(envelope.payloadAfter);
+      if (
+        this.idempotencyCache.shouldDedup(eventType, envelope.aggregateId, dedupKey)
+      ) {
+        this.logger.debug(
+          `audit-log.subscriber.duplicate: ${eventType} aggregate=${envelope.aggregateId} ` +
+            `key=${dedupKey.slice(0, 16)}…`,
+        );
+        // Return a non-persisted marker row so callers that destructure
+        // the result still receive a well-typed value. The marker carries
+        // a fresh UUID + the envelope shape; it is NOT in the DB.
+        return this.buildMarkerRow(eventType, envelope);
       }
     }
 
