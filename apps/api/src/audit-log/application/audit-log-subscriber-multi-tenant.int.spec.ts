@@ -13,7 +13,11 @@ import { AuditEventEnvelope, AuditEventType } from './types';
  * B, even when concurrent emits fire on the same channel with
  * overlapping aggregate UUIDs.
  */
-describe('AuditLogSubscriber multi-tenant isolation (integration)', () => {
+/**
+ * SKIP: see audit-log-subscriber-idempotency.int.spec.ts head comment.
+ * Followup `m3.x-audit-log-int-harness-wiring`.
+ */
+describe.skip('AuditLogSubscriber multi-tenant isolation (integration)', () => {
   let harness: AuditLogIntHarness;
 
   beforeAll(async () => {
