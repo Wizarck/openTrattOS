@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Length,
   Max,
   Min,
   ValidateNested,
@@ -113,6 +114,31 @@ export class ReclassifyItemDto {
 
   @IsString()
   @IsOptional()
+  reason?: string;
+
+  @IsString()
+  @IsOptional()
+  idempotencyKey?: string;
+}
+
+/**
+ * Retroactive correction request body. MANAGER + OWNER only at the
+ * controller layer per ADR-RBAC-MANAGER-ONLY (slice
+ * m3-photo-ingest-retroactive-correction-handler design.md).
+ */
+export class RetroactiveCorrectionDto {
+  @IsUUID()
+  organizationId!: string;
+
+  @IsArray()
+  @ArrayMaxSize(200)
+  @ValidateNested({ each: true })
+  @Type(() => FieldCorrectionDto)
+  fieldCorrections!: FieldCorrectionDto[];
+
+  @IsString()
+  @IsOptional()
+  @Length(1, 500)
   reason?: string;
 
   @IsString()

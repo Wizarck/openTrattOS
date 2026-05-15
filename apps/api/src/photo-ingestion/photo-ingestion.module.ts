@@ -7,6 +7,7 @@ import { HitlQueueQuery } from './application/hitl-queue.query';
 import { HitlSignService } from './application/hitl-sign.service';
 import { IngestionItemRepository } from './application/ingestion-item.repository';
 import { IngestionService } from './application/ingestion.service';
+import { RetroactiveCorrectionService } from './application/retroactive-correction.service';
 import { IngestionItem } from './domain/ingestion-item.entity';
 import { IngestionController } from './interface/ingestion.controller';
 
@@ -45,7 +46,13 @@ import { IngestionController } from './interface/ingestion.controller';
     IngestionService,
     HitlSignService,
     HitlQueueQuery,
+    RetroactiveCorrectionService,
   ],
-  exports: [IngestionService, HitlSignService, HitlQueueQuery],
+  exports: [
+    IngestionService,
+    HitlSignService,
+    HitlQueueQuery,
+    RetroactiveCorrectionService,
+  ],
 })
 export class PhotoIngestionModule {}

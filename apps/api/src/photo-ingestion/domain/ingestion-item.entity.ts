@@ -7,6 +7,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import type {
+  CorrectionsHistoryEntry,
   IngestionItemKind,
   IngestionItemStatus,
   PhotoIngestionExtraction,
@@ -105,6 +106,23 @@ export class IngestionItem {
 
   @Column({ name: 'deleted_at', type: 'timestamptz', nullable: true })
   deletedAt: Date | null = null;
+
+  /**
+   * Append-only chain of prior corrections preserved when the operator
+   * retroactively edits an already-signed item. Each entry carries the
+   * `previousCorrection` snapshot verbatim per
+   * ADR-APPEND-ONLY-CORRECTIONS-HISTORY (EU AI Act Article 13 forensic
+   * foundation). Empty `[]` on rows that have never been retro-corrected.
+   *
+   * Slot 0041 (m3-photo-ingest-retroactive-correction-handler) introduced
+   * this column. Existing rows keep their default `[]` per the migration.
+   */
+  @Column({
+    name: 'corrections_history',
+    type: 'jsonb',
+    default: () => "'[]'::jsonb",
+  })
+  correctionsHistory: CorrectionsHistoryEntry[] = [];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;

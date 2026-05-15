@@ -30,9 +30,12 @@ import {
   IngestionService,
   PHOTO_INGESTION_AGGREGATE_TYPE,
 } from '../application/ingestion.service';
+import { RetroactiveCorrectionService } from '../application/retroactive-correction.service';
 import {
   IngestionAlreadySignedError,
+  IngestionCorrectionEmptyError,
   IngestionCrossTenantError,
+  IngestionItemNotCorrectableError,
   IngestionItemNotFoundError,
   IngestionItemNotSignableError,
   IngestionPhotoNotFoundError,
@@ -49,6 +52,7 @@ import {
   ListItemsQueryDto,
   ItemDetailQueryDto,
   ReclassifyItemDto,
+  RetroactiveCorrectionDto,
   SignItemDto,
 } from './dto/ingestion.dto';
 
@@ -66,6 +70,7 @@ export class IngestionController {
     private readonly signService: HitlSignService,
     private readonly queue: HitlQueueQuery,
     private readonly repo: IngestionItemRepository,
+    private readonly retroactive: RetroactiveCorrectionService,
     private readonly events: EventEmitter2,
   ) {}
 
@@ -232,6 +237,46 @@ export class IngestionController {
       envelope,
     );
     return { itemId: row.id, status: row.status, queued: true };
+  }
+
+  @Post('items/:itemId/retroactive-correction')
+  @Roles('OWNER', 'MANAGER')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      'Apply a retroactive correction to a signed photo-ingestion item (M3 hardening H1b).',
+  })
+  async retroactiveCorrection(
+    @Param('itemId', new ParseUUIDPipe()) itemId: string,
+    @Body() dto: RetroactiveCorrectionDto,
+    @Req() req: Request,
+  ) {
+    const user = requireUser(req);
+    assertOrgMatch(user, dto.organizationId);
+    try {
+      return await this.retroactive.apply(dto.organizationId, itemId, {
+        fieldCorrections: dto.fieldCorrections as PhotoIngestionField[],
+        correctedByUserId: user.userId,
+        reason: dto.reason,
+      });
+    } catch (err) {
+      if (err instanceof IngestionCrossTenantError) {
+        throw new NotFoundException({ code: err.code });
+      }
+      if (err instanceof IngestionItemNotCorrectableError) {
+        throw new UnprocessableEntityException({
+          code: err.code,
+          message: err.message,
+        });
+      }
+      if (err instanceof IngestionCorrectionEmptyError) {
+        throw new UnprocessableEntityException({
+          code: err.code,
+          message: err.message,
+        });
+      }
+      throw err;
+    }
   }
 
   private defaultCapability(kind: 'invoice' | 'product'): string {
