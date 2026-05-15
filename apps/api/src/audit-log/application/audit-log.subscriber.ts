@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import type { AgentActionExecutedEvent } from '../../cost/application/cost.events';
 import { AuditLogService } from './audit-log.service';
+import { IdempotencyConflictError } from './errors';
 import {
   AuditEventEnvelope,
   AuditEventType,
@@ -680,6 +681,17 @@ export class AuditLogSubscriber {
     aggregateId: string,
     err: unknown,
   ): void {
+    // Idempotency rejection is BY DESIGN — never propagate as a write
+    // failure regardless of retention class. The producer's duplicate
+    // emit was correctly de-duped; surfacing it as a regulatory exception
+    // would defeat the dedup contract (m3.x-audit-log-idempotency-required-mode).
+    if (err instanceof IdempotencyConflictError) {
+      this.logger.log(
+        `audit-idempotency.rejected-duplicate: ${eventTypeName} aggregate=${aggregateId} ` +
+          `key=${err.idempotencyKey} matched_id=${err.existingId}`,
+      );
+      return;
+    }
     this.logError(eventTypeName, aggregateId, err);
     const retentionClass = computeRetentionClass(eventTypeName);
     if (retentionClass === 'regulatory') {

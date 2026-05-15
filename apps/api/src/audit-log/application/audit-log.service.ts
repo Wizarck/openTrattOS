@@ -10,7 +10,11 @@ import {
   validateChainIntegrity,
 } from './audit-log-hash-chain';
 import { AuditLogIdempotencyCache } from './audit-log-idempotency';
-import { AuditLogQueryError, HashChainBrokenError } from './errors';
+import {
+  AuditLogQueryError,
+  HashChainBrokenError,
+  IdempotencyConflictError,
+} from './errors';
 import {
   AuditEventEnvelope,
   AuditLogFilter,
@@ -93,8 +97,37 @@ export class AuditLogService {
    *  6. Persists via `repo.save()`.
    */
   async record(eventType: string, envelope: AuditEventEnvelope): Promise<AuditLog> {
-    // Idempotency dedup — optional / no-op when cache isn't wired.
-    if (this.idempotencyCache !== null) {
+    // Explicit-key path (m3.x-audit-log-idempotency-required-mode):
+    // when the envelope opts in by carrying `idempotencyKey`, SELECT the
+    // audit_log for a matching (org, key) row within the sliding 24h
+    // detection window. On hit, log a WARN and throw
+    // `IdempotencyConflictError` so producers receive a deterministic
+    // rejection rather than a silently-inserted duplicate row. Runs
+    // BEFORE the legacy implicit cache so the stronger explicit contract
+    // takes precedence — and skip the legacy cache entirely when an
+    // explicit key is set so the cache cannot short-circuit the throw.
+    if (envelope.idempotencyKey) {
+      const existing: Array<{ id: string }> = await this.dataSource.query(
+        `SELECT id FROM audit_log
+         WHERE organization_id = $1
+           AND idempotency_key = $2
+           AND created_at > NOW() - INTERVAL '24 hours'
+         LIMIT 1`,
+        [envelope.organizationId, envelope.idempotencyKey],
+      );
+      if (existing.length > 0) {
+        this.logger.warn(
+          `audit-idempotency.duplicate: type=${eventType} key=${envelope.idempotencyKey} ` +
+            `org=${envelope.organizationId} matched_id=${existing[0].id}`,
+        );
+        throw new IdempotencyConflictError(
+          existing[0].id,
+          envelope.idempotencyKey,
+          envelope.organizationId,
+        );
+      }
+    } else if (this.idempotencyCache !== null) {
+      // Legacy implicit dedup — only runs when no explicit key is set.
       const correlationId = this.extractCorrelationId(envelope);
       const dedupKey =
         correlationId ?? this.idempotencyCache.payloadHash(envelope.payloadAfter);
@@ -127,6 +160,7 @@ export class AuditLogService {
     row.reason = envelope.reason ?? null;
     row.citationUrl = envelope.citationUrl ?? null;
     row.snippet = envelope.snippet ?? null;
+    row.idempotencyKey = envelope.idempotencyKey ?? null;
     row.createdAt = new Date();
 
     // Hash chain integration. Wrapped in a try so transient lookback
@@ -267,6 +301,7 @@ export class AuditLogService {
     row.reason = envelope.reason ?? null;
     row.citationUrl = envelope.citationUrl ?? null;
     row.snippet = envelope.snippet ?? null;
+    row.idempotencyKey = envelope.idempotencyKey ?? null;
     row.createdAt = new Date();
     row.retentionClass = computeRetentionClass(eventType);
     return row;

@@ -9,7 +9,7 @@ import {
   AUDIT_LOG_MAX_LIMIT,
   AuditLogService,
 } from './audit-log.service';
-import { AuditLogQueryError } from './errors';
+import { AuditLogQueryError, IdempotencyConflictError } from './errors';
 import type { AuditEventEnvelope } from './types';
 
 interface FakeQueryBuilder {
@@ -131,11 +131,13 @@ describe('AuditLogService', () => {
   let savedRows: AuditLog[];
   let qbStates: FakeQueryBuilder[] = [];
   let rawQueryQueue: unknown[][] = [];
+  let rawQueryCalls: Array<{ sql: string; params: unknown[] }> = [];
 
   beforeEach(async () => {
     savedRows = [];
     qbStates = [];
     rawQueryQueue = [];
+    rawQueryCalls = [];
 
     const dataSource = {
       getRepository: () => ({
@@ -149,8 +151,10 @@ describe('AuditLogService', () => {
           return makeFakeQueryBuilder(next);
         },
       }),
-      // Used by wouldExceedCap (raw SELECT count(*) FROM (subquery) sub).
-      query: jest.fn(async () => {
+      // Used by wouldExceedCap (raw SELECT count(*) FROM (subquery) sub) +
+      // by record() idempotency SELECT (m3.x-audit-log-idempotency-required-mode).
+      query: jest.fn(async (sql: string, params: unknown[]) => {
+        rawQueryCalls.push({ sql, params });
         const next = rawQueryQueue.shift();
         if (!next) throw new Error('No raw-query result pre-loaded for test');
         return next;
@@ -221,6 +225,113 @@ describe('AuditLogService', () => {
       });
       expect(savedRows[0].actorKind).toBe('agent');
       expect(savedRows[0].agentName).toBe('claude-desktop');
+    });
+
+    // ----- m3.x-audit-log-idempotency-required-mode -----
+    //
+    // Sliding-24h reject-on-duplicate. The SELECT only fires when
+    // `envelope.idempotencyKey` is set. Hit → throw + no INSERT; miss → insert.
+    // `idempotency_key` column is plumbed into the persisted row on insert
+    // so a later attempt within the window matches.
+
+    describe('idempotency (sliding-24h reject-on-duplicate)', () => {
+      it('record() with no idempotencyKey → no SELECT, INSERT succeeds', async () => {
+        await service.record('TEST_EVENT', {
+          organizationId: orgId,
+          aggregateType: 'organization',
+          aggregateId: orgId,
+          actorUserId: null,
+          actorKind: 'system',
+        });
+        // The only raw query path is wouldExceedCap (not exercised here).
+        const idempotencyQueries = rawQueryCalls.filter((c) =>
+          c.sql.includes('idempotency_key'),
+        );
+        expect(idempotencyQueries).toHaveLength(0);
+        expect(savedRows).toHaveLength(1);
+        expect(savedRows[0].idempotencyKey).toBeNull();
+      });
+
+      it('record() with idempotencyKey + 0 rows → SELECT runs, INSERT succeeds', async () => {
+        // Pre-load empty result so the SELECT returns no matches.
+        rawQueryQueue.push([]);
+        await service.record('TEST_EVENT', {
+          organizationId: orgId,
+          aggregateType: 'organization',
+          aggregateId: orgId,
+          actorUserId: null,
+          actorKind: 'system',
+          idempotencyKey: 'idem-abc',
+        });
+        const idempotencyQueries = rawQueryCalls.filter((c) =>
+          c.sql.includes('idempotency_key'),
+        );
+        expect(idempotencyQueries).toHaveLength(1);
+        // SELECT params are positional ($1=orgId, $2=key).
+        expect(idempotencyQueries[0].params).toEqual([orgId, 'idem-abc']);
+        // SLIDING-24h window predicate present.
+        expect(idempotencyQueries[0].sql).toMatch(
+          /created_at\s*>\s*NOW\(\)\s*-\s*INTERVAL\s*'24 hours'/,
+        );
+        expect(savedRows).toHaveLength(1);
+        expect(savedRows[0].idempotencyKey).toBe('idem-abc');
+      });
+
+      it('record() with idempotencyKey + 1 row <24h → throws IdempotencyConflictError, no INSERT', async () => {
+        // Pre-load a SELECT hit — single row with matching key.
+        const existingId = '00000000-0000-4000-8000-000000000aaa';
+        rawQueryQueue.push([{ id: existingId }]);
+
+        let caught: unknown = null;
+        try {
+          await service.record('TEST_EVENT', {
+            organizationId: orgId,
+            aggregateType: 'organization',
+            aggregateId: orgId,
+            actorUserId: null,
+            actorKind: 'system',
+            idempotencyKey: 'idem-conflict',
+          });
+        } catch (err) {
+          caught = err;
+        }
+        expect(caught).toBeInstanceOf(IdempotencyConflictError);
+        const conflict = caught as IdempotencyConflictError;
+        expect(conflict.existingId).toBe(existingId);
+        expect(conflict.idempotencyKey).toBe('idem-conflict');
+        expect(conflict.organizationId).toBe(orgId);
+        expect(conflict.code).toBe('AUDIT_IDEMPOTENCY_CONFLICT');
+        // No INSERT happened — short-circuit fires before repo.save().
+        expect(savedRows).toHaveLength(0);
+      });
+
+      it('record() with idempotencyKey + 1 row exactly at boundary → SELECT predicate uses strict `>` so boundary row counts as inside the window', async () => {
+        // The DB-side predicate is `created_at > NOW() - INTERVAL '24 hours'`.
+        // Strictly inside the window → SELECT returns the row → reject.
+        rawQueryQueue.push([{ id: '00000000-0000-4000-8000-000000000bbb' }]);
+        await expect(
+          service.record('TEST_EVENT', {
+            organizationId: orgId,
+            aggregateType: 'organization',
+            aggregateId: orgId,
+            actorUserId: null,
+            actorKind: 'system',
+            idempotencyKey: 'idem-boundary-inside',
+          }),
+        ).rejects.toBeInstanceOf(IdempotencyConflictError);
+        // Strictly outside the window → SELECT returns 0 rows → insert.
+        rawQueryQueue.push([]);
+        await service.record('TEST_EVENT', {
+          organizationId: orgId,
+          aggregateType: 'organization',
+          aggregateId: orgId,
+          actorUserId: null,
+          actorKind: 'system',
+          idempotencyKey: 'idem-boundary-outside',
+        });
+        expect(savedRows).toHaveLength(1);
+        expect(savedRows[0].idempotencyKey).toBe('idem-boundary-outside');
+      });
     });
   });
 

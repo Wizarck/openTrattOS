@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuditLogService } from './audit-log.service';
 import { AuditLogSubscriber } from './audit-log.subscriber';
+import { IdempotencyConflictError } from './errors';
 import { AuditEventTypeName } from './types';
 import type { AuditEventEnvelope } from './types';
 import type { AgentActionExecutedEvent } from '../../cost/application/cost.events';
@@ -625,6 +626,47 @@ describe('AuditLogSubscriber', () => {
       await expect(
         subscriber.onRecipeCostRebuilt(operationalRebuild),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('idempotency-rejection swallow (m3.x-audit-log-idempotency-required-mode)', () => {
+    const REGULATORY_ENVELOPE: AuditEventEnvelope = {
+      organizationId: ORG,
+      aggregateType: 'lot',
+      aggregateId: 'lot-idem-1',
+      actorUserId: null,
+      actorKind: 'system',
+      payloadAfter: { quantityReceived: 18 },
+      idempotencyKey: 'idem-regulatory',
+    };
+
+    it('swallows IdempotencyConflictError on a regulatory envelope (LOT_CREATED)', async () => {
+      // LOT_CREATED is regulatory → the strict-mode contract would
+      // rethrow most errors here. IdempotencyConflictError is the one
+      // explicit exception: rejection is by design and the producer's
+      // duplicate emit was correctly de-duped.
+      recordSpy.mockRejectedValueOnce(
+        new IdempotencyConflictError(
+          '00000000-0000-4000-8000-000000000aaa',
+          'idem-regulatory',
+          ORG,
+        ),
+      );
+      await expect(
+        subscriber.onLotCreated(REGULATORY_ENVELOPE),
+      ).resolves.toBeUndefined();
+      expect(recordSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('still rethrows other Errors on regulatory envelopes (regression guard for PR #169 contract)', async () => {
+      // Non-idempotency errors on regulatory envelopes MUST still rethrow
+      // per m3.x-audit-log-subscriber-strict-mode. This guards against a
+      // refactor that accidentally swallowed every Error in the
+      // idempotency branch.
+      recordSpy.mockRejectedValueOnce(new Error('chain broken at lot-idem-1'));
+      await expect(
+        subscriber.onLotCreated(REGULATORY_ENVELOPE),
+      ).rejects.toThrow('chain broken at lot-idem-1');
     });
   });
 });

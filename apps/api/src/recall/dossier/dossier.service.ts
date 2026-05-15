@@ -180,6 +180,7 @@ export class DossierService {
       rowHash: null,
       prevHash: null,
       retentionClass: null,
+      idempotencyKey: null,
     }));
     const result = validateChainIntegrity(synthetic);
     if (result.ok) return { broken: false, firstBrokenRowId: null };
