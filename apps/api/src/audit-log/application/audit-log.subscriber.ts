@@ -524,6 +524,19 @@ export class AuditLogSubscriber {
     return this.persistEnvelope(AuditEventType.GR_REVIEW_CLEARED, payload);
   }
 
+  // ---- m3.x-requires-review-clear-cron (daily stale notifier) ----
+  // REVIEW_QUEUE_STALE_AGGREGATES is `operational` retention (notification
+  // surface, not chain-of-custody). aggregateType='organization';
+  // aggregateId=<organizationId>; payloadAfter carries `thresholdDays`,
+  // `staleCount`, `truncated`, `rows: [{aggregateType,aggregateId,...}]`.
+  @OnEvent(AuditEventType.REVIEW_QUEUE_STALE_AGGREGATES)
+  onReviewQueueStaleAggregates(payload: AuditEventEnvelope): Promise<void> {
+    return this.persistEnvelope(
+      AuditEventType.REVIEW_QUEUE_STALE_AGGREGATES,
+      payload,
+    );
+  }
+
   // ------------- Internals -------------
 
   /**

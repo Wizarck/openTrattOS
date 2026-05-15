@@ -514,6 +514,38 @@ describe('AuditLogSubscriber', () => {
       );
       expect(recordSpy.mock.calls[0][0]).toBe('RECALL_ADDENDUM_ATTACHED');
     });
+
+    it('REVIEW_QUEUE_STALE_AGGREGATES persists the per-org notifier envelope (m3.x-requires-review-clear-cron)', async () => {
+      const env: AuditEventEnvelope = {
+        organizationId: ORG,
+        aggregateType: 'organization',
+        aggregateId: ORG,
+        actorUserId: null,
+        actorKind: 'system',
+        payloadAfter: {
+          thresholdDays: 7,
+          staleCount: 2,
+          truncated: false,
+          rows: [
+            {
+              aggregateType: 'lot',
+              aggregateId: 'lot-stale-1',
+              sourcePhotoIngestionId: null,
+              flaggedAt: '2026-05-01T08:00:00.000Z',
+            },
+            {
+              aggregateType: 'goods_receipt',
+              aggregateId: 'gr-stale-1',
+              sourcePhotoIngestionId: 'phx-1',
+              flaggedAt: '2026-05-02T08:00:00.000Z',
+            },
+          ],
+        },
+      };
+      await subscriber.onReviewQueueStaleAggregates(env);
+      expect(recordSpy).toHaveBeenCalledTimes(1);
+      expect(recordSpy.mock.calls[0][0]).toBe('REVIEW_QUEUE_STALE_AGGREGATES');
+    });
   });
 
   describe('strict-mode error handling (m3.x-audit-log-subscriber-strict-mode)', () => {
