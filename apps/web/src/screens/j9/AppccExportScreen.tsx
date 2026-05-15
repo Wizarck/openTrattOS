@@ -151,7 +151,7 @@ function shortHash(hash: string): string {
 
 function Inner({
   orgId,
-  actorUserId,
+  actorUserId: _actorUserId,
 }: {
   orgId: string;
   actorUserId: string;

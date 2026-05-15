@@ -27,7 +27,7 @@ describe('BundleArchiveTable', () => {
     expect(screen.getByText('Bundles anteriores')).toBeInTheDocument();
     const rows = screen
       .getAllByRole('row')
-      .filter((r) => r.querySelector('[data-bundle-id]'));
+      .filter((r) => r.hasAttribute('data-bundle-id'));
     expect(rows.length).toBe(3);
   });
 
