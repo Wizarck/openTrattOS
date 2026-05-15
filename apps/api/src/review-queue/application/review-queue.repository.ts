@@ -7,8 +7,14 @@ import type {
   ReviewQueueGrDetails,
   ReviewQueueLotDetails,
   ReviewQueueRow,
+  StaleAggregateSummary,
+  StaleAggregatesByOrg,
 } from './types';
-import { REVIEW_QUEUE_DEFAULT_LIMIT, REVIEW_QUEUE_MAX_LIMIT } from './types';
+import {
+  REVIEW_QUEUE_DEFAULT_LIMIT,
+  REVIEW_QUEUE_MAX_LIMIT,
+  REVIEW_QUEUE_STALE_MAX_ROWS_PER_ORG,
+} from './types';
 
 /**
  * Raw-SQL repository for the review-queue BC
@@ -250,6 +256,158 @@ export class ReviewQueueRepository {
       if (this.isUndefinedColumn(err)) return [];
       throw err;
     }
+  }
+
+  /**
+   * Stale-notifier query (`m3.x-requires-review-clear-cron`). Returns
+   * every `requires_review=true` aggregate (Lot + GR) across ALL
+   * organizations whose `flagged_at` is older than `thresholdDays`,
+   * grouped by `organizationId`. Per-org rows are capped at
+   * `REVIEW_QUEUE_STALE_MAX_ROWS_PER_ORG` (oldest-first within the cap,
+   * so the most overdue rows surface even when truncated).
+   *
+   * The query uses the same `flagged_at` correlated-subquery pattern as
+   * `queryFlaggedLots` / `queryFlaggedGrs`, filtered by the threshold.
+   * Rows whose `flagged_at` derivation returns NULL (audit envelope
+   * missing) are excluded from the result set — they cannot be stale
+   * against a threshold we have no anchor for. This matches operator
+   * expectations: a Lot that was hand-flagged via SQL (no envelope) is
+   * not auto-surfaced; the j-screen still shows it.
+   *
+   * 42703 graceful probe mirrors `queryFlaggedLots` so deployments
+   * pre-migration 0041 return an empty array rather than throwing.
+   *
+   * Caller responsibility: convert each `StaleAggregatesByOrg` into an
+   * envelope and emit per-organization. The repository does NOT touch
+   * the bus; the scanner does (per ADR-CROSS-BC-SUBSCRIBER-LOCATION).
+   */
+  async findStaleAggregatesGroupedByOrg(
+    thresholdDays: number,
+  ): Promise<StaleAggregatesByOrg[]> {
+    if (!Number.isFinite(thresholdDays) || thresholdDays < 1) {
+      throw new Error(
+        `thresholdDays must be a positive integer; got ${thresholdDays}`,
+      );
+    }
+    let lotRows: StaleAggregateSummary[] = [];
+    let grRows: StaleAggregateSummary[] = [];
+    try {
+      lotRows = await this.queryStaleLots(thresholdDays);
+    } catch (err) {
+      if (!this.isUndefinedColumn(err)) throw err;
+    }
+    try {
+      grRows = await this.queryStaleGrs(thresholdDays);
+    } catch (err) {
+      if (!this.isUndefinedColumn(err)) throw err;
+    }
+
+    // Group by organizationId, preserving oldest-first within each org so
+    // a truncating cap surfaces the most overdue rows.
+    const byOrg = new Map<string, StaleAggregateSummary[]>();
+    const orderedOrgIds: string[] = [];
+    for (const row of [...lotRows, ...grRows]) {
+      const orgId = (row as StaleAggregateSummary & { organizationId: string })
+        .organizationId;
+      const summary: StaleAggregateSummary = {
+        aggregateType: row.aggregateType,
+        aggregateId: row.aggregateId,
+        flaggedAt: row.flaggedAt,
+        sourcePhotoIngestionId: row.sourcePhotoIngestionId,
+      };
+      const existing = byOrg.get(orgId);
+      if (existing === undefined) {
+        byOrg.set(orgId, [summary]);
+        orderedOrgIds.push(orgId);
+      } else {
+        existing.push(summary);
+      }
+    }
+
+    return orderedOrgIds.map((organizationId) => {
+      const rows = byOrg.get(organizationId) ?? [];
+      // Sort oldest-first so the truncation cap retains the rows that
+      // have been waiting longest.
+      rows.sort((a, b) => a.flaggedAt.localeCompare(b.flaggedAt));
+      return {
+        organizationId,
+        rows: rows.slice(0, REVIEW_QUEUE_STALE_MAX_ROWS_PER_ORG),
+      };
+    });
+  }
+
+  private async queryStaleLots(
+    thresholdDays: number,
+  ): Promise<Array<StaleAggregateSummary & { organizationId: string }>> {
+    const raw: Array<{
+      organization_id: string;
+      aggregate_id: string;
+      source_photo_ingestion_id: string | null;
+      flagged_at: Date;
+    }> = await this.dataSource.query(
+      `SELECT l."organization_id",
+              l."id" AS aggregate_id,
+              l."source_photo_ingestion_id",
+              flagged.created_at AS flagged_at
+         FROM "lots" l
+         JOIN LATERAL (
+           SELECT al."created_at"
+             FROM "audit_log" al
+            WHERE al."organization_id" = l."organization_id"
+              AND al."aggregate_type" = 'lot'
+              AND al."aggregate_id" = l."id"
+              AND al."event_type" = 'LOT_FLAGGED_FOR_REVIEW'
+            ORDER BY al."created_at" DESC
+            LIMIT 1
+         ) flagged ON true
+        WHERE l."requires_review" = true
+          AND flagged.created_at < (now() - ($1 || ' days')::interval)`,
+      [String(thresholdDays)],
+    );
+    return raw.map((r) => ({
+      organizationId: r.organization_id,
+      aggregateType: 'lot',
+      aggregateId: r.aggregate_id,
+      sourcePhotoIngestionId: r.source_photo_ingestion_id,
+      flaggedAt: r.flagged_at.toISOString(),
+    }));
+  }
+
+  private async queryStaleGrs(
+    thresholdDays: number,
+  ): Promise<Array<StaleAggregateSummary & { organizationId: string }>> {
+    const raw: Array<{
+      organization_id: string;
+      aggregate_id: string;
+      source_photo_ingestion_id: string | null;
+      flagged_at: Date;
+    }> = await this.dataSource.query(
+      `SELECT gr."organization_id",
+              gr."id" AS aggregate_id,
+              gr."source_photo_ingestion_id",
+              flagged.created_at AS flagged_at
+         FROM "goods_receipts" gr
+         JOIN LATERAL (
+           SELECT al."created_at"
+             FROM "audit_log" al
+            WHERE al."organization_id" = gr."organization_id"
+              AND al."aggregate_type" = 'goods_receipt'
+              AND al."aggregate_id" = gr."id"
+              AND al."event_type" = 'GR_FLAGGED_FOR_REVIEW'
+            ORDER BY al."created_at" DESC
+            LIMIT 1
+         ) flagged ON true
+        WHERE gr."requires_review" = true
+          AND flagged.created_at < (now() - ($1 || ' days')::interval)`,
+      [String(thresholdDays)],
+    );
+    return raw.map((r) => ({
+      organizationId: r.organization_id,
+      aggregateType: 'goods_receipt',
+      aggregateId: r.aggregate_id,
+      sourcePhotoIngestionId: r.source_photo_ingestion_id,
+      flaggedAt: r.flagged_at.toISOString(),
+    }));
   }
 
   private clampLimit(raw: number | undefined): number {

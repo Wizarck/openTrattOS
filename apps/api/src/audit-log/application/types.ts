@@ -78,6 +78,8 @@ export const AuditEventType = {
   // ---- m3.x-review-queue-backend (manual operator clear) ----
   LOT_REVIEW_CLEARED: 'm3.inventory.lot-review-cleared',
   GR_REVIEW_CLEARED: 'm3.procurement.gr-review-cleared',
+  // ---- m3.x-requires-review-clear-cron (stale-notifier; no auto-clear) ----
+  REVIEW_QUEUE_STALE_AGGREGATES: 'm3.review-queue.stale-aggregates',
 } as const;
 
 /**
@@ -151,6 +153,8 @@ export const AuditEventTypeName: Record<AuditEventType, string> = {
   // ---- m3.x-review-queue-backend (manual operator clear) ----
   'm3.inventory.lot-review-cleared': 'LOT_REVIEW_CLEARED',
   'm3.procurement.gr-review-cleared': 'GR_REVIEW_CLEARED',
+  // ---- m3.x-requires-review-clear-cron (stale-notifier) ----
+  'm3.review-queue.stale-aggregates': 'REVIEW_QUEUE_STALE_AGGREGATES',
 };
 
 /**
