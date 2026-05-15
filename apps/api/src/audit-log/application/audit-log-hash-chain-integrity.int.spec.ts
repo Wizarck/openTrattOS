@@ -38,6 +38,7 @@ describe('AuditLog hash chain integrity (integration)', () => {
   let app: TestingModule;
   let dataSource: DataSource;
   let service: AuditLogService;
+  let cache: AuditLogIdempotencyCache;
 
   const ORG = '11111111-1111-4111-8111-111111111111';
   const AGG_ID = '22222222-2222-4222-8222-222222222222';
@@ -68,6 +69,7 @@ describe('AuditLog hash chain integrity (integration)', () => {
 
     dataSource = app.get(DataSource);
     service = app.get(AuditLogService);
+    cache = app.get(AuditLogIdempotencyCache);
     await dataSource.runMigrations();
   });
 
@@ -78,6 +80,11 @@ describe('AuditLog hash chain integrity (integration)', () => {
 
   beforeEach(async () => {
     await dataSource.query('TRUNCATE TABLE "audit_log" RESTART IDENTITY CASCADE');
+    // Reset the LRU between tests — now that the cache actually injects
+    // (per m3.x-audit-log-idempotency-cache-injection), prior tests'
+    // (eventType, aggregateId, payloadHash) keys would dedup later tests
+    // that reuse the same envelope shape (most do).
+    cache.clear();
   });
 
   describe('AC-CHAIN-1 — rowHash/prevHash wiring', () => {
@@ -228,17 +235,12 @@ describe('AuditLog hash chain integrity (integration)', () => {
   });
 
   describe('AC-CHAIN-7 — idempotent re-emit produces exactly one DB row', () => {
-    /**
-     * SKIP (CONFIRMED 2026-05-15): un-skip CI run received 2 rows despite
-     * production having dedup logic wired through AuditLogIdempotencyCache.
-     * The `@Optional()` ctor param on AuditLogService likely resolves to
-     * null under this isolated TestingModule (the provider IS registered in
-     * `providers: [...]` but the test harness may bypass the `@Optional()`
-     * resolution path). Followup `m3.x-audit-log-idempotency-cache-injection`
-     * to diagnose the DI mechanics and either fix the harness wiring OR
-     * tighten the AuditLogService constructor to make the cache required.
-     */
-    it.skip('two record() calls with identical (eventType, aggregateId, correlationId) yield one row', async () => {
+    // Un-skipped by `m3.x-audit-log-idempotency-cache-injection`. The
+    // observation (cache resolves to null even with the provider registered)
+    // was correct; the root cause was a missing explicit
+    // `@Inject(AuditLogIdempotencyCache)` on the union-typed parameter.
+    // Fix in audit-log.service.ts.
+    it('two record() calls with identical (eventType, aggregateId, correlationId) yield one row', async () => {
       const correlationId = randomUUID();
       const env: AuditEventEnvelope = {
         organizationId: ORG,
