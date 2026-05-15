@@ -24,11 +24,8 @@ import {
  * enforcement), and AC-INT-6 (translator paths for AGENT_ACTION_EXECUTED
  * + GR_CONFIRMED + LOT_EXPIRY_NEAR shared channel).
  */
-/**
- * SKIP: see audit-log-subscriber-idempotency.int.spec.ts head comment.
- * Followup `m3.x-audit-log-int-harness-wiring`.
- */
-describe.skip('AuditLogSubscriber fan-out matrix (integration)', () => {
+const TEST_USER_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+describe('AuditLogSubscriber fan-out matrix (integration)', () => {
   let harness: AuditLogIntHarness;
   let orgId: string;
 
@@ -113,7 +110,7 @@ describe.skip('AuditLogSubscriber fan-out matrix (integration)', () => {
   describe('translator path: AGENT_ACTION_EXECUTED (lean shape)', () => {
     it('with organizationId → row persists with aggregate_type=organization + actor_kind=agent', async () => {
       await harness.emitAndWait(AuditEventType.AGENT_ACTION_EXECUTED, {
-        executedBy: 'user-1',
+        executedBy: TEST_USER_ID,
         viaAgent: true,
         agentName: 'claude-desktop',
         capabilityName: 'recipes.read',
@@ -241,7 +238,7 @@ describe.skip('AuditLogSubscriber fan-out matrix (integration)', () => {
     it('AGENT_ACTION_EXECUTED maps to retention_class=ephemeral', async () => {
       expect(computeRetentionClass('AGENT_ACTION_EXECUTED')).toBe('ephemeral');
       await harness.emitAndWait(AuditEventType.AGENT_ACTION_EXECUTED, {
-        executedBy: 'user-1',
+        executedBy: TEST_USER_ID,
         viaAgent: true,
         agentName: 'claude-desktop',
         capabilityName: 'recipes.read',
@@ -260,7 +257,7 @@ describe.skip('AuditLogSubscriber fan-out matrix (integration)', () => {
         organizationId: orgId,
         aggregateType: 'ai_suggestion',
         aggregateId: randomUUID(),
-        actorUserId: 'user-1',
+        actorUserId: TEST_USER_ID,
         actorKind: 'user',
         payloadAfter: { acceptedField: 'allergens' },
       } satisfies AuditEventEnvelope);
