@@ -57,6 +57,9 @@ export const AuditEventType = {
   CCP_READING_RECORDED: 'haccp.ccp-reading-recorded',
   CCP_CORRECTIVE_ACTION_RECORDED: 'haccp.corrective-action-recorded',
   FSMS_STANDARD_CONFIGURED: 'haccp.fsms-standard-configured',
+  // ---- Slice #14 m3-appcc-export-bundle-service (Wave 2.7) ----
+  EXPORT_BUNDLE_GENERATED: 'compliance.export-bundle-generated',
+  EXPORT_BUNDLE_DISPATCHED: 'compliance.export-bundle-dispatched',
 } as const;
 
 /**
@@ -109,6 +112,9 @@ export const AuditEventTypeName: Record<AuditEventType, string> = {
   'haccp.ccp-reading-recorded': 'CCP_READING_RECORDED',
   'haccp.corrective-action-recorded': 'CCP_CORRECTIVE_ACTION_RECORDED',
   'haccp.fsms-standard-configured': 'FSMS_STANDARD_CONFIGURED',
+  // ---- Slice #14 m3-appcc-export-bundle-service ----
+  'compliance.export-bundle-generated': 'EXPORT_BUNDLE_GENERATED',
+  'compliance.export-bundle-dispatched': 'EXPORT_BUNDLE_DISPATCHED',
 };
 
 /**
@@ -170,6 +176,9 @@ const RETENTION_BY_EVENT_NAME: Record<string, RetentionClass> = {
   CCP_READING_RECORDED: 'regulatory',
   CCP_CORRECTIVE_ACTION_RECORDED: 'regulatory',
   FSMS_STANDARD_CONFIGURED: 'regulatory',
+  // APPCC export envelopes — regulator-facing dossier of the chain of custody.
+  EXPORT_BUNDLE_GENERATED: 'regulatory',
+  EXPORT_BUNDLE_DISPATCHED: 'regulatory',
   // Ephemeral — lean per-request log; 90-day rolling
   AGENT_ACTION_EXECUTED: 'ephemeral',
 };
