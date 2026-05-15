@@ -458,6 +458,36 @@ export class AuditLogSubscriber {
     );
   }
 
+  // ---- m3.x-photo-ingest-downstream-revocation-listener (H1b followup) ----
+  //
+  // Three regulatory envelopes carrying the downstream-revocation chain of
+  // custody when a signed photo-ingestion item is retro-corrected:
+  //  - LOT_FLAGGED_FOR_REVIEW: aggregateType='lot', aggregateId=<lotId>
+  //  - GR_FLAGGED_FOR_REVIEW: aggregateType='goods_receipt',
+  //    aggregateId=<grId>
+  //  - DOWNSTREAM_REVOCATION_DEFERRED: aggregateType='photo_ingestion_item',
+  //    aggregateId=<itemId> — only fires when the lots/goods_receipts probe
+  //    surfaces Postgres error 42703 (column does not exist), which guards
+  //    against deployments that have not yet run migration 0041.
+
+  @OnEvent(AuditEventType.LOT_FLAGGED_FOR_REVIEW)
+  onLotFlaggedForReview(payload: AuditEventEnvelope): Promise<void> {
+    return this.persistEnvelope(AuditEventType.LOT_FLAGGED_FOR_REVIEW, payload);
+  }
+
+  @OnEvent(AuditEventType.GR_FLAGGED_FOR_REVIEW)
+  onGrFlaggedForReview(payload: AuditEventEnvelope): Promise<void> {
+    return this.persistEnvelope(AuditEventType.GR_FLAGGED_FOR_REVIEW, payload);
+  }
+
+  @OnEvent(AuditEventType.DOWNSTREAM_REVOCATION_DEFERRED)
+  onDownstreamRevocationDeferred(payload: AuditEventEnvelope): Promise<void> {
+    return this.persistEnvelope(
+      AuditEventType.DOWNSTREAM_REVOCATION_DEFERRED,
+      payload,
+    );
+  }
+
   // ------------- Internals -------------
 
   /**

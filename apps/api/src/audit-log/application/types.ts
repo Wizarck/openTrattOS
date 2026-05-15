@@ -71,6 +71,10 @@ export const AuditEventType = {
   // ---- M3 hardening H1a m3-photo-ingest-downstream-routing ----
   PHOTO_INGESTION_DOWNSTREAM_ROUTED: 'm3.photo-ingestion.downstream-routed',
   PHOTO_INGESTION_ROUTING_SKIPPED: 'm3.photo-ingestion.routing-skipped',
+  // ---- m3.x-photo-ingest-downstream-revocation-listener (H1b followup) ----
+  LOT_FLAGGED_FOR_REVIEW: 'm3.inventory.lot-flagged-for-review',
+  GR_FLAGGED_FOR_REVIEW: 'm3.procurement.gr-flagged-for-review',
+  DOWNSTREAM_REVOCATION_DEFERRED: 'm3.photo-ingestion.downstream-revocation-deferred',
 } as const;
 
 /**
@@ -137,6 +141,10 @@ export const AuditEventTypeName: Record<AuditEventType, string> = {
   // ---- M3 hardening H1a m3-photo-ingest-downstream-routing ----
   'm3.photo-ingestion.downstream-routed': 'PHOTO_INGESTION_DOWNSTREAM_ROUTED',
   'm3.photo-ingestion.routing-skipped': 'PHOTO_INGESTION_ROUTING_SKIPPED',
+  // ---- m3.x-photo-ingest-downstream-revocation-listener (H1b followup) ----
+  'm3.inventory.lot-flagged-for-review': 'LOT_FLAGGED_FOR_REVIEW',
+  'm3.procurement.gr-flagged-for-review': 'GR_FLAGGED_FOR_REVIEW',
+  'm3.photo-ingestion.downstream-revocation-deferred': 'DOWNSTREAM_REVOCATION_DEFERRED',
 };
 
 /**
@@ -217,6 +225,13 @@ const RETENTION_BY_EVENT_NAME: Record<string, RetentionClass> = {
   // ADR-ROUTING-AUDIT-EVENT-NAMING (M3 hardening H1a).
   PHOTO_INGESTION_DOWNSTREAM_ROUTED: 'regulatory',
   PHOTO_INGESTION_ROUTING_SKIPPED: 'regulatory',
+  // Downstream revocation envelopes — flips `requires_review=true` on a
+  // Lot or GR draft whose source photo-ingestion item was retro-corrected
+  // (m3.x-photo-ingest-downstream-revocation-listener). All three regulatory
+  // per EU AI Act chain-of-custody.
+  LOT_FLAGGED_FOR_REVIEW: 'regulatory',
+  GR_FLAGGED_FOR_REVIEW: 'regulatory',
+  DOWNSTREAM_REVOCATION_DEFERRED: 'regulatory',
   // Ephemeral — lean per-request log; 90-day rolling
   AGENT_ACTION_EXECUTED: 'ephemeral',
 };

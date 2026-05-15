@@ -21,6 +21,7 @@ import { MenusModule } from './menus/menus.module';
 import { PhotoStorageModule } from './photo-storage/photo-storage.module';
 import { PhotoIngestionModule } from './photo-ingestion/photo-ingestion.module';
 import { PhotoIngestionRoutingModule } from './photo-ingestion-routing/photo-ingestion-routing.module';
+import { PhotoIngestionRevocationModule } from './photo-ingestion-revocation/photo-ingestion-revocation.module';
 import { ProcurementModule } from './procurement/procurement.module';
 import { HaccpModule } from './haccp/haccp.module';
 import { I18nM3ExportModule } from './i18n/m3-export/i18n.module';
@@ -174,6 +175,16 @@ import { SharedModule } from './shared/shared.module';
     // per ADR-ROUTING-AUDIT-EVENT-NAMING. Missing critical fields fail
     // open: emit SKIPPED + halt (no throw) per ADR-FIELD-MAPPING-FAIL-OPEN.
     PhotoIngestionRoutingModule,
+
+    // M3 hardening followup `m3.x-photo-ingest-downstream-revocation-listener`:
+    // listens on `HITL_RETROACTIVE_CORRECTION` (emitted by H1b's
+    // `RetroactiveCorrectionService`) and flips `requires_review=true` on
+    // every downstream Lot / GR-draft row whose `source_photo_ingestion_id`
+    // matches the corrected ingestion item. Three new regulatory audit
+    // envelopes (LOT_FLAGGED_FOR_REVIEW, GR_FLAGGED_FOR_REVIEW,
+    // DOWNSTREAM_REVOCATION_DEFERRED). Per ADR-NEVER-AUTO-CASCADE-DOWNSTREAM
+    // the downstream snapshot is NOT mutated — operator review required.
+    PhotoIngestionRevocationModule,
 
     // M3 recall BC (Wave 2.5, slices #11+#12+#13): canonical Recall BC at
     // `apps/api/src/recall/` per ADR-028. Slice #11 ships incident search
