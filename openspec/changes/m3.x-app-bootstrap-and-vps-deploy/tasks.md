@@ -2,10 +2,10 @@
 
 ## §1 App bootstrap (work-stream A)
 
-- [ ] §1.1 — `apps/api/src/database-options.ts` (new) — extract `buildDataSourceOptions(): DataSourceOptions` from the shape currently inline in `data-source.ts`. Reads `DATABASE_URL`, sets entities glob, migrations glob, `migrationsTableName: 'opentrattos_migrations'`, `synchronize: false`, `logging` from `TYPEORM_LOGGING`.
-- [ ] §1.2 — `apps/api/src/data-source.ts` — refactor to consume `buildDataSourceOptions()`. Behaviour unchanged (migrations CLI still works).
-- [ ] §1.3 — `apps/api/src/app.module.ts` — add `TypeOrmModule.forRootAsync({ useFactory: buildDataSourceOptions })` as the first entry in `imports`. Verify no other module needs an explicit `forRoot` (none should).
-- [ ] §1.4 — `apps/api/src/otel-bootstrap.ts` — early-return when `process.env.OTEL_SDK_DISABLED === 'true'`. Default behaviour: `OTEL_SDK_DISABLED` defaults to `'true'` only inside the bootstrap smoke spec; in CI / normal dev it stays unset and OTel runs. Document the env semantics in the file header.
+- [x] §1.1 — `apps/api/src/database-options.ts` (new) — extract `buildDataSourceOptions(): DataSourceOptions` from the shape currently inline in `data-source.ts`. Reads `DATABASE_URL`, sets entities glob, migrations glob, `migrationsTableName: 'opentrattos_migrations'`, `synchronize: false`, `logging` from `TYPEORM_LOGGING`.
+- [x] §1.2 — `apps/api/src/data-source.ts` — refactor to consume `buildDataSourceOptions()`. Behaviour unchanged (migrations CLI still works).
+- [x] §1.3 — `apps/api/src/app.module.ts` — add `TypeOrmModule.forRootAsync({ useFactory: buildDataSourceOptions })` as the first entry in `imports`. Verify no other module needs an explicit `forRoot` (none should).
+- [x] §1.4 — `apps/api/src/otel-bootstrap.ts` — early-return when `process.env.OTEL_SDK_DISABLED === 'true'`. Default behaviour: `OTEL_SDK_DISABLED` defaults to `'true'` only inside the bootstrap smoke spec; in CI / normal dev it stays unset and OTel runs. Document the env semantics in the file header.
 - [ ] §1.5 — `apps/api/src/shared/email-dispatch/adapters/noop.ts` (new) — `NoopEmailAdapter` implementing the existing `EmailDispatchAdapter` interface. `dispatch()` returns `Result.ok({ providerMessageId: 'noop' })` and logs at `debug`.
 - [ ] §1.6 — `apps/api/src/shared/email-dispatch/email-dispatch.module.ts` — extend the existing provider factory to recognise `EMAIL_DISPATCH_PROVIDER=noop` and select `NoopEmailAdapter`. Default is `noop`.
 - [ ] §1.7 — Audit the remaining 4 feature flag homes:
@@ -13,47 +13,47 @@
   - `PHOTO_STORAGE_ENABLED` — find where the S3 client and 90-day retention cron are constructed (slice #18); gate on the flag.
   - `M3_PO_AGGREGATE_ENABLED` — verify the existing flag is honoured at PO state-transition site.
   - `OPENTRATTOS_AGENT_ENABLED` — verify the existing flag is honoured at the AgentChat SSE endpoint.
-- [ ] §1.8 — `apps/api/src/cli/migrate.ts` (new) — minimal entry: `import('./database-options').then(({ buildDataSourceOptions }) => new DataSource(buildDataSourceOptions()).initialize().then(ds => ds.runMigrations()).then(() => process.exit(0)).catch(err => { console.error(err); process.exit(1); }))`.
-- [ ] §1.9 — `apps/api/scripts/migrate-and-start.sh` (new) — `set -euo pipefail; node /app/api/dist/cli/migrate.js; exec node /app/api/dist/main`. Mark executable.
-- [ ] §1.10 — `apps/api/src/health/health.module.ts`, `health.controller.ts`, `health.controller.spec.ts` (new) — Terminus-backed module: `TypeOrmHealthIndicator` (DB ping) + `MemoryHealthIndicator` (heap < 300MB). Controller route `/health`. Wire into `AppModule.imports`.
-- [ ] §1.11 — `apps/api/src/main.ts` — add `setGlobalPrefix('api', { exclude: [{ path: 'health', method: RequestMethod.GET }] })` BEFORE `app.useGlobalPipes(...)`. Change `SwaggerModule.setup('api/docs', ...)` → `SwaggerModule.setup('docs', ...)` (the global prefix prepends `/api`).
-- [ ] §1.12 — `apps/api/src/app.module.ts` — add `ServeStaticModule.forRoot({ rootPath: join(__dirname, '..', '..', 'web', 'dist'), exclude: ['/api/{*splat}', '/health'] })`. Add `@nestjs/serve-static` to `apps/api/package.json`.
-- [ ] §1.13 — `apps/web/vite.config.ts` — remove the `rewrite` line so `/api/foo` is forwarded as-is. Keep `target: 'http://localhost:3001'` (port unchanged).
+- [x] §1.8 — `apps/api/src/cli/migrate.ts` (new) — minimal entry: `import('./database-options').then(({ buildDataSourceOptions }) => new DataSource(buildDataSourceOptions()).initialize().then(ds => ds.runMigrations()).then(() => process.exit(0)).catch(err => { console.error(err); process.exit(1); }))`.
+- [x] §1.9 — `apps/api/scripts/migrate-and-start.sh` (new) — `set -euo pipefail; node /app/api/dist/cli/migrate.js; exec node /app/api/dist/main`. Mark executable.
+- [x] §1.10 — `apps/api/src/health/health.module.ts`, `health.controller.ts`, `health.controller.spec.ts` (new) — Terminus-backed module: `TypeOrmHealthIndicator` (DB ping) + `MemoryHealthIndicator` (heap < 300MB). Controller route `/health`. Wire into `AppModule.imports`.
+- [x] §1.11 — `apps/api/src/main.ts` — add `setGlobalPrefix('api', { exclude: [{ path: 'health', method: RequestMethod.GET }] })` BEFORE `app.useGlobalPipes(...)`. Change `SwaggerModule.setup('api/docs', ...)` → `SwaggerModule.setup('docs', ...)` (the global prefix prepends `/api`).
+- [x] §1.12 — `apps/api/src/app.module.ts` — add `ServeStaticModule.forRoot({ rootPath: join(__dirname, '..', '..', 'web', 'dist'), exclude: ['/api/{*splat}', '/health'] })`. Add `@nestjs/serve-static` to `apps/api/package.json`.
+- [x] §1.13 — `apps/web/vite.config.ts` — remove the `rewrite` line so `/api/foo` is forwarded as-is. Keep `target: 'http://localhost:3001'` (port unchanged).
 - [ ] §1.14 — `apps/api/test/bootstrap.e2e-spec.ts` (new) — bootstrap smoke spec per `specs/app-bootstrap/spec.md` AC. Uses `JEST_INT_DB_URL`. Asserts: app boots, all 25 BCs init, GET /health → 200, GET / → 200 text/html, GET /api/docs → 200, each disabled-by-default flag honoured.
 
 ## §2 Single Dockerfile (work-stream B)
 
-- [ ] §2.1 — `Dockerfile` (repo root, new) — multi-stage Node 20 alpine per design ADR-SINGLE-IMAGE-OMNIBUS. Stage `build`: `npm ci`, `npx turbo run build --filter=@opentrattos/api... --filter=@opentrattos/web...`, `npm prune --omit=dev`. Stage `runtime`: copy `apps/api/dist/`, `apps/api/node_modules/`, the workspace package `dist/` outputs, `apps/web/dist/`, `apps/api/scripts/migrate-and-start.sh`. EXPOSE 3001. USER non-root (`node`). HEALTHCHECK `wget -qO- http://127.0.0.1:3001/health || exit 1`. CMD `["/app/api/scripts/migrate-and-start.sh"]`.
-- [ ] §2.2 — `.dockerignore` (repo root, new) — exclude `node_modules`, `**/dist`, `.git`, `.github`, `.bmad-output`, `_bmad-output`, `_bmad`, `coverage`, `*.log`, `.env*`. Speeds up build context upload.
+- [x] §2.1 — `Dockerfile` (repo root, new) — multi-stage Node 20 alpine per design ADR-SINGLE-IMAGE-OMNIBUS. Stage `build`: `npm ci`, `npx turbo run build --filter=@opentrattos/api... --filter=@opentrattos/web...`, `npm prune --omit=dev`. Stage `runtime`: copy `apps/api/dist/`, `apps/api/node_modules/`, the workspace package `dist/` outputs, `apps/web/dist/`, `apps/api/scripts/migrate-and-start.sh`. EXPOSE 3001. USER non-root (`node`). HEALTHCHECK `wget -qO- http://127.0.0.1:3001/health || exit 1`. CMD `["/app/api/scripts/migrate-and-start.sh"]`.
+- [x] §2.2 — `.dockerignore` (repo root, new) — exclude `node_modules`, `**/dist`, `.git`, `.github`, `.bmad-output`, `_bmad-output`, `_bmad`, `coverage`, `*.log`, `.env*`. Speeds up build context upload.
 - [ ] §2.3 — Local gate: `docker build -t opentrattos:test .` succeeds; `docker run --rm -e DATABASE_URL=... opentrattos:test` starts; `curl localhost:3001/health` returns 200.
 
 ## §3 Deployment artifacts (work-stream C)
 
-- [ ] §3.1 — `docker-compose.yml` (repo root, new) — community quickstart per `specs/deploy-vps-docker/spec.md`. 2 services: `db` (postgres:16-alpine, named volume `opentrattos_pgdata`, env from `.env`, healthcheck `pg_isready`) + `app` (`ghcr.io/wizarck/opentrattos:latest`, `depends_on: { db: { condition: service_healthy } }`, ports `0.0.0.0:3000:3001`, env from `.env`).
-- [ ] §3.2 — `.env.example` (repo root, new) — community defaults: `POSTGRES_USER=opentrattos`, `POSTGRES_DB=opentrattos`, `POSTGRES_PASSWORD=changeme-please`, `DATABASE_URL=postgresql://opentrattos:changeme-please@db:5432/opentrattos`, `FRONTEND_URL=http://localhost:3000`, `PORT=3001`. Comments call out the password change requirement.
-- [ ] §3.3 — `deploy/docker-compose.prod.yml` (new) — operator deployment. Same 2 services as §3.1 but `app.ports: ["127.0.0.1:3201:3001"]` (defense-in-depth bind). `env_file: /opt/opentrattos/.env`. `restart: unless-stopped` on both services.
-- [ ] §3.4 — `deploy/.env.example` (new) — operator-specific values: `FRONTEND_URL=https://trattos.palafitofood.com`, comments to set `POSTGRES_PASSWORD` from a `pwgen 32 1` invocation.
-- [ ] §3.5 — `deploy/cloudflared-ingress-trattos.snippet.yml` (new) — the 2-line ingress entry + a comment block describing where to insert (before `- service: http_status:404`) + reload procedure (`cloudflared tunnel ingress validate --config /etc/cloudflared/config.yml && systemctl restart cloudflared`).
-- [ ] §3.6 — `deploy/README.md` (new) — operator step-by-step procedure per `specs/deploy-vps-docker/spec.md` AC: SSH, `mkdir /opt/opentrattos`, scp compose + .env, generate POSTGRES_PASSWORD, `docker compose pull && up -d`, smoke (internal + external probes), insert cloudflared snippet, validate + restart, create Cloudflare DNS CNAME.
+- [x] §3.1 — `docker-compose.yml` (repo root, new) — community quickstart per `specs/deploy-vps-docker/spec.md`. 2 services: `db` (postgres:16-alpine, named volume `opentrattos_pgdata`, env from `.env`, healthcheck `pg_isready`) + `app` (`ghcr.io/wizarck/opentrattos:latest`, `depends_on: { db: { condition: service_healthy } }`, ports `0.0.0.0:3000:3001`, env from `.env`).
+- [x] §3.2 — `.env.example` (repo root, new) — community defaults: `POSTGRES_USER=opentrattos`, `POSTGRES_DB=opentrattos`, `POSTGRES_PASSWORD=changeme-please`, `DATABASE_URL=postgresql://opentrattos:changeme-please@db:5432/opentrattos`, `FRONTEND_URL=http://localhost:3000`, `PORT=3001`. Comments call out the password change requirement.
+- [x] §3.3 — `deploy/docker-compose.prod.yml` (new) — operator deployment. Same 2 services as §3.1 but `app.ports: ["127.0.0.1:3201:3001"]` (defense-in-depth bind). `env_file: /opt/opentrattos/.env`. `restart: unless-stopped` on both services.
+- [x] §3.4 — `deploy/.env.example` (new) — operator-specific values: `FRONTEND_URL=https://trattos.palafitofood.com`, comments to set `POSTGRES_PASSWORD` from a `pwgen 32 1` invocation.
+- [x] §3.5 — `deploy/cloudflared-ingress-trattos.snippet.yml` (new) — the 2-line ingress entry + a comment block describing where to insert (before `- service: http_status:404`) + reload procedure (`cloudflared tunnel ingress validate --config /etc/cloudflared/config.yml && systemctl restart cloudflared`).
+- [x] §3.6 — `deploy/README.md` (new) — operator step-by-step procedure per `specs/deploy-vps-docker/spec.md` AC: SSH, `mkdir /opt/opentrattos`, scp compose + .env, generate POSTGRES_PASSWORD, `docker compose pull && up -d`, smoke (internal + external probes), insert cloudflared snippet, validate + restart, create Cloudflare DNS CNAME.
 
 ## §4 CI + community docs (work-stream D)
 
-- [ ] §4.1 — `.github/workflows/build-images.yml` (new) — single job:
+- [x] §4.1 — `.github/workflows/build-images.yml` (new) — single job:
   - Triggers: `push: master` (paths `apps/**`, `packages/**`, `Dockerfile`, `deploy/**`) + `workflow_dispatch`.
   - Concurrency group `build-images-${{ github.ref }}` with `cancel-in-progress: true`.
   - Steps: checkout, set up Buildx, login to GHCR via `GITHUB_TOKEN`, `docker buildx build --push --tag ghcr.io/wizarck/opentrattos:latest --tag ghcr.io/wizarck/opentrattos:sha-${GITHUB_SHA::7} .`.
 - [ ] §4.2 — Post-first-push manual: set `ghcr.io/wizarck/opentrattos` package visibility to public via the GHCR UI. Document the 1-time step in `deploy/README.md`.
-- [ ] §4.3 — `README.md` (existing, edit) — replace the "⚠️ Coming soon — currently in Discovery & Architecture phase" Quick Start block with: `git clone https://github.com/Wizarck/openTrattOS.git`, `cd openTrattOS`, `cp .env.example .env`, `docker compose up -d`, `open http://localhost:3000`. Preserve the rest of the README (modules table, comparison vs TrattOS Enterprise, contributing, license).
+- [x] §4.3 — `README.md` (existing, edit) — replace the "⚠️ Coming soon — currently in Discovery & Architecture phase" Quick Start block with: `git clone https://github.com/Wizarck/openTrattOS.git`, `cd openTrattOS`, `cp .env.example .env`, `docker compose up -d`, `open http://localhost:3000`. Preserve the rest of the README (modules table, comparison vs TrattOS Enterprise, contributing, license).
 
 ## §5 Local gates
 
 - [ ] §5.1 — `npm test --workspace=apps/api -- --testPathPattern=health` — health module unit specs green.
-- [ ] §5.2 — `npm run build --workspace=apps/api` — TypeScript compile clean.
-- [ ] §5.3 — `npm run build --workspace=apps/web` — Vite build emits to `apps/web/dist/`.
+- [x] §5.2 — `npm run build --workspace=apps/api` — TypeScript compile clean.
+- [x] §5.3 — `npm run build --workspace=apps/web` — Vite build emits to `apps/web/dist/`.
 - [ ] §5.4 — `docker build -t opentrattos:test .` — image builds in <5 min on dev machine.
 - [ ] §5.5 — `docker compose -f docker-compose.yml up -d --build` — full stack up; `curl localhost:3000/health` → 200; `curl localhost:3000/` → SPA HTML; `curl localhost:3000/api/docs` → Swagger HTML.
 - [ ] §5.6 — INT bootstrap spec on real Postgres: `JEST_INT_DB_URL=... npx jest --config jest-integration.config.ts test/bootstrap.e2e-spec.ts` — green.
-- [ ] §5.7 — `npx openspec validate "m3.x-app-bootstrap-and-vps-deploy"` — green.
+- [x] §5.7 — `npx openspec validate "m3.x-app-bootstrap-and-vps-deploy"` — green.
 
 ## §6 §4.5.6 AI-reviewer signoff
 
