@@ -10,15 +10,15 @@ describe('LocalBundleStorage', () => {
   let root: string;
 
   beforeEach(async () => {
-    root = await fs.mkdtemp(join(tmpdir(), 'opentrattos-bundle-test-'));
-    process.env.OPENTRATTOS_BUNDLE_STORAGE_ROOT = root;
-    process.env.OPENTRATTOS_BUNDLE_SIGNING_SECRET = 'test-secret';
+    root = await fs.mkdtemp(join(tmpdir(), 'nexandro-bundle-test-'));
+    process.env.NEXANDRO_BUNDLE_STORAGE_ROOT = root;
+    process.env.NEXANDRO_BUNDLE_SIGNING_SECRET = 'test-secret';
   });
 
   afterEach(async () => {
     await fs.rm(root, { recursive: true, force: true });
-    delete process.env.OPENTRATTOS_BUNDLE_STORAGE_ROOT;
-    delete process.env.OPENTRATTOS_BUNDLE_SIGNING_SECRET;
+    delete process.env.NEXANDRO_BUNDLE_STORAGE_ROOT;
+    delete process.env.NEXANDRO_BUNDLE_SIGNING_SECRET;
   });
 
   it('round-trips put → read for both pdf and csv assets', async () => {
