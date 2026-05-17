@@ -40,6 +40,9 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       PORT: "3001"
+      # DEMO_MODE: seed 1 OWNER + 1 org on boot + auto-auth as that user.
+      # Disable with DEMO_MODE=false in .env for real auth (R8 roadmap).
+      DEMO_MODE: "${DEMO_MODE:-true}"
       OTEL_SDK_DISABLED: "true"
       NEXANDRO_EMAIL_PROVIDER: "${NEXANDRO_EMAIL_PROVIDER:-smtp}"
       AUDIT_ARCHIVAL_ENABLED: "false"
