@@ -18,8 +18,8 @@ export function App() {
         <div className="flex items-center gap-4">
           <h1 className="text-lg font-semibold text-ink">nexandro</h1>
           <nav className="flex items-center gap-4 text-sm text-mute">
-            <Link to="/poc/owner-dashboard" className="hover:text-ink">
-              PoC: Owner dashboard
+            <Link to="/owner-dashboard" className="hover:text-ink">
+              Dashboard
             </Link>
             <RoleGuard role="OWNER" currentRole={currentRole}>
               <Link to="/owner-settings" className="hover:text-ink">
