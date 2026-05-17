@@ -18,5 +18,12 @@ cd "$(dirname "$0")/.."  # /app/api
 echo ">> migrate-and-start: applying TypeORM migrations…"
 node ./dist/cli/migrate.js
 
+if [ "${DEMO_MODE:-false}" = "true" ]; then
+  echo ">> migrate-and-start: DEMO_MODE=true — running seed-demo…"
+  node ./dist/cli/seed-demo.js
+else
+  echo ">> migrate-and-start: DEMO_MODE not set — skipping seed."
+fi
+
 echo ">> migrate-and-start: starting NestJS…"
 exec node ./dist/main

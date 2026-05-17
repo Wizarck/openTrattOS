@@ -40,6 +40,7 @@ import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
 import { BeforeAfterAuditInterceptor } from './shared/interceptors/before-after-audit.interceptor';
 import { AgentAuditMiddleware } from './shared/middleware/agent-audit.middleware';
 import { AgentSignatureMiddleware } from './shared/middleware/agent-signature.middleware';
+import { DemoAuthMiddleware } from './shared/middleware/demo-auth.middleware';
 import { IdempotencyMiddleware } from './shared/middleware/idempotency.middleware';
 import { SharedModule } from './shared/shared.module';
 
@@ -61,6 +62,18 @@ import { SharedModule } from './shared/shared.module';
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'web', 'dist'),
       exclude: ['/api/{*splat}', '/health'],
+      serveStaticOptions: {
+        // index.html → no-cache so future deploys are immediately visible
+        // (no manual Cloudflare purge required). /assets/* → Vite emits
+        // content-hashed filenames → cache-immutable for 1 year.
+        setHeaders: (res: { setHeader: (k: string, v: string) => void }, p: string) => {
+          if (p.endsWith('index.html')) {
+            res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+          } else if (p.includes('/assets/') || p.includes('\\assets\\')) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          }
+        },
+      },
     }),
 
     // m3.x-app-bootstrap-and-vps-deploy slice §1.10: /health endpoint
@@ -293,8 +306,17 @@ export class AppModule implements NestModule {
     // runs FIRST so a verified signature stamps `req.agentContext` before
     // AgentAuditMiddleware reads it. AgentAuditMiddleware is idempotent —
     // it leaves a context with `signatureVerified=true` untouched.
+    // DemoAuthMiddleware runs FIRST so `req.user` is populated before any
+    // downstream middleware/guard reads it. No-op when DEMO_MODE !== 'true'.
+    // Pairs with `apps/api/src/cli/seed-demo.ts` so the injected IDs match
+    // real DB rows. Remove (or make a no-op) when real auth ships per R8.
     consumer
-      .apply(AgentSignatureMiddleware, AgentAuditMiddleware, IdempotencyMiddleware)
+      .apply(
+        DemoAuthMiddleware,
+        AgentSignatureMiddleware,
+        AgentAuditMiddleware,
+        IdempotencyMiddleware,
+      )
       .forRoutes('*');
   }
 }

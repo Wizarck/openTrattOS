@@ -33,6 +33,16 @@ COPY apps/api ./apps/api
 COPY apps/web ./apps/web
 COPY packages ./packages
 
+# Vite reads VITE_* env vars at build time and bakes them into the SPA
+# bundle. The defaults match apps/api/src/cli/seed-demo.ts seed IDs so
+# the SPA "auto-logs in" against the seeded demo OWNER when DEMO_MODE=true
+# on the api side. Override at build (`docker build --build-arg ...`)
+# only for non-demo image variants.
+ARG VITE_DEMO_ORG_ID=00000000-0000-4000-8000-000000000001
+ARG VITE_DEMO_USER_ROLE=OWNER
+ENV VITE_DEMO_ORG_ID=${VITE_DEMO_ORG_ID}
+ENV VITE_DEMO_USER_ROLE=${VITE_DEMO_USER_ROLE}
+
 # Build api and web (turbo will respect the workspace dependency graph
 # so @nexandro/types, contracts, label-renderer, ui-kit get built
 # transitively before consumers).

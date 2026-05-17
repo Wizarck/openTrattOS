@@ -43,6 +43,9 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       FRONTEND_URL: ${FRONTEND_URL:?set in .env}
       PORT: "3001"
+      # DEMO_MODE: seeds 1 OWNER user + 1 org on first boot and injects
+      # them on every request (DemoAuthMiddleware). Disable for real tenants.
+      DEMO_MODE: "${DEMO_MODE:-true}"
       OTEL_SDK_DISABLED: "${OTEL_SDK_DISABLED:-true}"
       NEXANDRO_EMAIL_PROVIDER: "${NEXANDRO_EMAIL_PROVIDER:-smtp}"
       AUDIT_ARCHIVAL_ENABLED: "${AUDIT_ARCHIVAL_ENABLED:-false}"
