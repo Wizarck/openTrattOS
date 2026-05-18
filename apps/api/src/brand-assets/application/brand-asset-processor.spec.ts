@@ -1,4 +1,7 @@
-import sharp = require('sharp');
+// CJS interop — see brand-asset-processor.ts for context.
+import * as sharpModule from 'sharp';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sharp: typeof import('sharp') = (sharpModule as any).default ?? sharpModule;
 import { BrandAssetProcessor } from './brand-asset-processor';
 import {
   BrandFileCorruptError,

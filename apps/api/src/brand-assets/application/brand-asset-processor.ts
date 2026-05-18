@@ -1,5 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import sharp = require('sharp');
+// CJS interop: apps/api tsconfig has allowSyntheticDefaultImports but NOT
+// esModuleInterop, so `import sharp from 'sharp'` compiles to
+// `require('sharp').default` which is undefined (sharp exports the factory
+// as `module.exports` directly). Same workaround as
+// shared/email-dispatch/sendgrid-email.adapter.ts.
+import * as sharpModule from 'sharp';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const sharp: typeof import('sharp') = (sharpModule as any).default ?? sharpModule;
 import {
   ALLOWED_BRAND_MIME_TYPES,
   BrandFileCorruptError,
