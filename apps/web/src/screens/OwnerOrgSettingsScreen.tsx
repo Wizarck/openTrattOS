@@ -7,6 +7,7 @@ import {
 } from '@nexandro/ui-kit';
 import { ApiError } from '../api/client';
 import { useCurrentOrgId, useCurrentRole } from '../lib/currentUser';
+import { useBrandMarkUploadMutation } from '../hooks/useBrandMarkUpload';
 import { useOrgLabelFieldsMutation, useOrgLabelFieldsQuery } from '../hooks/useOrgLabelFields';
 
 /**
@@ -33,7 +34,9 @@ export function OwnerOrgSettingsScreen() {
 function Inner({ orgId }: { orgId: string }) {
   const query = useOrgLabelFieldsQuery(orgId);
   const mutation = useOrgLabelFieldsMutation(orgId);
+  const brandUpload = useBrandMarkUploadMutation(orgId);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [brandSuccess, setBrandSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (mutation.isSuccess) {
@@ -43,6 +46,16 @@ function Inner({ orgId }: { orgId: string }) {
     }
     return undefined;
   }, [mutation.isSuccess]);
+
+  useEffect(() => {
+    if (brandUpload.isSuccess && brandUpload.data) {
+      const { width, height, byteSize } = brandUpload.data;
+      setBrandSuccess(`Logotipo guardado · ${width}×${height} · ${formatBytes(byteSize)}`);
+      const t = setTimeout(() => setBrandSuccess(null), 4000);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [brandUpload.isSuccess, brandUpload.data]);
 
   const onSubmit = (values: LabelFieldsFormValues) => {
     mutation.mutate(values);
@@ -64,6 +77,12 @@ function Inner({ orgId }: { orgId: string }) {
         onSubmit={onSubmit}
         submitting={mutation.isPending}
         errors={errors}
+        brandMarkUpload={{
+          onFilePicked: (file) => brandUpload.mutate(file),
+          uploading: brandUpload.isPending,
+          error: brandUpload.error ? friendlyUploadError(brandUpload.error) : undefined,
+          successInfo: brandSuccess ?? undefined,
+        }}
       />
       {savedAt !== null && (
         <p role="status" className="mt-4 text-sm text-(--color-success-fg)">
@@ -72,6 +91,20 @@ function Inner({ orgId }: { orgId: string }) {
       )}
     </>
   );
+}
+
+function friendlyUploadError(err: ApiError): string {
+  if (err.status === 413) return 'Archivo demasiado grande (máximo 2 MB).';
+  if (err.status === 415) return 'Formato no permitido. Permitidos: PNG, JPG, WEBP, SVG.';
+  if (err.status === 400) return 'No se pudo procesar la imagen. Prueba con otra.';
+  if (err.status === 403) return 'Sólo el Owner puede subir el logotipo.';
+  return `No se pudo subir el logotipo (HTTP ${err.status}).`;
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
 }
 
 function AccessDenied() {

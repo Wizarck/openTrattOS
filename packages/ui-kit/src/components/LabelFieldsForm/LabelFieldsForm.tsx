@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { cn } from '../../lib/cn';
+import { BrandMarkPicker } from '../BrandMarkPicker';
 import {
   LABEL_PAGE_SIZES,
   PRINT_ADAPTER_IDS,
@@ -29,6 +30,7 @@ export function LabelFieldsForm({
   submitting = false,
   errors = {},
   disabled = false,
+  brandMarkUpload,
 }: LabelFieldsFormProps) {
   const [values, setValues] = useState<LabelFieldsFormValues>(initialValues ?? {});
 
@@ -204,32 +206,46 @@ export function LabelFieldsForm({
         </div>
       </fieldset>
 
-      {/* 4. Brand mark URL */}
+      {/* 4. Brand mark — drag-and-drop upload + URL fallback when wired,
+            legacy URL-only input otherwise (kept for Storybook + tests). */}
       <fieldset className={fieldsetCls} disabled={disabled}>
         <legend className={legendCls}>Marca</legend>
-        <div>
-          <label className={labelCls} htmlFor="lf-brandMark">URL del logotipo</label>
-          <input
-            id="lf-brandMark"
-            type="url"
-            value={values.brandMarkUrl ?? ''}
-            onChange={(e) => updateField('brandMarkUrl', e.target.value || undefined)}
-            className={inputCls}
-            aria-invalid={Boolean(fieldError('brandMarkUrl'))}
-            placeholder="https://…"
+        {brandMarkUpload ? (
+          <BrandMarkPicker
+            value={values.brandMarkUrl}
+            onFilePicked={brandMarkUpload.onFilePicked}
+            onUrlChanged={(url) => updateField('brandMarkUrl', url)}
+            onClear={() => updateField('brandMarkUrl', undefined)}
+            uploading={brandMarkUpload.uploading}
+            error={brandMarkUpload.error ?? fieldError('brandMarkUrl')}
+            successInfo={brandMarkUpload.successInfo}
+            disabled={disabled}
           />
-          {fieldError('brandMarkUrl') && <p className={errorCls}>{fieldError('brandMarkUrl')}</p>}
-          {values.brandMarkUrl && !fieldError('brandMarkUrl') && (
-            <img
-              src={values.brandMarkUrl}
-              alt="Vista previa del logotipo"
-              className="mt-2 h-12 w-auto rounded border border-border-subtle"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
+        ) : (
+          <div>
+            <label className={labelCls} htmlFor="lf-brandMark">URL del logotipo</label>
+            <input
+              id="lf-brandMark"
+              type="url"
+              value={values.brandMarkUrl ?? ''}
+              onChange={(e) => updateField('brandMarkUrl', e.target.value || undefined)}
+              className={inputCls}
+              aria-invalid={Boolean(fieldError('brandMarkUrl'))}
+              placeholder="https://…"
             />
-          )}
-        </div>
+            {fieldError('brandMarkUrl') && <p className={errorCls}>{fieldError('brandMarkUrl')}</p>}
+            {values.brandMarkUrl && !fieldError('brandMarkUrl') && (
+              <img
+                src={values.brandMarkUrl}
+                alt="Vista previa del logotipo"
+                className="mt-2 h-12 w-auto rounded border border-border-subtle"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            )}
+          </div>
+        )}
       </fieldset>
 
       {/* 5. Page size */}
