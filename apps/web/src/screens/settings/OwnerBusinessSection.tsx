@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Save } from 'lucide-react';
+import { StickySaveBar } from '@nexandro/ui-kit';
 import { useCurrentOrgId } from '../../lib/currentUser';
 import { useOrganizationQuery, useOrganizationMutation } from '../../hooks/useOrganization';
 
@@ -34,6 +34,11 @@ function Form({ orgId }: { orgId: string }) {
   const [locale, setLocale] = useState<string>('');
   const [timezone, setTimezone] = useState<string>('');
   const [hydrated, setHydrated] = useState(false);
+  const [savedSnapshot, setSavedSnapshot] = useState<{
+    name: string;
+    locale: string;
+    timezone: string;
+  } | null>(null);
 
   // Hydrate once when the org loads.
   if (query.data && !hydrated) {
@@ -41,7 +46,19 @@ function Form({ orgId }: { orgId: string }) {
     setLocale(query.data.defaultLocale);
     setTimezone(query.data.timezone);
     setHydrated(true);
+    setSavedSnapshot({
+      name: query.data.name,
+      locale: query.data.defaultLocale,
+      timezone: query.data.timezone,
+    });
   }
+
+  // Audit v2 A-6 — dirty tracking drives the StickySaveBar visibility.
+  const dirty =
+    savedSnapshot != null &&
+    (savedSnapshot.name !== name.trim() ||
+      savedSnapshot.locale !== locale.trim() ||
+      savedSnapshot.timezone !== timezone.trim());
 
   if (query.isLoading) {
     return <p className="text-sm text-mute">Cargando datos del negocio…</p>;
@@ -58,11 +75,33 @@ function Form({ orgId }: { orgId: string }) {
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    mutation.mutate({
-      name: name.trim(),
-      defaultLocale: locale.trim(),
-      timezone: timezone.trim(),
-    });
+    persist();
+  };
+
+  const persist = () => {
+    mutation.mutate(
+      {
+        name: name.trim(),
+        defaultLocale: locale.trim(),
+        timezone: timezone.trim(),
+      },
+      {
+        onSuccess: () => {
+          setSavedSnapshot({
+            name: name.trim(),
+            locale: locale.trim(),
+            timezone: timezone.trim(),
+          });
+        },
+      },
+    );
+  };
+
+  const onDiscard = () => {
+    if (!savedSnapshot) return;
+    setName(savedSnapshot.name);
+    setLocale(savedSnapshot.locale);
+    setTimezone(savedSnapshot.timezone);
   };
 
   return (
@@ -148,22 +187,18 @@ function Form({ orgId }: { orgId: string }) {
           No se pudieron guardar los cambios: {mutation.error.message}
         </p>
       )}
-      {mutation.isSuccess && (
-        <p role="status" className="text-sm text-(--color-success-fg)">
-          ✓ Cambios guardados
-        </p>
-      )}
 
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="inline-flex items-center gap-2 rounded-md border border-(--color-primary) bg-(--color-primary) px-6 py-2.5 text-sm font-semibold text-(--color-on-primary) shadow-sm transition hover:shadow-md hover:brightness-110 active:translate-y-px focus:outline-none focus:ring-2 focus:ring-(--color-focus) focus:ring-offset-2"
-        >
-          <Save aria-hidden="true" size={16} />
-          {mutation.isPending ? 'Guardando…' : 'Guardar cambios'}
-        </button>
-      </div>
+      <StickySaveBar
+        visible={dirty || mutation.isPending}
+        onPrimary={persist}
+        onSecondary={onDiscard}
+        primaryPending={mutation.isPending}
+        message={
+          mutation.isSuccess && !dirty
+            ? '✓ Cambios guardados'
+            : undefined
+        }
+      />
     </form>
   );
 }

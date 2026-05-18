@@ -130,6 +130,8 @@ export { MetricCard } from './components/MetricCard';
 export type { MetricCardProps } from './components/MetricCard';
 export { EmptyStateCard } from './components/EmptyStateCard';
 export type { EmptyStateCardProps } from './components/EmptyStateCard';
+export { StickySaveBar } from './components/StickySaveBar';
+export type { StickySaveBarProps } from './components/StickySaveBar';
 
 // ---- Recall search (slice #11 m3-incident-search-multi-anchor, Wave 2.5) ----
 export { IncidentSearchField } from './components/IncidentSearchField';
