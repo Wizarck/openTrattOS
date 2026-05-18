@@ -55,14 +55,46 @@ export async function getGoodsReceipts(
   return api<GrListResponse>(`/m3/procurement/gr?${qs}`);
 }
 
+export type ReconciliationDiscrepancyType =
+  | 'cantidad'
+  | 'precio'
+  | 'producto'
+  | 'lote-no-conforme';
+
+export type ReconciliationState =
+  | 'abierta'
+  | 'aceptada'
+  | 'nota-credito'
+  | 'devuelta';
+
+export type ResolvableReconciliationState = Exclude<
+  ReconciliationState,
+  'abierta'
+>;
+
+/**
+ * Structured diff payload — `Record<string, unknown>` mirrors the backend
+ * `jsonb` column. Per discrepancy type (docs/ux/j11.md §6 + entity comment):
+ *   - cantidad         → { expectedQty, actualQty, unit, deltaPct }
+ *   - precio           → { expectedUnitPrice, actualUnitPrice, currency, deltaPct }
+ *   - producto         → { expectedProductId, actualProductId }
+ *   - lote-no-conforme → { lotId, reason }
+ * All variants also include `{ grLineId, poLineId }` from the detector.
+ */
+export type ReconciliationDiff = Record<string, unknown>;
+
 export interface ReconciliationListItem {
   id: string;
-  poId: string;
-  poNumber: string;
+  poId: string | null;
+  poNumber: string | null;
+  grId: string;
   supplierId: string;
-  discrepancyType: 'cantidad' | 'precio' | 'producto' | 'lote-no-conforme';
-  diff: string;
-  state: 'abierta' | 'aceptada' | 'nota-credito' | 'devuelta';
+  discrepancyType: ReconciliationDiscrepancyType;
+  diff: ReconciliationDiff;
+  state: ReconciliationState;
+  resolvedAt: string | null;
+  resolvedByUserId: string | null;
+  resolutionNotes: string | null;
   createdAt: string;
 }
 
@@ -77,5 +109,34 @@ export async function getReconciliations(
   const qs = new URLSearchParams({ organizationId }).toString();
   return api<ReconciliationListResponse>(
     `/m3/procurement/reconciliation?${qs}`,
+  );
+}
+
+export interface ResolveReconciliationPayload {
+  state: ResolvableReconciliationState;
+  notes?: string;
+}
+
+/**
+ * POST /m3/procurement/reconciliation/:id/resolve (Sprint 4 W3-5+W3-6).
+ * Owner-only at the API layer — the j11 drawer enforces the Manager
+ * disabled-state up-front so the request is never sent without the
+ * required role.
+ */
+export async function resolveReconciliation(
+  organizationId: string,
+  id: string,
+  payload: ResolveReconciliationPayload,
+): Promise<ReconciliationListItem> {
+  return api<ReconciliationListItem>(
+    `/m3/procurement/reconciliation/${id}/resolve`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        organizationId,
+        state: payload.state,
+        ...(payload.notes !== undefined ? { notes: payload.notes } : {}),
+      }),
+    },
   );
 }
