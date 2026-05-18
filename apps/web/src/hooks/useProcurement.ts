@@ -1,12 +1,15 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '../api/client';
 import {
   getGoodsReceipts,
   getPurchaseOrders,
   getReconciliations,
+  resolveReconciliation,
   type GrListResponse,
   type PoListResponse,
+  type ReconciliationListItem,
   type ReconciliationListResponse,
+  type ResolveReconciliationPayload,
 } from '../api/procurement';
 
 const STALE_30_S = 30_000;
@@ -51,5 +54,30 @@ export function useReconciliation(orgId: string | undefined) {
     },
     enabled: !!orgId,
     staleTime: STALE_30_S,
+  });
+}
+
+/**
+ * Mutation wrapping `POST /m3/procurement/reconciliation/:id/resolve`
+ * for the j11 resolution drawer (Sprint 4 W3-6). On success we
+ * invalidate the reconciliation list so the row's state badge + the
+ * empty-state count refresh without a full reload.
+ */
+export function useResolveReconciliation(orgId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation<
+    ReconciliationListItem,
+    ApiError,
+    { id: string; payload: ResolveReconciliationPayload }
+  >({
+    mutationFn: ({ id, payload }) => {
+      if (!orgId) throw new Error('orgId required');
+      return resolveReconciliation(orgId, id, payload);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: ['procurement', 'reconciliation', orgId],
+      });
+    },
   });
 }
