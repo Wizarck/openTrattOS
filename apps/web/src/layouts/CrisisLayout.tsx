@@ -98,11 +98,18 @@ export function CrisisLayout({ children, showHeader = true }: CrisisLayoutProps)
             <span>
               ventana legal{' '}
               <strong
-                className="font-mono tabular-nums"
+                className="font-mono tabular-nums text-sm font-bold"
                 style={{
-                  color: isOverdue ? 'var(--color-destructive)' : 'var(--color-ink)',
+                  color: 'var(--color-destructive)',
                   fontVariantNumeric: 'tabular-nums',
+                  letterSpacing: '0',
+                  marginLeft: '0.25rem',
                 }}
+                aria-label={
+                  isOverdue
+                    ? 'Ventana legal expirada'
+                    : `Tiempo restante ${formatCountdown(remaining)}`
+                }
               >
                 {formatCountdown(remaining)}
               </strong>

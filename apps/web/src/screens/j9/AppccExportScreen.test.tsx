@@ -5,6 +5,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppccExportScreen } from './AppccExportScreen';
 
@@ -29,13 +30,15 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-function renderWithClient() {
+function renderWithClient(initialUrl = '/compliance/export') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <AppccExportScreen />
+      <MemoryRouter initialEntries={[initialUrl]}>
+        <AppccExportScreen />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -226,5 +229,44 @@ describe('AppccExportScreen', () => {
     // SHA-256 short form rendered
     expect(screen.getByText('a9f3…b274')).toBeInTheDocument();
     expect(screen.getByText('AL-2026-189554')).toBeInTheDocument();
+  });
+
+  // Audit v2 B-4: deep-link pre-fill ("Inspector aquí ahora").
+  it('pre-fills inspector scope + raises banner when ?mode=inspeccion', async () => {
+    vi.mocked(useCurrentRole).mockReturnValue('OWNER');
+    vi.mocked(useCurrentOrgId).mockReturnValue('org-1');
+    fetchMock.mockImplementation(() => Promise.resolve(emptyArchive()));
+
+    renderWithClient('/compliance/export?mode=inspeccion');
+
+    // Paprika banner present
+    expect(
+      screen.getByRole('alert').textContent,
+    ).toMatch(/Modo inspección activo/);
+
+    // Inspector scope: haccp + lot + procurement + photo (not ai_obs).
+    const haccp = screen.getByLabelText(/HACCP records/) as HTMLInputElement;
+    const lot = screen.getByLabelText(/Lot lifecycle/) as HTMLInputElement;
+    const procurement = screen.getByLabelText(/Procurement/) as HTMLInputElement;
+    const photo = screen.getByLabelText(/Photo-ingestion/) as HTMLInputElement;
+    expect(haccp.checked).toBe(true);
+    expect(lot.checked).toBe(true);
+    expect(procurement.checked).toBe(true);
+    expect(photo.checked).toBe(true);
+  });
+
+  it('honours an explicit ?scope=haccp,photo and ignores defaults', async () => {
+    vi.mocked(useCurrentRole).mockReturnValue('OWNER');
+    vi.mocked(useCurrentOrgId).mockReturnValue('org-1');
+    fetchMock.mockImplementation(() => Promise.resolve(emptyArchive()));
+
+    renderWithClient('/compliance/export?scope=haccp,photo');
+
+    const haccp = screen.getByLabelText(/HACCP records/) as HTMLInputElement;
+    const lot = screen.getByLabelText(/Lot lifecycle/) as HTMLInputElement;
+    const photo = screen.getByLabelText(/Photo-ingestion/) as HTMLInputElement;
+    expect(haccp.checked).toBe(true);
+    expect(lot.checked).toBe(false); // overridden by explicit ?scope
+    expect(photo.checked).toBe(true);
   });
 });
