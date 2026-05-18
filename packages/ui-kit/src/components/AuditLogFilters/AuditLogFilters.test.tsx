@@ -24,7 +24,8 @@ describe('AuditLogFilters', () => {
   it('toggling an event-type checkbox calls onChange with the toggled value', () => {
     const onChange = vi.fn();
     render(<AuditLogFilters {...baseProps} onChange={onChange} />);
-    fireEvent.click(screen.getByLabelText('AGENT_ACTION_FORENSIC'));
+    // Label renders humanized Spanish; raw enum preserved in title for power users.
+    fireEvent.click(screen.getByLabelText('Agente · forense'));
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: ['AGENT_ACTION_FORENSIC'] }),
     );

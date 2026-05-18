@@ -109,11 +109,13 @@ describe('AuditLogScreen', () => {
     );
 
     renderWithClient();
+    // Audit v2 B-1: filter checkboxes now render humanized Spanish labels;
+    // the raw enum lives in the `title` attr for power users.
     await waitFor(() =>
-      expect(screen.getByText('AGENT_ACTION_FORENSIC')).toBeInTheDocument(),
+      expect(screen.getByText('Agente · forense')).toBeInTheDocument(),
     );
 
-    fireEvent.click(screen.getByLabelText('AGENT_ACTION_FORENSIC'));
+    fireEvent.click(screen.getByLabelText('Agente · forense'));
     fireEvent.click(screen.getByRole('button', { name: 'Aplicar' }));
 
     await waitFor(() => {

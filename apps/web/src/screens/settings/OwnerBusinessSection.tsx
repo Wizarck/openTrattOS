@@ -136,8 +136,9 @@ function Form({ orgId }: { orgId: string }) {
           Identidad fiscal <span className="text-xs font-normal italic text-mute">próximamente</span>
         </legend>
         <p className="text-sm text-mute">
-          CIF/NIF/VAT, razón social, domicilio fiscal. Necesarios para facturas + cumplimiento
-          fiscal EU. Aterrizan en la siguiente iteración junto con la migración de schema.
+          Pronto podrás añadir CIF/NIF/VAT, razón social y domicilio fiscal —
+          los datos que tu asesoría te pide para facturas y exportes oficiales.
+          Te avisaremos en cuanto esté disponible.
         </p>
       </fieldset>
 

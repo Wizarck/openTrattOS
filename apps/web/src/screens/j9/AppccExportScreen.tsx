@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   BundleArchiveTable,
   BundleDownloadRow,
@@ -56,6 +57,27 @@ const DEFAULT_SCOPE: Scope = {
   photo: false,
   ai_obs: false,
 };
+
+/** Inspector pre-fill (j9.md §Trigger): wider than quarterly default. */
+const INSPECTOR_SCOPE: Scope = {
+  haccp: true,
+  lot: true,
+  procurement: true,
+  photo: true,
+  ai_obs: false,
+};
+
+function parseScopeParam(raw: string | null): Scope | null {
+  if (!raw) return null;
+  const parts = new Set(raw.split(',').map((p) => p.trim().toLowerCase()));
+  return {
+    haccp: parts.has('haccp'),
+    lot: parts.has('lot') || parts.has('lots'),
+    procurement: parts.has('procurement') || parts.has('po'),
+    photo: parts.has('photo') || parts.has('photos'),
+    ai_obs: parts.has('ai_obs') || parts.has('ai-obs') || parts.has('aiobs'),
+  };
+}
 
 const PROGRESS_STEPS: ReadonlyArray<ProgressStep> = [
   { key: 'index_audit_log', label: 'Indexando audit_log' },
@@ -156,12 +178,21 @@ function Inner({
   orgId: string;
   actorUserId: string;
 }) {
+  // Deep-link pre-fill per j9.md §Trigger ("Inspector aquí ahora" flow):
+  // `?mode=inspeccion` widens scope + surfaces a paprika banner.
+  // `?scope=haccp,lot,photo` cherry-picks individual capabilities.
+  const [searchParams] = useSearchParams();
+  const inspectorMode = searchParams.get('mode') === 'inspeccion';
+  const initialScope =
+    parseScopeParam(searchParams.get('scope')) ??
+    (inspectorMode ? INSPECTOR_SCOPE : DEFAULT_SCOPE);
+
   const [chip, setChip] = useState<RangeChipKey>('90d');
   const initial = rangeFromChip('90d');
   const [from, setFrom] = useState<string>(initial.from);
   const [to, setTo] = useState<string>(initial.to);
   const [locale, setLocale] = useState<AppccLocale>('es-ES');
-  const [scope, setScope] = useState<Scope>(DEFAULT_SCOPE);
+  const [scope, setScope] = useState<Scope>(initialScope);
   const [expanded, setExpanded] = useState(false);
   const [recipients, setRecipients] = useState<ReadonlyArray<string>>([]);
   const [bundleId, setBundleId] = useState<string | null>(null);
@@ -274,6 +305,21 @@ function Inner({
       >
         Generar bundle de auditoría
       </h1>
+
+      {inspectorMode && (
+        <div
+          role="alert"
+          className="mt-4 rounded-md border-l-4 px-4 py-3 text-sm"
+          style={{
+            backgroundColor: 'var(--color-surface)',
+            borderLeftColor: 'var(--color-destructive)',
+            color: 'var(--color-ink)',
+          }}
+        >
+          <strong className="font-semibold">Modo inspección activo.</strong>{' '}
+          Alcance pre-ampliado a HACCP + Lotes + Compras + Fotos. Cambia el rango si el inspector pide otra ventana y pulsa <em>Generar bundle</em>.
+        </div>
+      )}
 
       <TransparencyBanner />
 

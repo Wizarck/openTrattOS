@@ -179,8 +179,11 @@ function Inner({
             "/compliance/export". This shortcut closes the discoverability gap
             while the dedicated nav tab also exists. Owner+Manager only. */}
         <RoleGuard role={['OWNER', 'MANAGER']} currentRole={role as 'OWNER' | 'MANAGER' | 'STAFF' | null}>
+          {/* Audit v2 B-4: pass ?mode=inspeccion so the export screen
+              widens scope + raises a paprika banner. Inspector flow
+              per j9.md §Trigger. */}
           <Link
-            to="/compliance/export"
+            to="/compliance/export?mode=inspeccion"
             className="inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-(--color-focus)"
             style={{
               borderColor: 'var(--color-border-strong)',

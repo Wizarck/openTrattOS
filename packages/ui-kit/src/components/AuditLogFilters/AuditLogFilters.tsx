@@ -1,4 +1,5 @@
 import { cn } from '../../lib/cn';
+import { humanizeEventType } from '../AuditLogTable/humanizeEventType';
 import {
   AUDIT_ACTOR_KINDS,
   KNOWN_AUDIT_AGGREGATE_TYPES,
@@ -49,13 +50,17 @@ export function AuditLogFilters({
         <legend className="px-1 text-xs font-semibold text-ink">Tipo de evento</legend>
         <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3">
           {KNOWN_AUDIT_EVENT_TYPES.map((et) => (
-            <label key={et} className="flex items-center gap-2 font-mono text-[11px] text-ink">
+            <label
+              key={et}
+              className="flex items-center gap-2 text-xs text-ink"
+              title={et}
+            >
               <input
                 type="checkbox"
                 checked={values.eventType.includes(et)}
                 onChange={() => toggleEventType(et)}
               />
-              <span>{et}</span>
+              <span>{humanizeEventType(et)}</span>
             </label>
           ))}
         </div>
