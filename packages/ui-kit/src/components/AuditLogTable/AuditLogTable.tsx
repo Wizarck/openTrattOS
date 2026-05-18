@@ -1,6 +1,8 @@
 import { Fragment } from 'react';
+import { FileSearch } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { AuditLogRowDetail } from '../AuditLogRowDetail';
+import { EmptyStateCard } from '../EmptyStateCard';
 import { humanizeEventType } from './humanizeEventType';
 import type { AuditLogRow, AuditLogTableProps } from './AuditLogTable.types';
 
@@ -25,10 +27,14 @@ export function AuditLogTable({
   }
 
   if (!loading && rows.length === 0) {
+    // Audit v2 A-5: shared empty-state primitive so the table never
+    // dead-ends. Icon + headline + body + (future) demo-data toggle.
     return (
-      <div className="rounded-lg border border-dashed border-border-strong p-8 text-center text-mute">
-        No hay eventos para los filtros aplicados.
-      </div>
+      <EmptyStateCard
+        Icon={FileSearch}
+        title="Sin eventos para estos filtros"
+        body="Prueba ampliando la ventana temporal o quitando filtros. La auditoría empieza a llenarse cuando alguien crea recetas, registra HACCP, despacha recalls, etc."
+      />
     );
   }
 

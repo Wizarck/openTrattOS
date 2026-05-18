@@ -21,8 +21,11 @@ const baseRow: AuditLogRow = {
 
 describe('AuditLogTable', () => {
   it('renders the empty-state message when rows is empty and not loading', () => {
+    // Audit v2 A-5: switched to EmptyStateCard with icon + headline + body.
     render(<AuditLogTable rows={[]} expandedRowId={null} onToggleExpand={vi.fn()} />);
-    expect(screen.getByText(/No hay eventos para los filtros aplicados/)).toBeInTheDocument();
+    expect(
+      screen.getByText('Sin eventos para estos filtros'),
+    ).toBeInTheDocument();
   });
 
   it('renders skeleton placeholders when loading and rows is empty', () => {
