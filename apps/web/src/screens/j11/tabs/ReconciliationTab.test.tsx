@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProcurementScreen } from '../ProcurementScreen';
 import type { ReconciliationListItem } from '../../../api/procurement';
+import { __DRAFT_KEY_PREFIX, saveDraft } from '../../../lib/draftStorage';
 
 vi.mock('../../../lib/currentUser', () => ({
   useCurrentRole: vi.fn(),
@@ -17,9 +18,22 @@ import {
 
 const fetchMock = vi.fn();
 
+function clearAllDrafts() {
+  const keys: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(__DRAFT_KEY_PREFIX)) keys.push(k);
+  }
+  for (const k of keys) localStorage.removeItem(k);
+}
+
 beforeEach(() => {
   fetchMock.mockReset();
   global.fetch = fetchMock as unknown as typeof fetch;
+  clearAllDrafts();
+});
+afterEach(() => {
+  clearAllDrafts();
 });
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -188,6 +202,40 @@ describe('ReconciliationTab — filter chips (Sprint 4 W3-9)', () => {
         'reconciliation-filter-supplier-chip-99999999-9999-4999-8999-999999999999',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('W3-13: renders the mute "Borrador de resolución · HH:MM" eyebrow on rows with a draft', async () => {
+    vi.mocked(useCurrentRole).mockReturnValue('OWNER');
+    vi.mocked(useCurrentOrgId).mockReturnValue('org-1');
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        items: [
+          buildRow({ id: 'recon-with-draft' }),
+          buildRow({ id: 'recon-no-draft', poNumber: 'PO-2026-0002' }),
+        ],
+        total: 2,
+      }),
+    );
+
+    // Seed a draft for the first row before the tab mounts.
+    saveDraft('recon:recon-with-draft', {
+      action: 'aceptada',
+      notes: 'verifico mañana',
+    });
+
+    renderReconTab();
+
+    // Both rows render.
+    const rows = await screen.findAllByTestId('reconciliation-row');
+    expect(rows).toHaveLength(2);
+
+    // Exactly one eyebrow — pinned to the row with a draft.
+    const eyebrows = await screen.findAllByTestId(
+      'reconciliation-draft-eyebrow',
+    );
+    expect(eyebrows).toHaveLength(1);
+    expect(eyebrows[0]).toHaveAttribute('data-row-id', 'recon-with-draft');
+    expect(eyebrows[0].textContent).toContain('Borrador de resolución');
   });
 
   it('"Restablecer filtros" appears only when non-default state is active', async () => {

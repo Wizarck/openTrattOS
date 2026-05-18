@@ -1,9 +1,13 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { afterEach, describe, it, expect, beforeEach, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ProcurementScreen } from '../ProcurementScreen';
 import type { ReconciliationListItem } from '../../../api/procurement';
+import {
+  __DRAFT_KEY_PREFIX,
+  saveDraft,
+} from '../../../lib/draftStorage';
 
 vi.mock('../../../lib/currentUser', () => ({
   useCurrentRole: vi.fn(),
@@ -17,9 +21,22 @@ import {
 
 const fetchMock = vi.fn();
 
+function clearAllDrafts() {
+  const keys: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(__DRAFT_KEY_PREFIX)) keys.push(k);
+  }
+  for (const k of keys) localStorage.removeItem(k);
+}
+
 beforeEach(() => {
   fetchMock.mockReset();
   global.fetch = fetchMock as unknown as typeof fetch;
+  clearAllDrafts();
+});
+afterEach(() => {
+  clearAllDrafts();
 });
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -316,6 +333,116 @@ describe('ReconciliationDrawer (Sprint 4 W3-6)', () => {
     expect(
       screen.getByTestId('reconciliation-audit-chip-link'),
     ).toHaveAttribute('href', '/audit-log?aggregate_id=recon-1');
+  });
+
+  it('W3-13: typing notes inside the confirm modal persists a draft to localStorage', async () => {
+    vi.mocked(useCurrentRole).mockReturnValue('OWNER');
+    vi.mocked(useCurrentOrgId).mockReturnValue('org-1');
+
+    renderRecon([buildRow({ id: 'recon-draft-1' })]);
+
+    fireEvent.click(await screen.findByTestId('reconciliation-row'));
+    fireEvent.click(
+      await screen.findByTestId('reconciliation-action-aceptada'),
+    );
+    fireEvent.change(screen.getByTestId('reconciliation-notes-input'), {
+      target: { value: 'media nota — esperar al jefe' },
+    });
+
+    await waitFor(() => {
+      const raw = localStorage.getItem(
+        __DRAFT_KEY_PREFIX + 'recon:recon-draft-1',
+      );
+      expect(raw).not.toBeNull();
+      const env = JSON.parse(raw as string);
+      expect(env.value).toEqual({
+        action: 'aceptada',
+        notes: 'media nota — esperar al jefe',
+      });
+    });
+  });
+
+  it('W3-13: re-opening the drawer restores the typed action + notes', async () => {
+    vi.mocked(useCurrentRole).mockReturnValue('OWNER');
+    vi.mocked(useCurrentOrgId).mockReturnValue('org-1');
+
+    saveDraft('recon:recon-restore-1', {
+      action: 'devuelta',
+      notes: 'No conformidad — lote vencido',
+    });
+
+    renderRecon([buildRow({ id: 'recon-restore-1' })]);
+
+    fireEvent.click(await screen.findByTestId('reconciliation-row'));
+
+    // The "draft restored" affordance + the matching ConfirmModal both
+    // surface without a second tap on the action button.
+    expect(
+      await screen.findByTestId('reconciliation-draft-restored'),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByTestId('reconciliation-confirm-modal'),
+    ).toHaveTextContent('Devolver');
+    expect(
+      (screen.getByTestId('reconciliation-notes-input') as HTMLTextAreaElement)
+        .value,
+    ).toBe('No conformidad — lote vencido');
+  });
+
+  it('W3-13: a successful resolve clears the draft from localStorage', async () => {
+    vi.mocked(useCurrentRole).mockReturnValue('OWNER');
+    vi.mocked(useCurrentOrgId).mockReturnValue('org-1');
+
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        items: [buildRow({ id: 'recon-clear-1' })],
+        total: 1,
+      }),
+    );
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse(buildRow({ id: 'recon-clear-1', state: 'aceptada' })),
+    );
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ items: [], total: 0 }),
+    );
+
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/procurement?tab=recon']}>
+          <ProcurementScreen />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(await screen.findByTestId('reconciliation-row'));
+    fireEvent.click(
+      await screen.findByTestId('reconciliation-action-aceptada'),
+    );
+    fireEvent.change(screen.getByTestId('reconciliation-notes-input'), {
+      target: { value: 'aceptamos la merma' },
+    });
+
+    // After the modal renders, the draft is persisted.
+    await waitFor(() => {
+      expect(
+        localStorage.getItem(__DRAFT_KEY_PREFIX + 'recon:recon-clear-1'),
+      ).not.toBeNull();
+    });
+
+    fireEvent.click(screen.getByTestId('reconciliation-confirm-submit'));
+
+    // Once the resolve succeeds, the entry is gone.
+    await waitFor(() => {
+      expect(
+        localStorage.getItem(__DRAFT_KEY_PREFIX + 'recon:recon-clear-1'),
+      ).toBeNull();
+    });
   });
 
   it('drawer with a resolved row shows the resolved note + disabled actions', async () => {

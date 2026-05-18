@@ -7,6 +7,32 @@ import type {
   ResolvableReconciliationState,
 } from '../../../api/procurement';
 import type { UserRole } from '@nexandro/ui-kit';
+import {
+  clearDraft,
+  loadDraft,
+  saveDraft,
+} from '../../../lib/draftStorage';
+
+/**
+ * Sprint 4 W3-13 — draft persistence key. The reconciliation row id is
+ * stable across reloads so two operators on the same tablet can share
+ * the draft surface without clobbering each other's WIP.
+ */
+export function reconciliationDraftKey(reconciliationId: string): string {
+  return `recon:${reconciliationId}`;
+}
+
+/**
+ * Sprint 4 W3-13 — what we persist to localStorage when the operator
+ * leaves the resolution drawer mid-flight. We remember both the
+ * intended action (Aceptar / Nota de crédito / Devolver) and the
+ * notes they've typed so far, so re-opening the row lands them
+ * exactly where they left off.
+ */
+interface ReconciliationDraft {
+  action: ResolvableReconciliationState;
+  notes: string;
+}
 
 /**
  * j11 Reconciliación — resolution drawer (Sprint 4 W3-6).
@@ -79,11 +105,41 @@ export function ReconciliationDrawer({
   orgId,
   onClose,
 }: ReconciliationDrawerProps) {
+  const draftKey = reconciliationDraftKey(row.id);
   const [confirmAction, setConfirmAction] = useState<ActionKey | null>(null);
   const [notes, setNotes] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
 
   const mutation = useResolveReconciliation(orgId);
+
+  // Sprint 4 W3-13 — restore on mount (if a draft exists for this
+  // reconciliation row we re-open the corresponding ConfirmModal with
+  // the typed notes pre-filled, so the operator resumes exactly where
+  // they left off — j11 §"Reconciliation aborted mid-resolution").
+  // We do NOT restore after the row is resolved; the action buttons
+  // are already disabled in that branch.
+  useEffect(() => {
+    if (row.state !== 'abierta') return;
+    const saved = loadDraft<ReconciliationDraft>(draftKey);
+    if (!saved) return;
+    setConfirmAction(saved.action);
+    setNotes(saved.notes);
+    setDraftRestored(true);
+  }, [draftKey, row.state]);
+
+  // Persist whenever there's an active action + notes, so a tablet
+  // crash / inadvertent close keeps the WIP for the next open. We
+  // intentionally save even on empty notes (action alone is useful
+  // context) — the localStorage write is cheap and lets the eyebrow
+  // surface as soon as the operator picks an action.
+  useEffect(() => {
+    if (confirmAction === null) return;
+    saveDraft<ReconciliationDraft>(draftKey, {
+      action: confirmAction,
+      notes,
+    });
+  }, [confirmAction, notes, draftKey]);
 
   // ESC closes the drawer (parity with retroactive-resign reason modal).
   useEffect(() => {
@@ -102,7 +158,13 @@ export function ReconciliationDrawer({
     role === 'MANAGER' && isMaterialDiscrepancy(row);
 
   const onActionClick = (action: ActionKey) => {
-    setNotes('');
+    // W3-13: only clear notes when there is no live draft for this
+    // row; otherwise the operator is mid-resume and we keep their
+    // typed text in place. (The previous behaviour blanked notes on
+    // every action click — fine pre-draft, breaks the resume flow.)
+    if (loadDraft<ReconciliationDraft>(draftKey) === null) {
+      setNotes('');
+    }
     setConfirmAction(action);
   };
 
@@ -121,6 +183,8 @@ export function ReconciliationDrawer({
         onSuccess: () => {
           setConfirmAction(null);
           setToastVisible(true);
+          // W3-13: a successful resolve makes the draft obsolete.
+          clearDraft(draftKey);
           // Defer close so the toast briefly renders (matches the
           // OwnerCatalogSection import-toast pattern — sub-second polite
           // status announcement before the panel unmounts).
@@ -188,6 +252,15 @@ export function ReconciliationDrawer({
             >
               Esta reconciliación ya fue resuelta. Las acciones están
               deshabilitadas.
+            </p>
+          )}
+
+          {draftRestored && !isResolved && (
+            <p
+              className="rounded-md border border-border-strong bg-surface px-3 py-2 text-xs text-mute"
+              data-testid="reconciliation-draft-restored"
+            >
+              Borrador de resolución restaurado. Continuá donde lo dejaste.
             </p>
           )}
 
