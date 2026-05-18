@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   ConflictException,
   Controller,
@@ -10,8 +11,11 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { QueryFailedError } from 'typeorm';
 import { AuditAggregate } from '../../shared/decorators/audit-aggregate.decorator';
 import { Roles } from '../../shared/decorators/roles.decorator';
@@ -19,14 +23,33 @@ import {
   WriteResponseDto,
   toWriteResponse,
 } from '../../shared/dto/write-response.dto';
+import {
+  CategoriesCommitPayload,
+  CategoriesCommitResult,
+  CategoriesImportFormatError,
+  CategoriesImportService,
+  CategoriesPreviewResult,
+  CSV_MAX_BYTES,
+} from '../application/categories-import.service';
 import { Category } from '../domain/category.entity';
 import { CategoryRepository } from '../infrastructure/category.repository';
 import { CategoryResponseDto, CreateCategoryDto, UpdateCategoryDto } from './dto/category.dto';
 
+interface UploadedCsvFile {
+  fieldname: string;
+  originalname: string;
+  mimetype: string;
+  buffer: Buffer;
+  size: number;
+}
+
 @ApiTags('Categories')
 @Controller('categories')
 export class CategoriesController {
-  constructor(private readonly categories: CategoryRepository) {}
+  constructor(
+    private readonly categories: CategoryRepository,
+    private readonly importService: CategoriesImportService,
+  ) {}
 
   @Get('tree')
   @Roles('OWNER', 'MANAGER', 'STAFF')
@@ -114,6 +137,83 @@ export class CategoriesController {
         if (/fk_ingredients_category/.test(msg)) {
           throw new ConflictException({ code: 'CATEGORY_HAS_INGREDIENTS' });
         }
+      }
+      throw err;
+    }
+  }
+
+  @Post('import/preview')
+  @Roles('OWNER')
+  @UseInterceptors(FileInterceptor('csv', { limits: { fileSize: CSV_MAX_BYTES } }))
+  @ApiOperation({
+    summary: 'Preview a categories CSV import (no mutation)',
+    description:
+      'Parses + validates + dedupes the uploaded CSV against the org\'s existing categories. ' +
+      'Returns { totalRows, new, duplicates, errors } so the operator can review before commit. ' +
+      'CSV columns: nombre (required, 2-64 chars), padre (optional), color (optional #RRGGBB). ' +
+      'Hard limits: 1 MB file size, 5000 rows.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        csv: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  async importPreview(
+    @Query('organizationId', new ParseUUIDPipe({ version: '4' })) organizationId: string,
+    @UploadedFile() file: UploadedCsvFile | undefined,
+  ): Promise<WriteResponseDto<CategoriesPreviewResult>> {
+    if (!file) {
+      throw new BadRequestException({
+        code: 'CATEGORIES_CSV_IMPORT_INVALID_FORMAT',
+        detail: 'no file uploaded (multipart field name must be "csv")',
+      });
+    }
+    try {
+      const csvContent = file.buffer.toString('utf8');
+      const result = await this.importService.preview(organizationId, csvContent);
+      return toWriteResponse(result);
+    } catch (err) {
+      if (err instanceof CategoriesImportFormatError) {
+        throw new BadRequestException({
+          code: 'CATEGORIES_CSV_IMPORT_INVALID_FORMAT',
+          detail: err.detail,
+        });
+      }
+      throw err;
+    }
+  }
+
+  @Post('import/commit')
+  @Roles('OWNER')
+  @AuditAggregate('category', null)
+  @ApiOperation({
+    summary: 'Commit a previewed categories CSV import',
+    description:
+      'Applies the previewed plan in a single transaction. Caller selects how to treat ' +
+      'duplicates via `mode`: "skip-duplicates" leaves them untouched; "update-duplicates" ' +
+      'reparents them when the row supplies a `parentName` that resolves to a different parent. ' +
+      'Returns { created, updated, skipped }.',
+  })
+  async importCommit(
+    @Query('organizationId', new ParseUUIDPipe({ version: '4' })) organizationId: string,
+    @Body() payload: CategoriesCommitPayload,
+  ): Promise<WriteResponseDto<CategoriesCommitResult>> {
+    try {
+      const result = await this.importService.commit(organizationId, payload);
+      return toWriteResponse(result);
+    } catch (err) {
+      if (err instanceof CategoriesImportFormatError) {
+        throw new BadRequestException({
+          code: 'CATEGORIES_CSV_IMPORT_INVALID_FORMAT',
+          detail: err.detail,
+        });
+      }
+      if (err instanceof QueryFailedError && /uq_categories_org_parent_name/.test(err.message)) {
+        throw new ConflictException({ code: 'CATEGORY_DUPLICATE_NAME_AT_PARENT' });
       }
       throw err;
     }

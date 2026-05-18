@@ -4,6 +4,7 @@ import { ExternalCatalogModule } from '../external-catalog/external-catalog.modu
 import { RecipesModule } from '../recipes/recipes.module';
 import { AuditResolverRegistry } from '../shared/application/audit-resolver-registry';
 import { SharedModule } from '../shared/shared.module';
+import { CategoriesImportService } from './application/categories-import.service';
 import { IngredientExportService } from './application/ingredient-export.service';
 import { IngredientImportService } from './application/ingredient-import.service';
 import { IngredientsService } from './application/ingredients.service';
@@ -25,6 +26,7 @@ import { UoMController } from './interface/uom.controller';
     IngredientImportService,
     IngredientExportService,
     IngredientsService,
+    CategoriesImportService,
   ],
   exports: [
     CategoryRepository,
@@ -32,6 +34,7 @@ import { UoMController } from './interface/uom.controller';
     IngredientImportService,
     IngredientExportService,
     IngredientsService,
+    CategoriesImportService,
     TypeOrmModule,
   ],
 })
