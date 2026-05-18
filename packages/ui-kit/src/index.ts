@@ -77,6 +77,12 @@ export type {
   LabelPageSize,
   PrintAdapterId,
 } from './components/LabelFieldsForm';
+export {
+  BrandMarkPicker,
+  ACCEPTED_BRAND_MIME_TYPES,
+  MAX_BRAND_BYTES,
+} from './components/BrandMarkPicker';
+export type { BrandMarkPickerProps } from './components/BrandMarkPicker';
 export { AuditLogTable } from './components/AuditLogTable';
 export type { AuditLogRow, AuditLogTableProps } from './components/AuditLogTable';
 export { AuditLogRowDetail } from './components/AuditLogRowDetail';

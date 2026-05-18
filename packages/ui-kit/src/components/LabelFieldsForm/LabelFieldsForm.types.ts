@@ -63,4 +63,16 @@ export interface LabelFieldsFormProps {
   errors?: LabelFieldsFormErrors;
   /** Render-only mode: hides Save and disables every input. */
   disabled?: boolean;
+  /**
+   * Optional brand-mark upload integration. When provided, the Marca fieldset
+   * renders a `<BrandMarkPicker>` (drag-and-drop) wired to these props
+   * instead of the legacy URL-only input. When omitted, the form falls back
+   * to a plain URL input (legacy / Storybook stories without an upload hook).
+   */
+  brandMarkUpload?: {
+    onFilePicked: (file: File) => void;
+    uploading?: boolean;
+    error?: string;
+    successInfo?: string;
+  };
 }
