@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { DiscrepancyDetectorService } from './application/discrepancy-detector.service';
 import { Reconciliation } from './domain/reconciliation.entity';
 import { ReconciliationRepository } from './infrastructure/reconciliation.repository';
 import { ReconciliationController } from './interface/reconciliation.controller';
@@ -23,7 +24,7 @@ import { ReconciliationController } from './interface/reconciliation.controller'
 @Module({
   imports: [TypeOrmModule.forFeature([Reconciliation])],
   controllers: [ReconciliationController],
-  providers: [ReconciliationRepository],
-  exports: [ReconciliationRepository],
+  providers: [ReconciliationRepository, DiscrepancyDetectorService],
+  exports: [ReconciliationRepository, DiscrepancyDetectorService],
 })
 export class ReconciliationModule {}
