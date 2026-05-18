@@ -10,7 +10,13 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Sprint 4 W4 (J5) — WhatsApp webhook signature verification reads
+  // `req.rawBody` (the byte-for-byte body Meta hashed). Without
+  // `rawBody: true`, Express only exposes the JSON-parsed body and the
+  // signature can never match. The flag is a no-op for every other
+  // controller (the parsed body is still on `req.body`). Per
+  // docs/sprint4-j5-whatsapp-assessment.md.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // m3.x-app-bootstrap-and-vps-deploy slice §1.11 + ADR-HEALTH-EXCLUDED-FROM-API-PREFIX:
   // All NestJS controllers are mounted under `/api`. The SPA (served by

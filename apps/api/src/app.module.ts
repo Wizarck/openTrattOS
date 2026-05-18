@@ -37,6 +37,7 @@ import { I18nM3ExportModule } from './i18n/m3-export/i18n.module';
 import { RecallModule } from './recall/recall.module';
 import { RecipesModule } from './recipes/recipes.module';
 import { SuppliersModule } from './suppliers/suppliers.module';
+import { WhatsappIngestModule } from './whatsapp-ingest/whatsapp-ingest.module';
 import { AgentCapabilityGuard } from './shared/guards/agent-capability.guard';
 import { RolesGuard } from './shared/guards/roles.guard';
 import { AuditInterceptor } from './shared/interceptors/audit.interceptor';
@@ -317,6 +318,19 @@ import { SharedModule } from './shared/shared.module';
     // via migration 0043 (deletion_scheduled_at + retention_policy +
     // dpo_contact). Real physical-deletion cron is a follow-up slice.
     PrivacyModule,
+
+    // Sprint 4 W4 (J5) — WhatsApp ingest skeleton
+    // (feat-whatsapp-sprint4-w4-skeleton): inbound webhook
+    // (POST /api/webhooks/whatsapp, signature-verified) + Meta
+    // verification handshake (GET /api/webhooks/whatsapp) +
+    // `whatsapp_messages` persistence + regex parser stub. Full Meta
+    // Business API integration requires external operator setup; see
+    // docs/sprint4-j5-whatsapp-assessment.md for the runbook + the list
+    // of pieces deferred to M2.x (Hermes LLM parser, recipes-BC
+    // pending_review lifecycle wiring, outbound replies). Webhook
+    // raw-body capture is enabled in main.ts via
+    // `NestFactory.create({ rawBody: true })`.
+    WhatsappIngestModule,
 
     // M3 APPCC export i18n infrastructure (m3-appcc-i18n-ui, Wave 2.7,
     // slice #15): four-locale ICU MessageFormat template seed (es-ES
