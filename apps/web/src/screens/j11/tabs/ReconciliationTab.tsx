@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useReconciliation } from '../../../hooks/useProcurement';
 import { useCurrentRole } from '../../../lib/currentUser';
 import type {
@@ -8,6 +8,7 @@ import type {
 } from '../../../api/procurement';
 import { EmptyState, ErrorBox, Loading } from './shared';
 import { ReconciliationDrawer } from './ReconciliationDrawer';
+import { listDrafts } from '../../../lib/draftStorage';
 
 /**
  * j11 Procurement — Reconciliación tab.
@@ -71,6 +72,32 @@ export function ReconciliationTab({ orgId }: { orgId: string }) {
   const role = useCurrentRole();
   const rows = useMemo(() => query.data?.items ?? [], [query.data]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // W3-13: per-row draft savedAt lookup. Recomputed whenever the drawer
+  // closes (the operator may have saved or cleared a draft) and on
+  // first mount. Keyed by reconciliation row id → savedAt epoch ms;
+  // rows without a draft are absent from the map.
+  const [draftRefreshTick, setDraftRefreshTick] = useState(0);
+  const draftsByRowId = useMemo<Record<string, number>>(() => {
+    const all = listDrafts<unknown>('recon:');
+    const map: Record<string, number> = {};
+    for (const d of all) {
+      // key shape: `recon:<reconciliationId>` (see reconciliationDraftKey)
+      const id = d.key.slice('recon:'.length);
+      if (id.length > 0) map[id] = d.savedAt;
+    }
+    return map;
+    // The draftRefreshTick dependency is intentional — it forces a
+    // re-read without any direct state input change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftRefreshTick, rows]);
+
+  // Touch the tick whenever the selection clears (drawer closed) so a
+  // freshly-saved draft surfaces its eyebrow without a manual reload.
+  useEffect(() => {
+    if (selectedId !== null) return;
+    setDraftRefreshTick((t) => t + 1);
+  }, [selectedId]);
 
   const selected = useMemo(
     () => rows.find((r) => r.id === selectedId) ?? null,
@@ -149,6 +176,7 @@ export function ReconciliationTab({ orgId }: { orgId: string }) {
       {filters}
       <ReconciliationTable
         rows={rows}
+        draftsByRowId={draftsByRowId}
         onRowClick={(row) => setSelectedId(row.id)}
       />
       {selected !== null && (
@@ -328,9 +356,11 @@ const STATE_LABELS: Record<ReconciliationListItem['state'], string> = {
 
 function ReconciliationTable({
   rows,
+  draftsByRowId,
   onRowClick,
 }: {
   rows: ReconciliationListItem[];
+  draftsByRowId: Record<string, number>;
   onRowClick: (row: ReconciliationListItem) => void;
 }) {
   return (
@@ -345,39 +375,79 @@ function ReconciliationTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-border-strong">
-          {rows.map((row) => (
-            <tr
-              key={row.id}
-              data-testid="reconciliation-row"
-              data-row-id={row.id}
-              tabIndex={0}
-              role="button"
-              aria-label={`Abrir reconciliación ${row.poNumber ?? 'sin OC'}`}
-              onClick={() => onRowClick(row)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onRowClick(row);
-                }
-              }}
-              className="cursor-pointer text-ink hover:bg-surface focus:bg-surface focus:outline-none focus:ring-2 focus:ring-inset focus:ring-(--color-focus)"
-            >
-              <td className="px-3 py-2 font-medium">
-                {row.poNumber ?? '—'}
-              </td>
-              <td className="px-3 py-2">
-                {DISCREPANCY_LABELS[row.discrepancyType]}
-              </td>
-              <td className="px-3 py-2 font-mono text-xs text-mute">
-                {formatDiffSummary(row)}
-              </td>
-              <td className="px-3 py-2">{STATE_LABELS[row.state]}</td>
-            </tr>
-          ))}
+          {rows.map((row) => {
+            const savedAt = draftsByRowId[row.id];
+            return (
+              <tr
+                key={row.id}
+                data-testid="reconciliation-row"
+                data-row-id={row.id}
+                tabIndex={0}
+                role="button"
+                aria-label={`Abrir reconciliación ${row.poNumber ?? 'sin OC'}`}
+                onClick={() => onRowClick(row)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onRowClick(row);
+                  }
+                }}
+                className="cursor-pointer text-ink hover:bg-surface focus:bg-surface focus:outline-none focus:ring-2 focus:ring-inset focus:ring-(--color-focus)"
+              >
+                <td className="px-3 py-2 font-medium">
+                  <span>{row.poNumber ?? '—'}</span>
+                  {savedAt !== undefined && (
+                    <span
+                      data-testid="reconciliation-draft-eyebrow"
+                      data-row-id={row.id}
+                      className="mt-0.5 block text-[10px] font-normal uppercase tracking-wide text-mute"
+                    >
+                      Borrador de resolución · {formatDraftTimestamp(savedAt)}
+                    </span>
+                  )}
+                </td>
+                <td className="px-3 py-2">
+                  {DISCREPANCY_LABELS[row.discrepancyType]}
+                </td>
+                <td className="px-3 py-2 font-mono text-xs text-mute">
+                  {formatDiffSummary(row)}
+                </td>
+                <td className="px-3 py-2">{STATE_LABELS[row.state]}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
   );
+}
+
+/**
+ * Sprint 4 W3-13 — eyebrow timestamp formatter. Matches the j11 spec
+ * `Borrador de resolución · 14:32 ayer`. We keep this simple:
+ *   - today: HH:MM
+ *   - yesterday: HH:MM ayer
+ *   - older: HH:MM dd/MM
+ * (Drafts are 24h-TTL'd so the "older" branch is reachable only for
+ * a few minutes around the rollover window.)
+ */
+function formatDraftTimestamp(savedAt: number): string {
+  const d = new Date(savedAt);
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  const hhmm = `${hh}:${mm}`;
+  const now = new Date();
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  ).getTime();
+  const startOfYesterday = startOfToday - 24 * 60 * 60 * 1000;
+  if (savedAt >= startOfToday) return hhmm;
+  if (savedAt >= startOfYesterday) return `${hhmm} ayer`;
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${hhmm} ${day}/${month}`;
 }
 
 /**
