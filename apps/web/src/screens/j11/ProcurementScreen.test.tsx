@@ -15,6 +15,17 @@ const fetchMock = vi.fn();
 
 beforeEach(() => {
   fetchMock.mockReset();
+  // Sprint 4 W3-batch2-A — PoTab now also fetches suppliers + locations
+  // for the filter chips + create modal. Default both to an empty array
+  // so tests that don't care about those surfaces don't need to opt-in.
+  // Tests that DO care can still queue `mockResolvedValueOnce` first.
+  fetchMock.mockImplementation((input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes('/suppliers') || url.includes('/locations')) {
+      return Promise.resolve(jsonResponse([]));
+    }
+    return Promise.resolve(jsonResponse({ items: [], total: 0 }));
+  });
   global.fetch = fetchMock as unknown as typeof fetch;
 });
 
@@ -56,7 +67,6 @@ describe('ProcurementScreen (Sprint 3 Block C — j11 shell)', () => {
   it('Owner with no ?tab defaults to PO tab + renders empty state', async () => {
     vi.mocked(useCurrentRole).mockReturnValue('OWNER');
     vi.mocked(useCurrentOrgId).mockReturnValue('org-1');
-    fetchMock.mockResolvedValueOnce(jsonResponse({ items: [], total: 0 }));
 
     renderWithClient('/procurement');
 
@@ -65,17 +75,16 @@ describe('ProcurementScreen (Sprint 3 Block C — j11 shell)', () => {
         screen.getByText('Aún no hay órdenes de compra activas'),
       ).toBeInTheDocument(),
     );
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(String(fetchMock.mock.calls[0][0])).toContain('/m3/procurement/po');
+    // Filter chips fetch suppliers + locations; PoTab still hits /m3/procurement/po
+    const poCalls = fetchMock.mock.calls.filter(([url]) =>
+      String(url).includes('/m3/procurement/po'),
+    );
+    expect(poCalls.length).toBeGreaterThan(0);
   });
 
   it('clicking Recepciones tab switches to GR fetch + empty state', async () => {
     vi.mocked(useCurrentRole).mockReturnValue('MANAGER');
     vi.mocked(useCurrentOrgId).mockReturnValue('org-1');
-    // PO tab loads first.
-    fetchMock.mockResolvedValueOnce(jsonResponse({ items: [], total: 0 }));
-    // Then GR tab.
-    fetchMock.mockResolvedValueOnce(jsonResponse({ items: [], total: 0 }));
 
     renderWithClient('/procurement');
 
@@ -101,7 +110,6 @@ describe('ProcurementScreen (Sprint 3 Block C — j11 shell)', () => {
   it('deep-link ?tab=recon lands on reconciliation tab + empty state', async () => {
     vi.mocked(useCurrentRole).mockReturnValue('OWNER');
     vi.mocked(useCurrentOrgId).mockReturnValue('org-1');
-    fetchMock.mockResolvedValueOnce(jsonResponse({ items: [], total: 0 }));
 
     renderWithClient('/procurement?tab=recon');
 
@@ -110,31 +118,43 @@ describe('ProcurementScreen (Sprint 3 Block C — j11 shell)', () => {
         screen.getByText('Aún no hay reconciliaciones abiertas'),
       ).toBeInTheDocument(),
     );
-    expect(String(fetchMock.mock.calls[0][0])).toContain(
-      '/m3/procurement/reconciliation',
+    const reconCalls = fetchMock.mock.calls.filter(([url]) =>
+      String(url).includes('/m3/procurement/reconciliation'),
     );
+    expect(reconCalls.length).toBeGreaterThan(0);
   });
 
   it('renders rows when PO endpoint returns data', async () => {
     vi.mocked(useCurrentRole).mockReturnValue('OWNER');
     vi.mocked(useCurrentOrgId).mockReturnValue('org-1');
-    fetchMock.mockResolvedValueOnce(
-      jsonResponse({
-        items: [
-          {
-            id: 'po-1',
-            poNumber: 'PO-2026-0001',
-            supplierId: 'sup-1',
-            state: 'sent',
-            currency: 'EUR',
-            total: 123.45,
-            expectedDeliveryDate: '2026-06-01',
-            createdAt: '2026-05-18T10:00:00.000Z',
-          },
-        ],
-        total: 1,
-      }),
-    );
+    // Route by URL so the PO list fetch returns 1 row while suppliers/locations
+    // stay at the empty default from beforeEach.
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/m3/procurement/po')) {
+        return Promise.resolve(
+          jsonResponse({
+            items: [
+              {
+                id: '00000000-0000-4000-8000-000000000001',
+                poNumber: 'PO-2026-0001',
+                supplierId: 'sup-1',
+                state: 'sent',
+                currency: 'EUR',
+                total: 123.45,
+                expectedDeliveryDate: '2026-06-01',
+                createdAt: '2026-05-18T10:00:00.000Z',
+              },
+            ],
+            total: 1,
+          }),
+        );
+      }
+      if (url.includes('/suppliers') || url.includes('/locations')) {
+        return Promise.resolve(jsonResponse([]));
+      }
+      return Promise.resolve(jsonResponse({ items: [], total: 0 }));
+    });
 
     renderWithClient('/procurement?tab=po');
 
@@ -143,6 +163,45 @@ describe('ProcurementScreen (Sprint 3 Block C — j11 shell)', () => {
     );
     expect(screen.getByText('123.45 EUR')).toBeInTheDocument();
     expect(screen.queryByText('Aún no hay órdenes de compra activas')).toBeNull();
+  });
+
+  it('Owner sees Nueva OC CTA; Manager does not (W3-11 RBAC)', async () => {
+    vi.mocked(useCurrentRole).mockReturnValue('OWNER');
+    vi.mocked(useCurrentOrgId).mockReturnValue('org-1');
+
+    renderWithClient('/procurement?tab=po');
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('Aún no hay órdenes de compra activas'),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.getByTestId('po-new-cta')).toBeInTheDocument();
+  });
+
+  it('Manager does NOT see Nueva OC CTA (W3-11 RBAC)', async () => {
+    vi.mocked(useCurrentRole).mockReturnValue('MANAGER');
+    vi.mocked(useCurrentOrgId).mockReturnValue('org-1');
+
+    renderWithClient('/procurement?tab=po');
+
+    await waitFor(() =>
+      expect(
+        screen.getByText('Aún no hay órdenes de compra activas'),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.queryByTestId('po-new-cta')).toBeNull();
+  });
+
+  it('renders filter chip bar above PO table (W3-9)', async () => {
+    vi.mocked(useCurrentRole).mockReturnValue('OWNER');
+    vi.mocked(useCurrentOrgId).mockReturnValue('org-1');
+
+    renderWithClient('/procurement?tab=po');
+
+    await waitFor(() =>
+      expect(screen.getByTestId('po-filter-bar')).toBeInTheDocument(),
+    );
   });
 
   it('shows signed-out fallback when role is null', () => {

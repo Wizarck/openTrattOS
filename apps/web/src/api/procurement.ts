@@ -8,6 +8,22 @@ import { api } from './client';
  * comments enumerating what is intentionally not built. Spec: docs/ux/j11.md.
  */
 
+/**
+ * Six PO states (mirror of apps/api PoState). Kept inline per the same
+ * "no @nexandro/contracts import from apps/web" rule that the api side
+ * follows; centralising the tuple here lets the filter chip UI render
+ * the canonical Spanish label map without a backend round-trip.
+ */
+export const PO_STATES = [
+  'draft',
+  'sent',
+  'partially_received',
+  'received',
+  'closed',
+  'cancelled',
+] as const;
+export type PoState = (typeof PO_STATES)[number];
+
 export interface PoListItem {
   id: string;
   poNumber: string;
@@ -24,11 +40,66 @@ export interface PoListResponse {
   total: number;
 }
 
+/**
+ * Sprint 4 W3-9 — filter chip surface. Empty arrays / undefined means
+ * "no narrowing"; the backend then falls back to the active-ops default
+ * list view.
+ */
+export interface PoListFilters {
+  supplierIds?: string[];
+  locationIds?: string[];
+  state?: PoState | null;
+}
+
 export async function getPurchaseOrders(
   organizationId: string,
+  filters: PoListFilters = {},
 ): Promise<PoListResponse> {
-  const qs = new URLSearchParams({ organizationId }).toString();
-  return api<PoListResponse>(`/m3/procurement/po?${qs}`);
+  const qs = new URLSearchParams({ organizationId });
+  if (filters.supplierIds && filters.supplierIds.length > 0) {
+    qs.set('supplierIds', filters.supplierIds.join(','));
+  }
+  if (filters.locationIds && filters.locationIds.length > 0) {
+    qs.set('locationIds', filters.locationIds.join(','));
+  }
+  if (filters.state) {
+    qs.set('state', filters.state);
+  }
+  return api<PoListResponse>(`/m3/procurement/po?${qs.toString()}`);
+}
+
+/**
+ * Sprint 4 W3-11 — Nueva OC create flow body. `locationId` is UX-only
+ * metadata captured by the wizard's step 2; backend serialises it into
+ * the `notes` column as an `Entrega en: <uuid>` prefix until the PO
+ * entity grows a location column.
+ */
+export interface CreatePoLinePayload {
+  ingredientId: string;
+  quantityOrdered: number;
+  unit: string;
+  unitPrice: number;
+  vatRate: number;
+  vatInclusive: boolean;
+}
+
+export interface CreatePoPayload {
+  supplierId: string;
+  currency: string;
+  expectedDeliveryDate?: string;
+  notes?: string;
+  locationId?: string;
+  lines: CreatePoLinePayload[];
+}
+
+export async function createPurchaseOrder(
+  organizationId: string,
+  payload: CreatePoPayload,
+): Promise<PoDetail> {
+  return api<PoDetail>(`/m3/procurement/po`, {
+    method: 'POST',
+    body: JSON.stringify({ organizationId, ...payload }),
+  });
 }
 
 /**

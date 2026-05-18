@@ -3,7 +3,7 @@ import { usePurchaseOrder } from '../../../hooks/useProcurement';
 import { ErrorBox, Loading } from './shared';
 
 /**
- * j11 PO detail drawer (Sprint 4 W3-1).
+ * j11 PO detail drawer (Sprint 4 W3-1; W3-batch2-A bundles W3-8 + W3-12).
  *
  * Spec: docs/ux/j11.md §3 — click PO row → drawer mounts on right
  * (full-page on phone). Shows header (proveedor · dirección · fecha ·
@@ -11,14 +11,15 @@ import { ErrorBox, Loading } from './shared';
  * subtotal) · footer (subtotal · IVA · total). State-aware action
  * buttons land in Phase 3 of this slice.
  *
- * Close affordances: X button, Escape key, overlay click.
+ * Close affordances: X button, Escape key, overlay click. All interactive
+ * controls inside the drawer are sized ≥48 px tall (W3-12 tablet rule).
+ * Footer carries the audit chip routing to /audit-log?aggregate_id= (W3-8).
  *
  * SHELL ONLY — does NOT yet render:
  *   FOLLOWUP — supplier display name + address (today only supplier_id
  *   is surfaced; resolve via suppliers cache once the suppliers list
  *   query is wired into this screen), ingredient display name (same
- *   pattern), audit chip linking to /audit-log?aggregate_id=, Hermes
- *   pre-fill banner, Cancelar / Cerrar buttons (Phase 3).
+ *   pattern), Hermes pre-fill banner, Cancelar / Cerrar buttons (Phase 3).
  */
 export function PoDetailDrawer({
   orgId,
@@ -77,7 +78,7 @@ export function PoDetailDrawer({
             type="button"
             onClick={onClose}
             aria-label="Cerrar"
-            className="rounded p-2 text-mute hover:bg-(--color-surface-strong) hover:text-ink focus:outline-none focus:ring-2 focus:ring-(--color-focus)"
+            className="min-h-[48px] min-w-[48px] rounded p-2 text-mute hover:bg-(--color-surface-strong) hover:text-ink focus:outline-none focus:ring-2 focus:ring-(--color-focus)"
           >
             <span aria-hidden="true">×</span>
           </button>
@@ -88,8 +89,39 @@ export function PoDetailDrawer({
           {query.error && <ErrorBox message={query.error.message} />}
           {detail && <PoDrawerBody detail={detail} />}
         </div>
+
+        {detail && (
+          <footer className="flex items-center justify-between gap-3 border-t border-border-strong px-5 py-3 text-sm">
+            <PoAuditChip aggregateId={detail.id} />
+            <button
+              type="button"
+              onClick={onClose}
+              className="min-h-[48px] rounded-md border border-border-strong px-4 py-2 text-sm font-medium text-mute hover:text-ink focus:outline-none focus:ring-2 focus:ring-(--color-focus)"
+            >
+              Cerrar
+            </button>
+          </footer>
+        )}
       </aside>
     </div>
+  );
+}
+
+/**
+ * W3-8 — audit chip in drawer footer. Mirrors the per-row chip in PoTab.
+ * Routes to `/audit-log?aggregate_id=<poId>` so the operator can jump
+ * straight to the hash-chain view for this PO.
+ */
+function PoAuditChip({ aggregateId }: { aggregateId: string }) {
+  const short = aggregateId.slice(0, 8).toUpperCase();
+  return (
+    <a
+      href={`/audit-log?aggregate_id=${encodeURIComponent(aggregateId)}`}
+      className="text-xs text-mute underline-offset-2 hover:text-ink hover:underline focus:outline-none focus:ring-2 focus:ring-(--color-focus)"
+      data-testid="po-drawer-audit-chip"
+    >
+      audit_log AL-{short} · ver chain →
+    </a>
   );
 }
 
