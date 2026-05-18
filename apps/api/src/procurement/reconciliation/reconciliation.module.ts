@@ -1,15 +1,25 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Reconciliation } from './domain/reconciliation.entity';
 import { ReconciliationController } from './interface/reconciliation.controller';
 
 /**
- * Placeholder module for the j11 Reconciliación tab (Sprint 3 Block C).
+ * procurement.reconciliation bounded context (Sprint 4 W3-5).
  *
- * SHELL ONLY — wires a single read-only controller that returns `[]`.
- * The reconciliation aggregate (entity, repository, application service,
- * discrepancy detection) is a follow-up. Once it lands, providers +
- * exports get added here. Spec: docs/ux/j11.md §6.
+ * Sprint 3 Block C (PR #218) shipped a placeholder controller returning
+ * `[]`. This module registers the real `Reconciliation` entity so the
+ * migration (0046) has a TypeORM repository at boot; the controller +
+ * service + repository + detector land in the same PR (checkpoint 2 of
+ * the Sprint 4 W3-5 task).
+ *
+ * Multi-tenant invariant: every read/write goes through the dedicated
+ * repository which always WHERE-clauses `organization_id`. No direct
+ * `TypeOrmModule.forFeature` consumers outside this module.
+ *
+ * Spec: docs/ux/j11.md §6.
  */
 @Module({
+  imports: [TypeOrmModule.forFeature([Reconciliation])],
   controllers: [ReconciliationController],
 })
 export class ReconciliationModule {}
