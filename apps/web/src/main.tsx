@@ -27,6 +27,7 @@ import { RecallInvestigateJ6Route, RecallDossierJ7Route } from './m3/recall/reca
 import { HaccpRecordScreen } from './screens/j10/HaccpRecordScreen';
 import { AppccExportScreen } from './screens/j9/AppccExportScreen';
 import { PhotoIngestReviewScreen } from './screens/j12/PhotoIngestReviewScreen';
+import { ProcurementScreen } from './screens/j11/ProcurementScreen';
 import { ReviewQueueScreen } from './screens/ReviewQueueScreen';
 import { RecallTraceTreeScreen } from './screens/j6/RecallTraceTreeScreen';
 
@@ -118,6 +119,13 @@ const router = createBrowserRouter([
       {
         path: 'm3/review-queue',
         element: <ReviewQueueScreen />,
+      },
+      // Sprint 3 Block C — j11 Procurement minimum-viable shell (3 read-only
+      // tabs behind ?tab=po|gr|recon). Full j11.md surface (drawers,
+      // bulk-confirm, Hermes pre-fill, Owner approval gates) is followup.
+      {
+        path: 'procurement',
+        element: <ProcurementScreen />,
       },
       // J7 recall dossier surface uses the standard AppLayout per j7.md.
       {
