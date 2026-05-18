@@ -4,6 +4,7 @@ import {
   cancelPurchaseOrder,
   closePurchaseOrder,
   confirmGoodsReceiptLine,
+  createPurchaseOrder,
   getGoodsReceiptDetail,
   getGoodsReceipts,
   getPurchaseOrderById,
@@ -11,9 +12,11 @@ import {
   getReconciliations,
   resolveReconciliation,
   type ConfirmGrLineInput,
+  type CreatePoPayload,
   type GrDetail,
   type GrListResponse,
   type PoDetail,
+  type PoListFilters,
   type PoListResponse,
   type ReconciliationListItem,
   type ReconciliationListResponse,
@@ -29,15 +32,44 @@ const STALE_30_S = 30_000;
  * its signed-out fallback without firing requests.
  */
 
-export function usePurchaseOrders(orgId: string | undefined) {
+/**
+ * Sprint 4 W3-9 — filter chips. Filters are folded into the query key so
+ * each chip combination keeps its own cache entry; switching chips
+ * therefore refetches without invalidating the prior view.
+ */
+export function usePurchaseOrders(
+  orgId: string | undefined,
+  filters: PoListFilters = {},
+) {
   return useQuery<PoListResponse, ApiError>({
-    queryKey: ['procurement', 'po', orgId],
+    queryKey: ['procurement', 'po', orgId, filters],
     queryFn: () => {
       if (!orgId) throw new Error('orgId required');
-      return getPurchaseOrders(orgId);
+      return getPurchaseOrders(orgId, filters);
     },
     enabled: !!orgId,
     staleTime: STALE_30_S,
+  });
+}
+
+/**
+ * Sprint 4 W3-11 — Nueva OC mutation. On success we invalidate every
+ * PO list cache entry (any filter combination) so the new PO surfaces
+ * regardless of which chip set the operator is currently viewing.
+ */
+export function useCreatePurchaseOrder(orgId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation<PoDetail, ApiError, CreatePoPayload>({
+    mutationFn: (payload) => {
+      if (!orgId) throw new Error('orgId required');
+      return createPurchaseOrder(orgId, payload);
+    },
+    onSuccess: (detail) => {
+      qc.invalidateQueries({ queryKey: ['procurement', 'po', orgId] });
+      // Pre-warm the detail query cache so opening the new PO's drawer
+      // skips the round-trip.
+      qc.setQueryData(['procurement', 'po', orgId, detail.id], detail);
+    },
   });
 }
 
